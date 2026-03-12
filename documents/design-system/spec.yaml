@@ -1,0 +1,116 @@
+openspec: "1.0"
+kind: DesignSystem
+info:
+  title: LMS Platform - Design System
+  version: "1.0.0"
+  description: >
+    Complete design system for the LMS Platform frontend.
+    Token-based architecture using CSS custom properties with SCSS mixins.
+    Follows a layered approach: Tokens -> Colors -> Typography -> Components -> Theme.
+
+architecture:
+  entry_point:
+    file: src/assets/design-system/_design.scss
+    description: Central design system file that imports all layers in order.
+    imports:
+      - layer: theme
+        file: theme/theme_index
+        alias: theme
+        description: Active theme (currently Mint)
+      - layer: ui-style
+        file: ui-style/ui-style-default
+        alias: ui-style-default
+        description: UI style configuration (padding, border-radius)
+      - layer: tokens
+        file: tokens/token
+        alias: semantic
+        description: Semantic token mixins (button, input, nav, footer)
+      - layer: typography
+        file: typography
+        alias: typography
+        description: Typography scale, mixins, classes, and HTML mapping
+      - layer: components
+        file: component
+        alias: component
+        description: Component styles (button, input) + image border-radius
+      - layer: form
+        file: form
+        alias: form
+        description: Form layout styles
+
+  global_import:
+    file: src/styles.scss
+    content: '@use "assets/design-system/design" as design;'
+
+documents:
+  - id: tokens
+    title: Design Tokens
+    path: ./tokens.yaml
+    kind: DesignTokens
+    description: >
+      Spacing, border-radius, motion/animation, z-index, font-size tokens,
+      plus elevation (shadow system), semantic border tokens, opacity tokens,
+      and focus ring tokens. All defined as CSS custom properties on :root.
+
+  - id: color
+    title: Color System
+    path: ./color.yaml
+    kind: ColorSystem
+    description: >
+      Color palette with primary, neutral, and semantic (warning, success, error)
+      color scales. Includes surface color tokens for white-background
+      premium design. Base colors in _color.scss, theme overrides in theme-mint.scss.
+
+  - id: typography
+    title: Typography System
+    path: ./typography.yaml
+    kind: TypographySystem
+    description: >
+      Typography scale with 15 levels (display, headline, title, body, label).
+      SCSS mixins, CSS classes, HTML element mappings, and text color utilities.
+
+  - id: breakpoints
+    title: Responsive Breakpoints
+    path: ./breakpoints.yaml
+    kind: Breakpoints
+    description: >
+      Mobile-first responsive breakpoints from 576px to 1600px.
+      Defined as SCSS variables.
+
+  - id: components
+    title: Component Styles
+    path: ./components.yaml
+    kind: ComponentStyles
+    description: >
+      Global component styles for button, input, select, textarea, radio,
+      checkbox, data table, and form.
+      Defined in SCSS with CSS custom property theming.
+
+  - id: theme
+    title: Theme Configuration
+    path: ./theme.yaml
+    kind: ThemeConfig
+    description: >
+      Theme system with token mixins for default configuration (including
+      content area and card tokens), navigation bar, footer, and sidebar.
+      Currently active theme: Mint/Teal.
+
+  - id: icons
+    title: Icon System
+    path: ./icons.yaml
+    kind: IconSystem
+    description: >
+      Icon system using Google Material Icons and Material Symbols Outlined.
+      Loaded via Google Fonts CDN in index.html. Material Icons (filled) used
+      for most UI elements; Material Symbols Outlined used for navbar icons.
+
+  - id: shared-components
+    title: Shared Angular Components
+    path: ./shared-components.yaml
+    kind: SharedComponents
+    description: >
+      Reusable Angular standalone components: ButtonComponent, SpinnerComponent,
+      InputComponent, CardComponent, BadgeComponent, DialogComponent,
+      ToastComponent, TabsComponent, EmptyStateComponent, SkeletonComponent,
+      AvatarComponent, ProgressBarComponent, BreadcrumbComponent,
+      PaginationComponent, and DropdownMenuComponent.

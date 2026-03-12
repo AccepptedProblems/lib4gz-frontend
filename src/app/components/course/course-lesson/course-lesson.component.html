@@ -1,0 +1,233 @@
+<!-- Lesson Content with Submission Drawer -->
+<mat-drawer-container class="drawer-container">
+  <!-- Submission Drawer (push mode, right side) -->
+  <mat-drawer
+    #submissionDrawer
+    position="end"
+    mode="side"
+    (closed)="onDrawerClosed()"
+  >
+    <div class="submission-drawer">
+      <div class="submission-drawer__top-bar">
+        <button class="submission-drawer__close" (click)="closeSubmissionDrawer()" aria-label="Close drawer">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      @if (drawerQuestionContent()) {
+        <div class="submission-drawer__question-header">
+          <span class="text-title-small text-primary">Q: {{ drawerQuestionContent() }}</span>
+        </div>
+      }
+      <div class="submission-drawer__body">
+        @if (drawerLoading()) {
+          <lib-skeleton width="100%" height="80px" variant="rect" />
+          <lib-skeleton width="100%" height="80px" variant="rect" />
+          <lib-skeleton width="100%" height="80px" variant="rect" />
+        } @else if (drawerSubmissions().length === 0) {
+          <p class="text-body-medium text-secondary">No submissions yet.</p>
+        } @else {
+          @for (sub of drawerSubmissions(); track sub.id) {
+            <div class="submission-message">
+              <div class="submission-message__header">
+                <span class="text-title-small">{{ sub.user.name }}</span>
+                <lib-chip
+                  [label]="getSubmissionStatusLabel(sub)"
+                  [value]="sub.status"
+                  [variant]="getSubmissionChipVariant(sub)"
+                  [selected]="true"
+                />
+              </div>
+              <div class="submission-message__answer">
+                @if (getAnswerForQuestion(sub); as answer) {
+                  @if (answer.answer) {
+                    <span class="text-body-medium">{{ answer.answer }}</span>
+                  } @else {
+                    <em class="text-body-medium text-secondary">(no answer)</em>
+                  }
+                } @else {
+                  <em class="text-body-medium text-secondary">(no answer)</em>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </mat-drawer>
+
+  <mat-drawer-content>
+    <div class="lesson-content" aria-live="polite">
+      @if (lessonLoading()) {
+        <div class="loading-placeholder">
+          <lib-spinner type="screen" [diameter]="32" label="Loading lesson..." />
+        </div>
+      } @else if (lesson()) {
+        <!-- Selected Lesson -->
+        <div class="lesson-detail">
+          <h2 class="text-title-large text-primary">{{ lessonPrefix() }} {{ lesson()!.title }}</h2>
+
+          <!-- Tab Bar -->
+          <div class="tab-bar" role="tablist">
+            <button
+              class="tab-button"
+              [class.tab-button--active]="activeTab() === 'summary'"
+              role="tab"
+              [attr.aria-selected]="activeTab() === 'summary'"
+              (click)="switchTab('summary')"
+            >
+              Summary
+            </button>
+            <button
+              class="tab-button"
+              [class.tab-button--active]="activeTab() === 'exercises'"
+              role="tab"
+              [attr.aria-selected]="activeTab() === 'exercises'"
+              (click)="switchTab('exercises')"
+            >
+              Exercises ({{ exercises().length }})
+            </button>
+            @if (isTeacher()) {
+              <button
+                class="tab-button"
+                [class.tab-button--active]="activeTab() === 'submissions'"
+                role="tab"
+                [attr.aria-selected]="activeTab() === 'submissions'"
+                (click)="switchTab('submissions')"
+              >
+                Submissions
+              </button>
+            }
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content" role="tabpanel">
+            <!-- Summary Tab -->
+            @if (activeTab() === 'summary') {
+              @if (summaryLoading()) {
+                <div class="summary-skeleton">
+                  <lib-skeleton width="100%" height="16px" />
+                  <lib-skeleton width="90%" height="16px" />
+                  <lib-skeleton width="95%" height="16px" />
+                  <lib-skeleton width="70%" height="16px" />
+                  <lib-skeleton width="100%" height="200px" variant="rect" />
+                </div>
+              } @else if (summary()) {
+                <div class="summary-content text-body-medium text-primary" [innerHTML]="summary()!.content"></div>
+              } @else if (summaryError()) {
+                <p class="text-body-medium text-secondary">Failed to load summary.</p>
+              } @else {
+                <p class="text-body-medium text-secondary">No summary available for this lesson.</p>
+              }
+            }
+
+            <!-- Exercises Tab -->
+            @if (activeTab() === 'exercises') {
+              @if (exerciseStatusesLoading()) {
+                <div class="exercise-skeletons">
+                  <lib-skeleton width="100%" height="80px" variant="rect" />
+                  <lib-skeleton width="100%" height="80px" variant="rect" />
+                </div>
+              } @else if (sortedExercises().length === 0) {
+                <p class="text-body-medium text-secondary">No exercises available for this lesson.</p>
+              } @else {
+                <div class="exercise-list">
+                  @for (exercise of sortedExercises(); track exercise.id) {
+                    <div class="exercise-card">
+                      <div class="exercise-card__header">
+                        <span class="text-title-medium exercise-card__title">{{ exercise.title }}</span>
+                        @if (perExerciseSubmission().get(exercise.id); as sub) {
+                          <lib-chip
+                            [label]="getSubmissionStatusLabel(sub)"
+                            [value]="sub.status"
+                            [variant]="getSubmissionChipVariant(sub)"
+                            [selected]="true"
+                          />
+                        }
+                      </div>
+                      <p class="text-body-medium text-secondary exercise-card__meta">
+                        {{ getExerciseTypeLabel(exercise.type) }} · {{ exercise.questionCount ?? 0 }} {{ (exercise.questionCount ?? 0) === 1 ? 'Question' : 'Questions' }}
+                      </p>
+                    </div>
+                  }
+                </div>
+
+                <div class="exercise-actions">
+                  <lib-button variant="primary" size="md" (buttonClick)="navigateToExercise()">
+                    Do Exercise
+                  </lib-button>
+                </div>
+              }
+            }
+
+            <!-- Submissions Tab (Teacher Only) -->
+            @if (activeTab() === 'submissions' && isTeacher()) {
+              @if (submissionsLoading()) {
+                <div class="exercise-skeletons">
+                  <lib-skeleton width="100%" height="80px" variant="rect" />
+                  <lib-skeleton width="100%" height="80px" variant="rect" />
+                </div>
+              } @else if (sortedExercises().length === 0) {
+                <p class="text-body-medium text-secondary">No exercises available for this lesson.</p>
+              } @else {
+                <div class="exercise-list">
+                  @for (exercise of sortedExercises(); track exercise.id) {
+                    <div
+                      class="exercise-card exercise-card--clickable"
+                      [class.exercise-card--selected]="expandedExerciseId() === exercise.id"
+                      (click)="toggleExerciseExpand(exercise)"
+                    >
+                      <div class="exercise-card__header">
+                        <span
+                          class="material-icons exercise-card__chevron"
+                          [class.exercise-card__chevron--expanded]="expandedExerciseId() === exercise.id"
+                        >chevron_right</span>
+                        <span class="text-title-medium exercise-card__title">{{ exercise.title }}</span>
+                        @if (exerciseSubmissions().get(exercise.id); as subs) {
+                          <lib-chip
+                            [label]="subs.length + ' ' + (subs.length === 1 ? 'Submission' : 'Submissions')"
+                            [value]="'count'"
+                            variant="neutral"
+                            [selected]="true"
+                          />
+                        }
+                      </div>
+                      <p class="text-body-medium text-secondary exercise-card__meta">
+                        {{ getExerciseTypeLabel(exercise.type) }} · {{ exercise.questionCount ?? 0 }} {{ (exercise.questionCount ?? 0) === 1 ? 'Question' : 'Questions' }}
+                      </p>
+
+                      @if (expandedExerciseId() === exercise.id) {
+                        <div class="exercise-card__questions" (click)="$event.stopPropagation()">
+                          @if (exerciseQuestionsLoading().has(exercise.id)) {
+                            <div class="question-skeletons">
+                              <lib-skeleton width="90%" height="14px" />
+                              <lib-skeleton width="70%" height="14px" />
+                              <lib-skeleton width="80%" height="14px" />
+                            </div>
+                          } @else {
+                            @if (exerciseQuestions().get(exercise.id)?.length === 0) {
+                              <p class="text-body-medium text-secondary">No questions in this exercise.</p>
+                            } @else {
+                              @for (question of exerciseQuestions().get(exercise.id) ?? []; track question.id; let qi = $index) {
+                                <div
+                                  class="question-item"
+                                  [class.question-item--active]="drawerQuestionId() === question.id"
+                                  (click)="openQuestionDrawer(question, exercise)"
+                                >
+                                  <span class="text-body-medium">{{ qi + 1 }}. {{ question.content }}</span>
+                                </div>
+                              }
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>

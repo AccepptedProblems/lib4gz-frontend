@@ -1,0 +1,363 @@
+<!-- Loading state (edit mode) -->
+@if (screenState() === 'loading') {
+  <div class="editor-page">
+    <div class="editor-container">
+      <div class="page-header">
+        <lib-skeleton variant="rect" width="32px" height="32px" />
+        <lib-skeleton variant="text" width="160px" height="28px" />
+      </div>
+      <div class="form-section">
+        <lib-skeleton variant="rect" width="100%" height="56px" />
+        <lib-skeleton variant="rect" width="100%" height="56px" />
+      </div>
+      <div class="questions-section">
+        <lib-skeleton variant="text" width="140px" height="24px" />
+        <lib-skeleton variant="rect" width="100%" height="80px" />
+        <lib-skeleton variant="rect" width="100%" height="80px" />
+        <lib-skeleton variant="rect" width="100%" height="80px" />
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Error state -->
+@if (screenState() === 'error') {
+  <div class="editor-page">
+    <div class="editor-container">
+      <div class="error-state">
+        <span class="material-icons error-state__icon">error_outline</span>
+        <p class="text-body-medium">Failed to load exercise. Please try again.</p>
+        <lib-button variant="secondary" (buttonClick)="goBack()">
+          Go Back
+        </lib-button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Loaded state -->
+@if (screenState() === 'loaded') {
+  <div class="editor-page">
+    <div class="editor-container">
+
+      <!-- Page header with Cancel/Save -->
+      <div class="page-header">
+        <h1 class="text-title-large editor-title">
+          {{ isEditMode() ? 'Edit Exercise' : 'Create Exercise' }}
+        </h1>
+        <div class="header-actions">
+          <lib-button variant="secondary" (buttonClick)="cancelExercise()" [disabled]="isSaving()">
+            Cancel
+          </lib-button>
+          <lib-button
+            variant="primary"
+            [isLoading]="isSaving()"
+            (buttonClick)="saveExercise()"
+          >
+            Save Exercise
+          </lib-button>
+        </div>
+      </div>
+
+      <!-- Exercise metadata form -->
+      <div class="form-section">
+        <div class="form-field">
+          <lib-textarea
+            label="Exercise Title"
+            placeholder="Enter the main question or title for this exercise"
+            [minRows]="1"
+            [value]="exerciseTitle()"
+            (valueChange)="onTitleInput($event)"
+            [disabled]="isSaving()"
+            [required]="true"
+            [error]="titleError()"
+          />
+        </div>
+
+        <div class="form-field">
+          <label class="form-field-label text-label-large" for="exercise-type">
+            Exercise Type <span class="required">*</span>
+          </label>
+          <div class="select-box-container select-box-container--compact">
+            <select
+              id="exercise-type"
+              class="select-box small-input"
+              [value]="exerciseType()"
+              (change)="onTypeChange($any($event.target).value)"
+              [disabled]="isSaving()"
+            >
+              @for (opt of typeOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+            <span class="material-symbols-outlined select-box-icon">keyboard_arrow_down</span>
+          </div>
+        </div>
+
+        <!-- Default answers (placeholder) for MULTIPLE_CHOICE -->
+        @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+          <div class="default-answers-section">
+            <label class="form-field-label text-label-large">Default Answers <span class="default-answers-hint text-body-small">(new questions will use these)</span></label>
+            <div class="answers-list">
+              @for (opt of defaultOptions(); track $index; let oi = $index) {
+                <div class="answer-row">
+                  <input
+                    type="radio"
+                    name="default-correct"
+                    [checked]="opt.isCorrect"
+                    (change)="setDefaultCorrectOption(oi)"
+                    class="answer-radio"
+                    [attr.aria-label]="'Mark default answer ' + (oi + 1) + ' as correct'"
+                  />
+                  <input
+                    type="text"
+                    class="small-input answer-input"
+                    placeholder="Answer option"
+                    [value]="opt.text"
+                    (input)="updateDefaultOptionText(oi, $any($event.target).value)"
+                    [disabled]="isSaving()"
+                  />
+                  @if (defaultOptions().length > 2) {
+                    <button
+                      class="icon-btn icon-btn--delete icon-btn--small"
+                      (click)="removeDefaultOption(oi)"
+                      [attr.aria-label]="'Remove default answer option ' + (oi + 1)"
+                    >
+                      <span class="material-icons">close</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            @if (defaultOptions().length < 6) {
+              <button class="add-answer-btn text-body-medium" (click)="addDefaultOption()">
+                <span class="material-icons">add</span>
+                Add Answer
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Questions section -->
+      <div class="questions-section">
+        <h2 class="text-title-medium section-title">
+          Questions{{ questionCount() > 0 ? ' (' + questionCount() + ')' : '' }}
+        </h2>
+
+        @if (questionsError()) {
+          <p class="form-field-error" role="alert">{{ questionsError() }}</p>
+        }
+
+        <!-- Question list -->
+        <div class="question-list">
+          @for (q of questions(); track $index; let i = $index) {
+            <!-- View mode -->
+            @if (!q.isEditing) {
+              <div class="question-card question-card--view" [class.has-error]="questionErrors().has(i) || questionOptionErrors().has(i)">
+                <div class="question-card__header">
+                  <div class="question-card__info">
+                    <span class="question-number text-label-large">{{ i + 1 }}.</span>
+                    <p class="question-text text-body-medium">{{ q.content || '(No content)' }}</p>
+                  </div>
+                  <div class="question-card__actions">
+                    <button
+                      class="icon-btn"
+                      (click)="editQuestion(i)"
+                      [attr.aria-label]="'Edit question ' + (i + 1)"
+                      [disabled]="isSaving()"
+                    >
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button
+                      class="icon-btn icon-btn--delete"
+                      (click)="deleteQuestion(i)"
+                      [attr.aria-label]="'Delete question ' + (i + 1)"
+                      [disabled]="isSaving()"
+                    >
+                      <span class="material-icons">close</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Answer preview (MC) -->
+                @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+                  <div class="answer-preview">
+                    @for (opt of getOptions(q); track $index) {
+                      <span class="answer-chip" [class.correct]="opt.isCorrect">
+                        {{ opt.isCorrect ? '●' : '○' }} {{ opt.text || '(empty)' }}
+                      </span>
+                    }
+                  </div>
+                }
+
+                <!-- Text answer label -->
+                @if (exerciseType() === ExerciseType.TEXT_ANSWER) {
+                  <p class="text-answer-label text-body-small">(Text answer)</p>
+                }
+
+                <!-- Validation errors for this question -->
+                @if (questionErrors().has(i)) {
+                  <p class="form-field-error" role="alert">{{ questionErrors().get(i) }}</p>
+                }
+                @if (questionOptionErrors().has(i)) {
+                  <p class="form-field-error" role="alert">{{ questionOptionErrors().get(i) }}</p>
+                }
+              </div>
+            }
+
+            <!-- Edit mode -->
+            @if (q.isEditing) {
+              <div class="question-card question-card--edit">
+                <h3 class="text-label-large edit-card-title">Question {{ i + 1 }}</h3>
+
+                <div class="form-field">
+                  <lib-textarea
+                    label="Question Text"
+                    placeholder="Enter the question"
+                    [minRows]="1"
+                    [value]="tempContent()"
+                    (valueChange)="tempContent.set($event)"
+                    [disabled]="isSaving()"
+                    [required]="true"
+                    [error]="questionErrors().has(i) ? questionErrors().get(i)! : null"
+                  />
+                </div>
+
+                <!-- Answer options (MC only) -->
+                @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+                  <div class="answers-section">
+                    <label class="form-field-label">Answers</label>
+                    <div class="answers-list">
+                      @for (opt of tempOptions(); track $index; let oi = $index) {
+                        <div class="answer-row">
+                          <input
+                            type="radio"
+                            [name]="'correct-' + i"
+                            [checked]="opt.isCorrect"
+                            (change)="setCorrectOption(oi)"
+                            class="answer-radio"
+                            [attr.aria-label]="'Mark answer ' + (oi + 1) + ' as correct'"
+                          />
+                          <input
+                            type="text"
+                            class="small-input answer-input"
+                            placeholder="Answer option"
+                            [value]="opt.text"
+                            (input)="updateOptionText(oi, $any($event.target).value)"
+                            [disabled]="isSaving()"
+                          />
+                          @if (tempOptions().length > 2) {
+                            <button
+                              class="icon-btn icon-btn--delete icon-btn--small"
+                              (click)="removeOption(oi)"
+                              [attr.aria-label]="'Remove answer option ' + (oi + 1)"
+                            >
+                              <span class="material-icons">close</span>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    @if (tempOptions().length < 6) {
+                      <button class="add-answer-btn text-body-medium" (click)="addOption()">
+                        <span class="material-icons">add</span>
+                        Add Answer
+                      </button>
+                    }
+
+                    @if (questionOptionErrors().has(i)) {
+                      <p class="form-field-error" role="alert">{{ questionOptionErrors().get(i) }}</p>
+                    }
+                  </div>
+                }
+
+                <!-- Text answer hint -->
+                @if (exerciseType() === ExerciseType.TEXT_ANSWER) {
+                  <p class="text-answer-hint text-body-small">
+                    Students will type their answer as free text.
+                  </p>
+                }
+
+                <!-- Card actions -->
+                <div class="question-card__footer">
+                  <lib-button variant="secondary" size="sm" (buttonClick)="cancelQuestionEdit()">
+                    Cancel
+                  </lib-button>
+                  <lib-button variant="primary" size="sm" (buttonClick)="saveQuestion()">
+                    Save Question
+                  </lib-button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- Question action buttons -->
+        <div class="question-actions">
+          <lib-button variant="secondary" (buttonClick)="addQuestion()" [disabled]="isSaving()">
+            <span class="material-icons btn-icon">add</span>
+            Add Question
+          </lib-button>
+          <lib-button variant="primary" (buttonClick)="openFastCreate()" [disabled]="isSaving()">
+            <span class="btn-icon">⚡</span>
+            Fast Create
+          </lib-button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Fast Create Dialog -->
+<lib-dialog
+  [open]="showFastCreate()"
+  title="⚡ Fast Create"
+  [confirmLabel]="'Add ' + parsedQuestions().length + ' Questions'"
+  cancelLabel="Cancel"
+  width="600px"
+  (confirm)="confirmFastCreate()"
+  (cancel)="cancelFastCreate()"
+>
+  <div class="fast-create-content">
+    <lib-textarea
+      label="Paste your numbered question list below"
+      [placeholder]="'1. First question\n2. Second question\n3. Third question'"
+      [minRows]="8"
+      [value]="fastCreateText()"
+      (valueChange)="onFastCreateInput($event)"
+    />
+  </div>
+</lib-dialog>
+
+<!-- Unsaved Changes Dialog -->
+<lib-dialog
+  [open]="showUnsavedDialog()"
+  title="Unsaved Changes"
+  icon="warning"
+  iconClass="warning-icon"
+  confirmLabel="Leave"
+  cancelLabel="Stay"
+  confirmVariant="destructive"
+  (confirm)="confirmLeave()"
+  (cancel)="stayOnPage()"
+>
+  You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+</lib-dialog>
+
+<!-- Type Change Confirmation Dialog -->
+<lib-dialog
+  [open]="showTypeChangeDialog()"
+  title="Change Exercise Type"
+  icon="warning"
+  iconClass="warning-icon"
+  confirmLabel="Continue"
+  cancelLabel="Cancel"
+  confirmVariant="primary"
+  (confirm)="confirmTypeChange()"
+  (cancel)="cancelTypeChange()"
+>
+  Changing the type will reset answer options for all existing questions. Continue?
+</lib-dialog>

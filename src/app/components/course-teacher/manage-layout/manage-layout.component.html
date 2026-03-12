@@ -1,0 +1,118 @@
+<!-- Loading State -->
+@if (screenState() === 'loading') {
+  <div class="loading-container">
+    <lib-spinner type="screen" [diameter]="48" label="Loading course management..." />
+  </div>
+}
+
+<!-- Error State -->
+@if (screenState() === 'error') {
+  <div class="error-container">
+    <span class="material-icons error-icon">error_outline</span>
+    <p class="text-body-large text-secondary">{{ errorMessage() }}</p>
+    <lib-button variant="primary" size="md" (buttonClick)="retry()">
+      Retry
+    </lib-button>
+  </div>
+}
+
+<!-- Loaded State -->
+@if (screenState() === 'loaded' && course(); as course) {
+  <div class="manage-layout">
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+      <span class="material-icons">menu</span>
+    </button>
+
+    <!-- Sidebar -->
+    <aside
+      class="sidebar"
+      [class.sidebar--open]="sidebarOpen()"
+      role="navigation"
+      aria-label="Course management navigation"
+    >
+      <button class="sidebar__close" (click)="closeSidebar()" aria-label="Close sidebar">
+        <span class="material-icons">close</span>
+      </button>
+
+      <!-- Course Heading -->
+      <div class="sidebar__heading">
+        @if (editingCourse()) {
+          <div class="inline-form">
+            <input
+              class="inline-input"
+              [value]="editCourseTitle()"
+              (input)="editCourseTitle.set($any($event.target).value)"
+              placeholder="Course title"
+              (keydown.escape)="cancelEditCourse()"
+            />
+            <lib-textarea
+              [value]="editCourseDescription()"
+              (valueChange)="editCourseDescription.set($event)"
+              placeholder="Course description"
+              [minRows]="3"
+              size="small"
+              ariaLabel="Course description"
+            />
+            <div class="inline-form__actions">
+              <lib-button variant="primary" size="sm" [isLoading]="savingCourse()" (buttonClick)="saveEditCourse()">
+                Save
+              </lib-button>
+              <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditCourse()">
+                Cancel
+              </lib-button>
+            </div>
+          </div>
+        } @else {
+          <h1 class="text-title-large text-primary sidebar__course-name">{{ course.title }}</h1>
+          @if (course.description) {
+            <p class="text-body-medium text-secondary sidebar__description">
+              {{ course.description }}
+            </p>
+          }
+          <div class="sidebar__actions">
+            <lib-button variant="secondary" size="sm" (buttonClick)="startEditCourse()">
+              <span class="material-icons btn-icon">edit</span> Edit
+            </lib-button>
+            <lib-button variant="secondary" size="sm" (buttonClick)="navigateBackToCourse()">
+              Go to Course
+            </lib-button>
+          </div>
+        }
+      </div>
+
+      <hr class="sidebar__divider" />
+
+      <!-- Navigation Items -->
+      <nav class="sidebar__nav">
+        @for (item of navItems(); track item.id) {
+          <button
+            class="nav-item"
+            [class.nav-item--active]="activeView() === item.id"
+            [attr.aria-current]="activeView() === item.id ? 'page' : null"
+            (click)="switchView(item)"
+          >
+            <span class="material-icons nav-item__icon">{{ item.icon }}</span>
+            <span class="text-title-medium nav-item__label">{{ item.label }}</span>
+            @if (item.badge != null && item.badge > 0) {
+              <span class="nav-item__badge">{{ item.badge }}</span>
+            }
+          </button>
+        }
+      </nav>
+
+    </aside>
+
+    <!-- Sidebar Backdrop (mobile) -->
+    @if (sidebarOpen()) {
+      <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+    }
+
+    <!-- Main Content -->
+    <main class="content-area">
+      <div class="content-inner">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+}

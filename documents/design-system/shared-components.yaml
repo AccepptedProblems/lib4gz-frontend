@@ -1,0 +1,2884 @@
+openspec: "1.0"
+kind: SharedComponents
+info:
+  title: LMS Platform - Shared Angular Components
+  version: "1.0.0"
+  description: >
+    Reusable Angular standalone components used across the application.
+    Located in src/app/shared/components/.
+
+barrel_export:
+  file: src/app/shared/components/index.ts
+  exports:
+    - ./button/button.component
+    - ./spinner/spinner.component
+    - ./input/input.component
+    - ./card/card.component
+    - ./badge/badge.component
+    - ./dialog/dialog.component
+    - ./toast/toast.component
+    - ./tabs/tabs.component
+    - ./empty-state/empty-state.component
+    - ./skeleton/skeleton.component
+    - ./avatar/avatar.component
+    - ./progress-bar/progress-bar.component
+    - ./breadcrumb/breadcrumb.component
+    - ./pagination/pagination.component
+    - ./dropdown-menu/dropdown-menu.component
+    - ./chip/chip.component
+    - ./textarea/textarea.component
+
+# ──────────────────────────────────────────────────────────────
+# TEXTAREA COMPONENT
+# ──────────────────────────────────────────────────────────────
+textarea:
+  selector: lib-textarea
+  status: implemented
+  component:
+    file: src/app/shared/components/textarea/textarea.component.ts
+    template: src/app/shared/components/textarea/textarea.component.html
+    styles: src/app/shared/components/textarea/textarea.component.scss
+    standalone: true
+    imports: []
+
+  description: >
+    Reusable auto-expanding textarea component. Height automatically adjusts
+    to fit content — grows as the user types and shrinks when content is
+    removed. Supports an optional floating label (matching lib-input design
+    language), error state, disabled state, and size variants. Implements
+    ControlValueAccessor for reactive/template-driven forms AND supports
+    direct [value] + (valueChange) binding for simple use cases.
+
+  types:
+    - name: TextareaSize
+      definition: "'normal' | 'small'"
+
+  inputs:
+    - name: label
+      type: string
+      default: "''"
+      description: >
+        Optional floating label. When provided, renders an animated label
+        that floats above the textarea on focus or when content exists.
+        When empty, no label is rendered (use ariaLabel for a11y).
+    - name: placeholder
+      type: string
+      default: "''"
+      description: >
+        Native placeholder text. When a floating label is present, the
+        placeholder is hidden until the label floats (focus or has value).
+    - name: size
+      type: TextareaSize
+      default: "'normal'"
+      description: >
+        Controls padding, border-radius, and font-size. 'normal' uses
+        16px padding and 8px border-radius. 'small' uses 12px 16px
+        padding, 10px border-radius, and 0.875rem font-size.
+    - name: error
+      type: "string | null"
+      default: "null"
+      description: >
+        Error message to display below the textarea. When set, the border
+        and label turn error color (--error-color).
+    - name: disabled
+      type: boolean
+      default: "false"
+    - name: required
+      type: boolean
+      default: "false"
+      description: "Adds ' *' after the floating label text."
+    - name: minRows
+      type: number
+      default: "3"
+      description: >
+        Minimum visible rows. Sets the native rows attribute. The textarea
+        never shrinks below this height during auto-resize.
+    - name: maxRows
+      type: number
+      default: "15"
+      description: >
+        Maximum visible rows. Caps the textarea height via max-height
+        computed as maxRows * line-height + vertical padding. When content
+        exceeds this height, overflow-y switches to auto to show a scrollbar.
+    - name: ariaLabel
+      type: string
+      default: "''"
+      description: >
+        Accessible label for screen readers when no floating label is used.
+        Falls back to label value if ariaLabel is not provided.
+    - name: value
+      type: string
+      default: "''"
+      description: >
+        Direct value binding input for non-CVA usage. When the parent sets
+        [value], an internal effect syncs it to the textarea. Ignored when
+        ControlValueAccessor is active (writeValue takes precedence).
+
+  outputs:
+    - name: valueChange
+      type: string
+      description: >
+        Emitted on every input event with the current textarea value.
+        Use with [value] for direct binding: [value]="signal()"
+        (valueChange)="signal.set($event)".
+
+  cva:
+    description: >
+      Implements ControlValueAccessor for integration with Angular
+      reactive forms and ngModel. When writeValue is called, CVA mode
+      activates and the [value] input is ignored.
+    methods:
+      - writeValue
+      - registerOnChange
+      - registerOnTouched
+      - setDisabledState
+
+  behavior:
+    auto_resize: >
+      On every input event, the textarea height is reset to 'auto' then
+      set to scrollHeight + 'px'. This makes the textarea grow and shrink
+      with content. CSS overflow-y is hidden by default but switches to
+      auto when content exceeds maxRows height. The native rows attribute
+      provides the minimum height. maxRows caps growth via max-height
+      computed as maxRows * line-height (1.5em) + vertical padding, and
+      autoResize clamps the height to this maximum. Auto-resize skips
+      hidden elements (checks offsetParent) to prevent collapsing to
+      zero height when inside unopened dialogs. CSS min-height (45px
+      normal, 34px small) provides a safety floor matching lib-input.
+      On value changes (via input binding or writeValue), resize is
+      scheduled via afterNextRender to ensure DOM is updated first.
+
+  design:
+    matches: lib-input
+    description: >
+      Mirrors the lib-input component's visual design: same border color
+      (--input-border-color), focus state (--primary-color border + label),
+      error state (--error-color), disabled state (opacity 0.6), floating
+      label animation, and size variants. The key difference is multi-line
+      support with auto-expanding height and no resize handle.
+
+  usage_patterns:
+    - name: Direct binding (no label)
+      example: |
+        <lib-textarea
+          [value]="mySignal()"
+          (valueChange)="mySignal.set($event)"
+          placeholder="Enter text..."
+          [minRows]="3"
+          ariaLabel="Description"
+        />
+    - name: With floating label
+      example: |
+        <lib-textarea
+          label="Exercise Title"
+          [value]="title()"
+          (valueChange)="title.set($event)"
+          [required]="true"
+          [error]="titleError()"
+          [minRows]="1"
+        />
+    - name: Small size (inline editing)
+      example: |
+        <lib-textarea
+          [value]="description()"
+          (valueChange)="description.set($event)"
+          placeholder="Description"
+          size="small"
+          [minRows]="3"
+        />
+
+  current_implementation: |
+    import {
+      Component, input, output, signal, computed, forwardRef, effect,
+      viewChild, ElementRef, afterNextRender, Injector, inject,
+    } from '@angular/core';
+    import {
+      ControlValueAccessor, NG_VALUE_ACCESSOR,
+    } from '@angular/forms';
+
+    export type TextareaSize = 'normal' | 'small';
+
+    @Component({
+      selector: 'lib-textarea',
+      standalone: true,
+      templateUrl: './textarea.component.html',
+      styleUrl: './textarea.component.scss',
+      providers: [
+        {
+          provide: NG_VALUE_ACCESSOR,
+          useExisting: forwardRef(() => TextareaComponent),
+          multi: true,
+        },
+      ],
+    })
+    export class TextareaComponent implements ControlValueAccessor {
+      private static nextId = 0;
+      protected readonly textareaId = `lib-textarea-${TextareaComponent.nextId++}`;
+      private readonly injector = inject(Injector);
+
+      // Config inputs
+      label = input<string>('');
+      placeholder = input<string>('');
+      size = input<TextareaSize>('normal');
+      error = input<string | null>(null);
+      disabled = input<boolean>(false);
+      required = input<boolean>(false);
+      minRows = input<number>(3);
+      maxRows = input<number>(15);
+      ariaLabel = input<string>('');
+
+      // Value input for direct binding (non-CVA)
+      value = input<string>('');
+      valueChange = output<string>();
+
+      // Internal state
+      protected internalValue = signal<string>('');
+      focused = signal<boolean>(false);
+      private internalDisabled = signal<boolean>(false);
+      private cvaActive = false;
+
+      isFloating = computed(() => this.focused() || this.internalValue().length > 0);
+      isDisabled = computed(() => this.disabled() || this.internalDisabled());
+
+      protected textareaRef = viewChild<ElementRef<HTMLTextAreaElement>>('textareaEl');
+
+      private onChange: (value: string) => void = () => {};
+      private onTouched: () => void = () => {};
+
+      constructor() {
+        // Sync external value input → internal value (when not using CVA)
+        effect(() => {
+          const v = this.value();
+          if (!this.cvaActive) {
+            this.internalValue.set(v);
+            this.scheduleResize();
+          }
+        });
+      }
+
+      // ── ControlValueAccessor ──────────────────────────────────────
+
+      writeValue(val: string): void {
+        this.cvaActive = true;
+        this.internalValue.set(val ?? '');
+        this.scheduleResize();
+      }
+
+      registerOnChange(fn: (value: string) => void): void {
+        this.onChange = fn;
+      }
+
+      registerOnTouched(fn: () => void): void {
+        this.onTouched = fn;
+      }
+
+      setDisabledState(isDisabled: boolean): void {
+        this.internalDisabled.set(isDisabled);
+      }
+
+      // ── Event handlers ────────────────────────────────────────────
+
+      onInput(event: Event): void {
+        const target = event.target as HTMLTextAreaElement;
+        this.internalValue.set(target.value);
+        this.onChange(target.value);
+        this.valueChange.emit(target.value);
+        this.autoResize();
+      }
+
+      onFocus(): void {
+        this.focused.set(true);
+      }
+
+      onBlur(): void {
+        this.focused.set(false);
+        this.onTouched();
+      }
+
+      // ── Auto-resize ───────────────────────────────────────────────
+
+      autoResize(): void {
+        const ta = this.textareaRef()?.nativeElement;
+        if (!ta || !ta.offsetParent) return;
+        ta.style.height = 'auto';
+        const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || (parseFloat(getComputedStyle(ta).fontSize) * 1.5);
+        const padding = parseFloat(getComputedStyle(ta).paddingTop) + parseFloat(getComputedStyle(ta).paddingBottom);
+        const border = parseFloat(getComputedStyle(ta).borderTopWidth) + parseFloat(getComputedStyle(ta).borderBottomWidth);
+        const maxHeight = lineHeight * this.maxRows() + padding + border;
+        const clampedHeight = Math.min(ta.scrollHeight, maxHeight);
+        ta.style.height = clampedHeight + 'px';
+        ta.style.overflowY = ta.scrollHeight > maxHeight ? 'auto' : 'hidden';
+      }
+
+      private scheduleResize(): void {
+        afterNextRender(() => this.autoResize(), { injector: this.injector });
+      }
+    }
+
+  current_template: |
+    <div
+      class="textarea-wrapper"
+      [class.normal]="size() === 'normal'"
+      [class.small]="size() === 'small'"
+      [class.focused]="focused()"
+      [class.floating]="isFloating()"
+      [class.has-error]="error()"
+      [class.disabled]="isDisabled()"
+      [class.has-label]="!!label()"
+    >
+      <div class="textarea-field">
+        <textarea
+          #textareaEl
+          [id]="textareaId"
+          [attr.rows]="minRows()"
+          [disabled]="isDisabled()"
+          [required]="required()"
+          [value]="internalValue()"
+          [placeholder]="label() && !isFloating() ? '' : placeholder()"
+          [attr.aria-label]="ariaLabel() || label() || null"
+          [attr.aria-invalid]="!!error()"
+          [attr.aria-describedby]="error() ? textareaId + '-error' : null"
+          (input)="onInput($event)"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+        ></textarea>
+        @if (label()) {
+          <label [for]="textareaId" [class.required]="required()">
+            {{ label() }}
+          </label>
+        }
+      </div>
+      @if (error()) {
+        <span class="error-text" [id]="textareaId + '-error'" role="alert">
+          {{ error() }}
+        </span>
+      }
+    </div>
+
+  current_styles: |
+    :host {
+      display: block;
+      width: 100%;
+    }
+
+    .textarea-wrapper {
+      width: 100%;
+
+      .textarea-field {
+        position: relative;
+
+        textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid var(--input-border-color);
+          background: transparent;
+          outline: none;
+          font-family: inherit;
+          line-height: 1.5;
+          resize: none;
+          transition: border-color var(--duration-normal) var(--easing-ease-in-out);
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
+
+        label {
+          position: absolute;
+          left: 16px;
+          color: var(--neutral-color-5);
+          pointer-events: none;
+          transition:
+            top var(--duration-normal) var(--easing-ease-in-out),
+            font-size var(--duration-normal) var(--easing-ease-in-out),
+            color var(--duration-normal) var(--easing-ease-in-out),
+            background-color var(--duration-normal) var(--easing-ease-in-out);
+
+          &.required::after {
+            content: ' *';
+          }
+        }
+      }
+
+      // ── Normal size ──
+      &.normal .textarea-field {
+        textarea {
+          min-height: 45px;
+          padding: 16px;
+          border-radius: 8px;
+        }
+        label { top: 16px; }
+      }
+
+      &.normal.floating .textarea-field label {
+        top: 0;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        background-color: var(--neutral-color-0);
+        padding: 0 4px;
+      }
+
+      // ── Small size ──
+      &.small .textarea-field {
+        textarea {
+          min-height: 34px;
+          padding: 12px 16px;
+          border-radius: 10px;
+          font-size: 0.875rem;
+        }
+        label { top: 12px; font-size: 0.875rem; }
+      }
+
+      &.small.floating .textarea-field label {
+        top: 0;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        background-color: var(--neutral-color-0);
+        padding: 0 4px;
+      }
+
+      // ── Focused state ──
+      &.focused .textarea-field {
+        textarea { border-color: var(--primary-color); }
+        label { color: var(--primary-color); }
+      }
+
+      // ── Error state ──
+      &.has-error .textarea-field {
+        textarea { border-color: var(--error-color); }
+        label { color: var(--error-color); }
+      }
+
+      // ── Error text ──
+      .error-text {
+        display: block;
+        color: var(--error-color);
+        font-size: 0.75rem;
+        margin-top: 4px;
+        margin-left: var(--spacing-2);
+      }
+
+      // ── Disabled state ──
+      &.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      // ── Prevent iOS zoom on focus ──
+      @media (max-width: 768px) {
+        &.normal .textarea-field textarea,
+        &.small .textarea-field textarea {
+          font-size: 16px;
+        }
+      }
+    }
+
+# ──────────────────────────────────────────────────────────────
+# BUTTON COMPONENT
+# ──────────────────────────────────────────────────────────────
+button:
+  selector: lib-button
+  status: implemented
+  component:
+    file: src/app/shared/components/button/button.component.ts
+    template: src/app/shared/components/button/button.component.html
+    styles: src/app/shared/components/button/button.component.scss
+    standalone: true
+    imports: [SpinnerComponent]
+
+  types:
+    - name: ButtonVariant
+      definition: "'primary' | 'secondary' | 'destructive'"
+    - name: ButtonSize
+      definition: "'sm' | 'md' | 'lg'"
+    - name: ButtonType
+      definition: "'button' | 'submit' | 'reset'"
+
+  inputs:
+    - name: isLoading
+      type: boolean
+      default: "false"
+      description: Show loading spinner and disable interaction
+    - name: variant
+      type: ButtonVariant
+      default: "'primary'"
+      description: Visual style variant
+    - name: size
+      type: ButtonSize
+      default: "'md'"
+      description: Button size
+    - name: disabled
+      type: boolean
+      default: "false"
+      description: Disable the button
+    - name: type
+      type: ButtonType
+      default: "'button'"
+      description: Native button type attribute
+    - name: routerLink
+      type: "string | any[] | null"
+      default: "null"
+      description: Angular router navigation path
+    - name: routerState
+      type: "Record<string, any> | null"
+      default: "null"
+      description: Router state object for navigation
+    - name: ariaLabel
+      type: "string | null"
+      default: "null"
+      description: Accessibility label
+
+  outputs:
+    - name: buttonClick
+      type: MouseEvent
+      description: Emitted on click (after disabled/loading check)
+
+  computed:
+    - name: isDisabled
+      expression: "this.disabled() || this.isLoading()"
+      description: True when disabled OR loading
+    - name: spinnerDiameter
+      expression: "{ sm: 16, md: 20, lg: 24 }[this.size()]"
+      description: Spinner size matched to button size
+
+  behavior:
+    - Returns early if isDisabled
+    - If routerLink is set, navigates via Router.navigate()
+    - Emits buttonClick output after navigation
+
+  implementation: |
+    import { Component, input, output, computed, inject } from '@angular/core';
+    import { Router } from '@angular/router';
+    import { SpinnerComponent } from '../spinner/spinner.component';
+
+    export type ButtonVariant = 'primary' | 'secondary' | 'destructive';
+    export type ButtonSize = 'sm' | 'md' | 'lg';
+    export type ButtonType = 'button' | 'submit' | 'reset';
+
+    @Component({
+      selector: 'lib-button',
+      standalone: true,
+      imports: [SpinnerComponent],
+      templateUrl: './button.component.html',
+      styleUrl: './button.component.scss',
+    })
+    export class ButtonComponent {
+      isLoading = input<boolean>(false);
+      variant = input<ButtonVariant>('primary');
+      size = input<ButtonSize>('md');
+      disabled = input<boolean>(false);
+      type = input<ButtonType>('button');
+      routerLink = input<string | any[] | null>(null);
+      routerState = input<Record<string, any> | null>(null);
+      ariaLabel = input<string | null>(null);
+
+      buttonClick = output<MouseEvent>();
+
+      isDisabled = computed(() => this.disabled() || this.isLoading());
+
+      spinnerDiameter = computed(() => {
+        const sizeMap: Record<ButtonSize, number> = { sm: 16, md: 20, lg: 24 };
+        return sizeMap[this.size()];
+      });
+
+      private router = inject(Router);
+
+      handleClick(event: MouseEvent): void {
+        if (this.isDisabled()) return;
+
+        const link = this.routerLink();
+        if (link) {
+          const path = Array.isArray(link) ? link : [link];
+          this.router.navigate(path, { state: this.routerState() ?? undefined });
+        }
+
+        this.buttonClick.emit(event);
+      }
+    }
+
+  template: |
+    <button
+      [type]="type()"
+      [disabled]="isDisabled()"
+      [attr.aria-label]="ariaLabel()"
+      [attr.aria-busy]="isLoading()"
+      [class.primary]="variant() === 'primary'"
+      [class.secondary]="variant() === 'secondary'"
+      [class.destructive]="variant() === 'destructive'"
+      [class.sm]="size() === 'sm'"
+      [class.md]="size() === 'md'"
+      [class.lg]="size() === 'lg'"
+      [class.loading]="isLoading()"
+      (click)="handleClick($event)"
+    >
+      @if (isLoading()) {
+        <lib-spinner
+          [diameter]="spinnerDiameter()"
+          type="inline"
+          color="inherit"
+          class="button-spinner"
+        />
+      }
+      <span class="button-content" [class.hidden]="isLoading()">
+        <ng-content />
+      </span>
+    </button>
+
+  styles: |
+    :host {
+      display: inline-block;
+    }
+
+    button {
+      width: 100%;
+      position: relative;
+      font-family: inherit;
+    }
+
+    .button-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      &.hidden {
+        visibility: hidden;
+      }
+    }
+
+    .button-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+  usage: |
+    <lib-button
+      variant="primary"
+      size="md"
+      [isLoading]="isSubmitting"
+      (buttonClick)="onSubmit()"
+    >
+      Save Changes
+    </lib-button>
+
+    <lib-button
+      variant="secondary"
+      routerLink="/"
+    >
+      Cancel
+    </lib-button>
+
+    <lib-button
+      variant="destructive"
+      size="sm"
+      (buttonClick)="onDelete()"
+    >
+      Delete
+    </lib-button>
+
+# ──────────────────────────────────────────────────────────────
+# SPINNER COMPONENT
+# ──────────────────────────────────────────────────────────────
+spinner:
+  selector: lib-spinner
+  status: implemented
+  component:
+    file: src/app/shared/components/spinner/spinner.component.ts
+    template: src/app/shared/components/spinner/spinner.component.html
+    styles: src/app/shared/components/spinner/spinner.component.scss
+    standalone: true
+    imports: [MatProgressSpinner]
+    dependency: "@angular/material/progress-spinner"
+
+  types:
+    - name: SpinnerType
+      definition: "'screen' | 'inline' | 'overlay'"
+    - name: SpinnerColor
+      definition: "'primary' | 'accent' | 'inherit'"
+
+  inputs:
+    - name: type
+      type: SpinnerType
+      default: "'inline'"
+      description: >
+        Display mode. screen = full viewport, inline = fits content,
+        overlay = fixed fullscreen with backdrop.
+    - name: diameter
+      type: number
+      default: "40"
+      description: Spinner size in pixels
+    - name: strokeWidth
+      type: number
+      default: "4"
+      description: Spinner stroke thickness
+    - name: color
+      type: SpinnerColor
+      default: "'primary'"
+      description: Color theme. inherit uses --spinner-color or currentColor.
+    - name: label
+      type: string
+      default: "'Loading'"
+      description: Accessibility label for screen readers
+
+  computed:
+    - name: matColor
+      expression: "this.color() === 'inherit' ? undefined : this.color()"
+      description: Maps color to Angular Material color input (undefined for inherit)
+
+  implementation: |
+    import { Component, input, computed } from '@angular/core';
+    import { MatProgressSpinner } from '@angular/material/progress-spinner';
+
+    export type SpinnerType = 'screen' | 'inline' | 'overlay';
+    export type SpinnerColor = 'primary' | 'accent' | 'inherit';
+
+    @Component({
+      selector: 'lib-spinner',
+      standalone: true,
+      imports: [MatProgressSpinner],
+      templateUrl: './spinner.component.html',
+      styleUrl: './spinner.component.scss',
+    })
+    export class SpinnerComponent {
+      type = input<SpinnerType>('inline');
+      diameter = input<number>(40);
+      strokeWidth = input<number>(4);
+      color = input<SpinnerColor>('primary');
+      label = input<string>('Loading');
+
+      matColor = computed(() => {
+        const c = this.color();
+        return c === 'inherit' ? undefined : c;
+      });
+    }
+
+  template: |
+    <div
+      class="spinner-container"
+      [class.screen]="type() === 'screen'"
+      [class.inline]="type() === 'inline'"
+      [class.overlay]="type() === 'overlay'"
+      [class.inherit-color]="color() === 'inherit'"
+      role="status"
+      [attr.aria-label]="label()"
+    >
+      <mat-spinner
+        [diameter]="diameter()"
+        [strokeWidth]="strokeWidth()"
+        [color]="matColor()"
+      />
+    </div>
+
+  styles: |
+    .spinner-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &.inline {
+        width: auto;
+        height: auto;
+      }
+
+      &.screen {
+        width: 100%;
+        height: calc(100vh - 70px);
+        min-height: 200px;
+      }
+
+      &.overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        z-index: var(--z-index-modal);
+      }
+
+      &.inherit-color {
+        ::ng-deep .mdc-circular-progress__indeterminate-circle-graphic {
+          stroke: var(--spinner-color, currentColor);
+        }
+      }
+    }
+
+  type_layouts:
+    - type: inline
+      description: Minimal sizing, fits within parent container
+      use_case: Inside buttons, table cells, small containers
+
+    - type: screen
+      description: Full viewport height minus navbar (70px)
+      use_case: Page-level loading state
+
+    - type: overlay
+      description: Fixed fullscreen with semi-transparent white backdrop
+      use_case: Blocking operations that prevent interaction
+
+  usage: |
+    <!-- Inline spinner (in button) -->
+    <lib-spinner type="inline" [diameter]="20" color="inherit" />
+
+    <!-- Full page loading -->
+    <lib-spinner type="screen" />
+
+    <!-- Overlay during save -->
+    <lib-spinner type="overlay" label="Saving..." />
+
+# ──────────────────────────────────────────────────────────────
+# INPUT COMPONENT
+# ──────────────────────────────────────────────────────────────
+input:
+  selector: lib-input
+  status: implemented
+  component:
+    file: src/app/shared/components/input/input.component.ts
+    template: src/app/shared/components/input/input.component.html
+    styles: src/app/shared/components/input/input.component.scss
+    standalone: true
+    imports: []
+    providers:
+      - provide: NG_VALUE_ACCESSOR
+        useExisting: "forwardRef(() => InputComponent)"
+        multi: true
+
+  description: >
+    Floating-label text input with ControlValueAccessor integration.
+    Label acts as placeholder when empty/unfocused and animates to the
+    top border edge on focus or when the input has a value.
+    Similar to Angular Material outlined input, but implemented with
+    pure CSS/HTML — no external library dependencies.
+
+  layout:
+    width: "100% of parent container by default (fluid)"
+    host_display: block
+    constraint: >
+      Width is determined by the parent container. To fix the width,
+      apply CSS on the host element (e.g. lib-input { width: 300px; })
+      or constrain the parent container.
+
+  types:
+    - name: InputSize
+      definition: "'normal' | 'small'"
+    - name: InputType
+      definition: "'text' | 'email' | 'password' | 'number' | 'tel' | 'url'"
+
+  inputs:
+    - name: label
+      type: string
+      required: true
+      description: Label text displayed as floating placeholder
+    - name: size
+      type: InputSize
+      default: "'normal'"
+      description: "Input size variant (normal: 45px, small: 34px)"
+    - name: type
+      type: InputType
+      default: "'text'"
+      description: Native input type attribute
+    - name: error
+      type: "string | null"
+      default: "null"
+      description: Error message text. When set, input shows error styling.
+    - name: disabled
+      type: boolean
+      default: "false"
+      description: Disable the input
+    - name: required
+      type: boolean
+      default: "false"
+      description: Mark field as required (shows asterisk on label)
+
+  signals:
+    - name: value
+      type: "signal<string>"
+      initial: "''"
+      description: Current input value (internal state managed by CVA)
+    - name: focused
+      type: "signal<boolean>"
+      initial: "false"
+      description: Whether input is currently focused
+    - name: internalDisabled
+      type: "signal<boolean>"
+      initial: "false"
+      description: Disabled state set by ControlValueAccessor.setDisabledState()
+
+  computed:
+    - name: isFloating
+      expression: "this.focused() || this.value().length > 0"
+      description: Label floats when input is focused or has a value
+    - name: isDisabled
+      expression: "this.disabled() || this.internalDisabled()"
+      description: True when disabled via input or form control
+
+  interfaces:
+    - name: ControlValueAccessor
+      source: "@angular/forms"
+      description: Enables Angular reactive and template-driven form integration
+      methods:
+        - name: writeValue
+          description: Sets value from form control
+        - name: registerOnChange
+          description: Registers change callback
+        - name: registerOnTouched
+          description: Registers touched callback
+        - name: setDisabledState
+          description: Updates internalDisabled signal from form control
+
+  behavior:
+    - "Label acts as placeholder when input is empty and not focused"
+    - "On focus or when input has value: label animates to the top border edge"
+    - "Floating label uses CSS transition on top, font-size, color, and background-color"
+    - "Floating label gets a background-color patch to visually cut through the border"
+    - "When focused, border and label color change to primary color"
+    - "When error is set, border and label color change to error color"
+    - "Inner .input-field div isolates input+label from error text so label top:50% is relative to input height only"
+    - "Required indicator (*) appended to label text via ::after pseudo-element"
+    - "Implements ControlValueAccessor for Angular reactive and template-driven forms"
+    - "setDisabledState from form control merges with disabled input"
+    - "onBlur triggers onTouched callback for form validation timing"
+    - "Width fills parent container by default (:host display:block, wrapper width:100%)"
+    - "Width can be constrained via CSS on the host element or by sizing the parent"
+
+  implementation: |
+    import {
+      Component, input, computed, signal, forwardRef
+    } from '@angular/core';
+    import {
+      ControlValueAccessor, NG_VALUE_ACCESSOR
+    } from '@angular/forms';
+
+    export type InputSize = 'normal' | 'small';
+    export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+
+    @Component({
+      selector: 'lib-input',
+      standalone: true,
+      imports: [],
+      templateUrl: './input.component.html',
+      styleUrl: './input.component.scss',
+      providers: [
+        {
+          provide: NG_VALUE_ACCESSOR,
+          useExisting: forwardRef(() => InputComponent),
+          multi: true,
+        },
+      ],
+    })
+    export class InputComponent implements ControlValueAccessor {
+      private static nextId = 0;
+      protected readonly inputId = `lib-input-${InputComponent.nextId++}`;
+
+      label = input.required<string>();
+      size = input<InputSize>('normal');
+      type = input<InputType>('text');
+      error = input<string | null>(null);
+      disabled = input<boolean>(false);
+      required = input<boolean>(false);
+
+      value = signal<string>('');
+      focused = signal<boolean>(false);
+      private internalDisabled = signal<boolean>(false);
+
+      isFloating = computed(() => this.focused() || this.value().length > 0);
+      isDisabled = computed(() => this.disabled() || this.internalDisabled());
+
+      private onChange: (value: string) => void = () => {};
+      private onTouched: () => void = () => {};
+
+      writeValue(value: string): void {
+        this.value.set(value ?? '');
+      }
+
+      registerOnChange(fn: (value: string) => void): void {
+        this.onChange = fn;
+      }
+
+      registerOnTouched(fn: () => void): void {
+        this.onTouched = fn;
+      }
+
+      setDisabledState(isDisabled: boolean): void {
+        this.internalDisabled.set(isDisabled);
+      }
+
+      onInput(event: Event): void {
+        const target = event.target as HTMLInputElement;
+        this.value.set(target.value);
+        this.onChange(target.value);
+      }
+
+      onFocus(): void {
+        this.focused.set(true);
+      }
+
+      onBlur(): void {
+        this.focused.set(false);
+        this.onTouched();
+      }
+    }
+
+  template: |
+    <div
+      class="input-wrapper"
+      [class.normal]="size() === 'normal'"
+      [class.small]="size() === 'small'"
+      [class.focused]="focused()"
+      [class.floating]="isFloating()"
+      [class.has-error]="error()"
+      [class.disabled]="isDisabled()"
+    >
+      <div class="input-field">
+        <input
+          [id]="inputId"
+          [type]="type()"
+          [disabled]="isDisabled()"
+          [required]="required()"
+          [value]="value()"
+          [attr.aria-label]="label()"
+          [attr.aria-invalid]="!!error()"
+          [attr.aria-describedby]="error() ? inputId + '-error' : null"
+          (input)="onInput($event)"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+        />
+        <label [for]="inputId" [class.required]="required()">
+          {{ label() }}
+        </label>
+      </div>
+      @if (error()) {
+        <span class="error-text" [id]="inputId + '-error'" role="alert">
+          {{ error() }}
+        </span>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+      width: 100%;
+    }
+
+    .input-wrapper {
+      width: 100%;
+
+      .input-field {
+        position: relative;
+
+        input {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid var(--neutral-color-4);
+          background: transparent;
+          outline: none;
+          font-family: inherit;
+          transition: border-color var(--duration-normal) var(--easing-ease-in-out);
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
+
+        label {
+          position: absolute;
+          left: 10px;
+          color: var(--neutral-color-5);
+          pointer-events: none;
+          transition:
+            top var(--duration-normal) var(--easing-ease-in-out),
+            font-size var(--duration-normal) var(--easing-ease-in-out),
+            color var(--duration-normal) var(--easing-ease-in-out),
+            background-color var(--duration-normal) var(--easing-ease-in-out);
+
+          &.required::after {
+            content: ' *';
+          }
+        }
+      }
+
+      // ── Normal size (45px height) ──
+      &.normal .input-field {
+        input {
+          height: 45px;
+          padding: 0 10px;
+          border-radius: 8px;
+        }
+
+        label {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+      }
+
+      &.normal.floating .input-field label {
+        top: 0;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        background-color: var(--neutral-color-0);
+        padding: 0 4px;
+      }
+
+      // ── Small size (34px height) ──
+      &.small .input-field {
+        input {
+          height: 34px;
+          padding: 0 10px;
+          border-radius: 10px;
+          font-size: 0.875rem;
+        }
+
+        label {
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 0.875rem;
+        }
+      }
+
+      &.small.floating .input-field label {
+        top: 0;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        background-color: var(--neutral-color-0);
+        padding: 0 4px;
+      }
+
+      // ── Focused state ──
+      &.focused .input-field {
+        input {
+          border-color: var(--primary-color);
+        }
+        label {
+          color: var(--primary-color);
+        }
+      }
+
+      // ── Error state ──
+      &.has-error .input-field {
+        input {
+          border-color: var(--error-color);
+        }
+        label {
+          color: var(--error-color);
+        }
+      }
+
+      // ── Error text ──
+      .error-text {
+        display: block;
+        color: var(--error-color);
+        font-size: 0.75rem;
+        margin-top: 4px;
+        margin-left: var(--spacing-2);
+      }
+
+      // ── Disabled state ──
+      &.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      // ── Prevent iOS zoom on focus ──
+      @media (max-width: 768px) {
+        &.normal .input-field input,
+        &.small .input-field input {
+          font-size: 16px;
+        }
+      }
+    }
+
+  usage: |
+    <!-- Reactive form usage -->
+    <form [formGroup]="loginForm">
+      <lib-input
+        formControlName="email"
+        label="Email"
+        type="email"
+        [required]="true"
+        [error]="loginForm.get('email')?.touched &&
+                 loginForm.get('email')?.invalid
+                 ? 'Valid email is required' : null"
+      />
+    </form>
+
+    <!-- Small size with ngModel -->
+    <lib-input
+      label="Search courses..."
+      size="small"
+      [(ngModel)]="searchQuery"
+    />
+
+    <!-- With error -->
+    <lib-input
+      label="Username"
+      [error]="'Username is already taken'"
+    />
+
+    <!-- Width fills parent container by default.
+         Constrain via parent or host CSS: -->
+    <div style="width: 300px">
+      <lib-input label="Fixed by parent" />
+    </div>
+
+# ──────────────────────────────────────────────────────────────
+# CARD COMPONENT
+# ──────────────────────────────────────────────────────────────
+card:
+  selector: lib-card
+  status: planned
+  component:
+    file: src/app/shared/components/card/card.component.ts
+    template: src/app/shared/components/card/card.component.html
+    styles: src/app/shared/components/card/card.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: CardVariant
+      definition: "'elevated' | 'outlined' | 'flat'"
+
+  inputs:
+    - name: variant
+      type: CardVariant
+      default: "'elevated'"
+      description: >
+        Visual style. elevated = border + shadow, outlined = border only,
+        flat = no border or shadow.
+    - name: hoverable
+      type: boolean
+      default: "false"
+      description: Enable hover lift effect (shadow-md + translateY(-2px))
+    - name: padding
+      type: string
+      default: "'md'"
+      description: "Content padding using spacing tokens (none, sm, md, lg)"
+
+  behavior:
+    - "Content projection via ng-content for flexible card body"
+    - "Elevated variant: --border-subtle + --shadow-xs at rest"
+    - "Hoverable: transitions to --shadow-md + translateY(-2px) on hover"
+    - "Outlined variant: --border-default, no shadow"
+    - "Flat variant: no border, no shadow (background only)"
+
+  template: |
+    <div
+      class="card"
+      [class.elevated]="variant() === 'elevated'"
+      [class.outlined]="variant() === 'outlined'"
+      [class.flat]="variant() === 'flat'"
+      [class.hoverable]="hoverable()"
+      [class]="'padding-' + padding()"
+    >
+      <ng-content />
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .card {
+      background-color: var(--card-bg-color);
+      border-radius: var(--radius-md);
+      transition:
+        box-shadow var(--duration-normal) var(--easing-ease-in-out),
+        transform var(--duration-normal) var(--easing-ease-in-out);
+
+      &.elevated {
+        border: var(--border-subtle);
+        box-shadow: var(--card-shadow);
+      }
+
+      &.outlined {
+        border: var(--border-default);
+        box-shadow: none;
+      }
+
+      &.flat {
+        border: none;
+        box-shadow: none;
+      }
+
+      &.hoverable:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-2px);
+      }
+
+      &.padding-none { padding: 0; }
+      &.padding-sm { padding: var(--spacing-sm); }
+      &.padding-md { padding: var(--spacing-md); }
+      &.padding-lg { padding: var(--spacing-lg); }
+    }
+
+  usage: |
+    <lib-card variant="elevated" [hoverable]="true">
+      <h3>Course Title</h3>
+      <p>Course description text</p>
+    </lib-card>
+
+    <lib-card variant="outlined" padding="lg">
+      <p>Settings panel content</p>
+    </lib-card>
+
+# ──────────────────────────────────────────────────────────────
+# BADGE COMPONENT
+# ──────────────────────────────────────────────────────────────
+badge:
+  selector: lib-badge
+  status: planned
+  component:
+    file: src/app/shared/components/badge/badge.component.ts
+    template: src/app/shared/components/badge/badge.component.html
+    styles: src/app/shared/components/badge/badge.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: BadgeVariant
+      definition: "'primary' | 'success' | 'warning' | 'error' | 'neutral'"
+
+  inputs:
+    - name: variant
+      type: BadgeVariant
+      default: "'neutral'"
+      description: Color variant using subtle surface backgrounds
+    - name: size
+      type: "'sm' | 'md'"
+      default: "'md'"
+      description: Badge size
+
+  behavior:
+    - "Pill-shaped badge with subtle background and darker text"
+    - "Content projected via ng-content for flexible label text"
+    - "Each variant uses matching surface-*-subtle background"
+
+  template: |
+    <span
+      class="badge"
+      [class]="variant() + ' size-' + size()"
+    >
+      <ng-content />
+    </span>
+
+  styles: |
+    :host {
+      display: inline-block;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius-full);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+
+      &.size-sm {
+        padding: 2px var(--spacing-sm);
+        font-size: var(--label-small-size);
+        line-height: var(--label-small-height);
+      }
+
+      &.size-md {
+        padding: var(--spacing-xxs) var(--spacing-sm);
+        font-size: var(--label-medium-size);
+        line-height: var(--label-medium-height);
+      }
+
+      &.primary {
+        background-color: var(--surface-primary-subtle);
+        color: var(--primary-color-700);
+      }
+
+      &.success {
+        background-color: var(--surface-success-subtle);
+        color: var(--success-color-8);
+      }
+
+      &.warning {
+        background-color: var(--surface-warning-subtle);
+        color: var(--warning-color-8);
+      }
+
+      &.error {
+        background-color: var(--surface-error-subtle);
+        color: var(--error-color-8);
+      }
+
+      &.neutral {
+        background-color: var(--neutral-color-2);
+        color: var(--neutral-color-7);
+      }
+    }
+
+  usage: |
+    <lib-badge variant="success">Active</lib-badge>
+    <lib-badge variant="warning" size="sm">Pending</lib-badge>
+    <lib-badge variant="error">Rejected</lib-badge>
+
+# ──────────────────────────────────────────────────────────────
+# CHIP COMPONENT
+# ──────────────────────────────────────────────────────────────
+chip:
+  selector: lib-chip
+  status: implemented
+  component:
+    file: src/app/shared/components/chip/chip.component.ts
+    styles: src/app/shared/components/chip/chip.component.scss
+    standalone: true
+    imports: []
+
+  description: >
+    Reusable filter chip component used for inline filter lists.
+    Supports selected/unselected toggle states, optional count badge,
+    and variant-based coloring. Emits a click event when toggled.
+
+  types:
+    - name: ChipVariant
+      definition: "'default' | 'success' | 'warning' | 'error' | 'neutral'"
+
+  inputs:
+    - name: label
+      type: string
+      required: true
+      description: Display text for the chip
+    - name: value
+      type: string
+      required: true
+      description: Value emitted on selection (e.g. status enum value)
+    - name: selected
+      type: boolean
+      default: "false"
+      description: Whether the chip is currently selected/active
+    - name: variant
+      type: ChipVariant
+      default: "'default'"
+      description: >
+        Color variant applied when selected. Uses matching semantic
+        surface tokens. Unselected chips use neutral styling.
+    - name: count
+      type: "number | null"
+      default: "null"
+      description: >
+        Optional count badge displayed inside the chip. When non-null
+        and > 0, renders a small numeric badge after the label text.
+
+  outputs:
+    - name: chipClick
+      type: string
+      description: Emits the chip's value when clicked
+
+  behavior:
+    - "Toggleable chip with selected/unselected visual states"
+    - "Selected state uses variant-specific background and text color"
+    - "Unselected state uses neutral border and text"
+    - "Optional count badge renders inline after label text"
+    - "Emits chipClick with value on click"
+    - "Uses role=option and aria-selected for accessibility"
+
+  implementation: |
+    import { Component, input, output } from '@angular/core';
+
+    export type ChipVariant = 'default' | 'success' | 'warning' | 'error' | 'neutral';
+
+    @Component({
+      selector: 'lib-chip',
+      standalone: true,
+      template: `
+        <button
+          class="chip"
+          [class.selected]="selected()"
+          [class]="'variant-' + variant()"
+          [attr.aria-selected]="selected()"
+          role="option"
+          (click)="chipClick.emit(value())"
+        >
+          <span class="chip__label">{{ label() }}</span>
+          @if (count() !== null && count()! > 0) {
+            <span class="chip__count">{{ count() }}</span>
+          }
+        </button>
+      `,
+      styleUrl: './chip.component.scss',
+    })
+    export class ChipComponent {
+      label = input.required<string>();
+      value = input.required<string>();
+      selected = input<boolean>(false);
+      variant = input<ChipVariant>('default');
+      count = input<number | null>(null);
+
+      chipClick = output<string>();
+    }
+
+  styles: |
+    :host {
+      display: inline-block;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full, 9999px);
+      border: 1px solid var(--neutral-color-3, #e0e0e0);
+      background: var(--surface-default, #fff);
+      color: var(--neutral-color-7, #646464);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 150ms ease;
+      white-space: nowrap;
+
+      &:hover:not(.selected) {
+        border-color: var(--neutral-color-4, #c0c0c0);
+        background: var(--neutral-color-1, #fafafa);
+      }
+
+      &.selected {
+        border-color: transparent;
+      }
+
+      // ── Variant colors (applied when selected) ──────────────
+      &.selected.variant-default {
+        background: var(--primary-color-100, #e0f2f1);
+        color: var(--primary-color-700, #00796b);
+        border-color: var(--primary-color-200, #b2dfdb);
+      }
+
+      &.selected.variant-success {
+        background: var(--surface-success-subtle, #e8f5e9);
+        color: var(--success-color-8, #2e7d32);
+        border-color: transparent;
+      }
+
+      &.selected.variant-warning {
+        background: var(--surface-warning-subtle, #fff8e1);
+        color: var(--warning-color-8, #e86722);
+        border-color: transparent;
+      }
+
+      &.selected.variant-error {
+        background: var(--surface-error-subtle, #ffebee);
+        color: var(--error-color-8, #c62828);
+        border-color: transparent;
+      }
+
+      &.selected.variant-neutral {
+        background: var(--neutral-color-2, #f2f2f2);
+        color: var(--neutral-color-8, #424242);
+        border-color: transparent;
+      }
+    }
+
+    .chip__count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: var(--radius-full, 9999px);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      background: currentColor;
+      // Use contrasting text color for count badge
+      .chip:not(.selected) & {
+        background: var(--neutral-color-3, #e0e0e0);
+        color: var(--neutral-color-7, #646464);
+      }
+      .chip.selected & {
+        background: currentColor;
+        // White text on colored background
+        span { color: #fff; }
+      }
+    }
+
+    // Use a pseudo-element approach for the count text color
+    .chip__count {
+      position: relative;
+      color: #fff;
+      -webkit-text-fill-color: #fff;
+    }
+
+    .chip:not(.selected) .chip__count {
+      color: var(--neutral-color-7, #646464);
+      -webkit-text-fill-color: var(--neutral-color-7, #646464);
+      background: var(--neutral-color-3, #e0e0e0);
+    }
+
+  usage: |
+    <!-- Status filter chips -->
+    <div class="chip-list" role="listbox" aria-label="Filter by status">
+      <lib-chip label="All" value="All" [selected]="filter() === 'All'" (chipClick)="setFilter($event)" />
+      <lib-chip label="Active" value="ACTIVE" variant="success" [selected]="filter() === 'ACTIVE'" (chipClick)="setFilter($event)" />
+      <lib-chip label="Pending" value="PENDING" variant="warning" [selected]="filter() === 'PENDING'" [count]="pendingCount()" (chipClick)="setFilter($event)" />
+      <lib-chip label="Rejected" value="REJECTED" variant="error" [selected]="filter() === 'REJECTED'" (chipClick)="setFilter($event)" />
+    </div>
+
+# ──────────────────────────────────────────────────────────────
+# DIALOG COMPONENT
+# ──────────────────────────────────────────────────────────────
+dialog:
+  selector: lib-dialog
+  status: planned
+  component:
+    file: src/app/shared/components/dialog/dialog.component.ts
+    template: src/app/shared/components/dialog/dialog.component.html
+    styles: src/app/shared/components/dialog/dialog.component.scss
+    standalone: true
+    imports: []
+
+  inputs:
+    - name: open
+      type: boolean
+      default: "false"
+      description: Whether the dialog is visible
+    - name: title
+      type: string
+      default: "''"
+      description: Dialog header title text
+    - name: width
+      type: string
+      default: "'480px'"
+      description: Dialog max-width
+
+  outputs:
+    - name: closed
+      type: void
+      description: Emitted when dialog is closed (backdrop click, escape, or close button)
+
+  behavior:
+    - "Shadow-xl only (no border) for floating overlay feel"
+    - "Backdrop with blur effect and --surface-overlay color"
+    - "Focus trap: Tab cycles through dialog focusable elements"
+    - "Escape key closes dialog"
+    - "Backdrop click closes dialog"
+    - "Scale animation on open (0.95 -> 1.0 with ease-out)"
+    - "Three content projection slots: header actions, body, footer"
+
+  template: |
+    @if (open()) {
+      <div class="dialog-backdrop" (click)="onBackdropClick()">
+        <div
+          class="dialog-panel"
+          [style.max-width]="width()"
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-label]="title()"
+          (click)="$event.stopPropagation()"
+          (keydown.escape)="close()"
+        >
+          <div class="dialog-header">
+            <h2 class="dialog-title text-title-large">{{ title() }}</h2>
+            <button
+              class="dialog-close"
+              type="button"
+              aria-label="Close dialog"
+              (click)="close()"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="dialog-body">
+            <ng-content />
+          </div>
+          <div class="dialog-footer">
+            <ng-content select="[dialog-footer]" />
+          </div>
+        </div>
+      </div>
+    }
+
+  styles: |
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: var(--surface-overlay);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: var(--z-index-modal-backdrop);
+      animation: fadeIn var(--duration-normal) var(--easing-ease-out);
+    }
+
+    .dialog-panel {
+      background-color: var(--neutral-color-0);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      z-index: var(--z-index-modal);
+      animation: scaleIn var(--duration-normal) var(--easing-ease-out);
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+    }
+
+    .dialog-title {
+      margin: 0;
+    }
+
+    .dialog-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: var(--neutral-color-6);
+      cursor: pointer;
+      padding: var(--spacing-xs);
+      border-radius: var(--radius-sm);
+
+      &:hover {
+        background-color: var(--surface-hover);
+        color: var(--neutral-color-9);
+      }
+    }
+
+    .dialog-body {
+      padding: 0 var(--spacing-lg);
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+  usage: |
+    <lib-dialog
+      [open]="showConfirm"
+      title="Confirm Deletion"
+      (closed)="showConfirm = false"
+    >
+      <p>Are you sure you want to delete this course?</p>
+      <div dialog-footer>
+        <lib-button variant="secondary" (buttonClick)="showConfirm = false">Cancel</lib-button>
+        <lib-button variant="destructive" (buttonClick)="onDelete()">Delete</lib-button>
+      </div>
+    </lib-dialog>
+
+# ──────────────────────────────────────────────────────────────
+# TOAST COMPONENT
+# ──────────────────────────────────────────────────────────────
+toast:
+  selector: lib-toast
+  status: planned
+  component:
+    file: src/app/shared/components/toast/toast.component.ts
+    template: src/app/shared/components/toast/toast.component.html
+    styles: src/app/shared/components/toast/toast.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: ToastVariant
+      definition: "'success' | 'error' | 'warning' | 'info'"
+    - name: ToastPosition
+      definition: "'top-right' | 'top-center' | 'bottom-right'"
+
+  inputs:
+    - name: message
+      type: string
+      required: true
+      description: Toast message text
+    - name: variant
+      type: ToastVariant
+      default: "'info'"
+      description: Visual style variant
+    - name: duration
+      type: number
+      default: "5000"
+      description: Auto-dismiss duration in milliseconds (0 = no auto-dismiss)
+    - name: dismissible
+      type: boolean
+      default: "true"
+      description: Show close button
+
+  outputs:
+    - name: dismissed
+      type: void
+      description: Emitted when toast is dismissed (auto or manual)
+
+  behavior:
+    - "Shadow-lg only (no border) for floating notification feel"
+    - "Slide-in animation from the right"
+    - "Auto-dismiss after duration (default 5s)"
+    - "Manual dismiss via close button"
+    - "Variant-specific icon and left accent border"
+    - "Stacks vertically when multiple toasts are shown"
+
+  template: |
+    <div
+      class="toast"
+      [class]="variant()"
+      role="alert"
+      aria-live="polite"
+    >
+      <span class="toast-icon material-symbols-outlined">{{ iconName() }}</span>
+      <span class="toast-message">{{ message() }}</span>
+      @if (dismissible()) {
+        <button
+          class="toast-close"
+          type="button"
+          aria-label="Dismiss"
+          (click)="dismiss()"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+      position: fixed;
+      top: var(--spacing-lg);
+      right: var(--spacing-lg);
+      z-index: var(--z-index-toast);
+      animation: slideInRight var(--duration-slow) var(--easing-ease-out);
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background-color: var(--neutral-color-0);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      min-width: 320px;
+      max-width: 480px;
+      border-left: 3px solid transparent;
+
+      &.success { border-left-color: var(--success-color); }
+      &.error { border-left-color: var(--error-color); }
+      &.warning { border-left-color: var(--warning-color); }
+      &.info { border-left-color: var(--primary-color); }
+    }
+
+    .toast-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .success .toast-icon { color: var(--success-color); }
+    .error .toast-icon { color: var(--error-color); }
+    .warning .toast-icon { color: var(--warning-color); }
+    .info .toast-icon { color: var(--primary-color); }
+
+    .toast-message {
+      flex: 1;
+      font-size: var(--body-medium-size);
+      color: var(--text-primary-color);
+    }
+
+    .toast-close {
+      display: flex;
+      background: none;
+      border: none;
+      color: var(--neutral-color-5);
+      cursor: pointer;
+      padding: 0;
+
+      &:hover { color: var(--neutral-color-8); }
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+  computed:
+    - name: iconName
+      expression: "{ success: 'check_circle', error: 'error', warning: 'warning', info: 'info' }[this.variant()]"
+
+  usage: |
+    <lib-toast
+      message="Course saved successfully"
+      variant="success"
+      (dismissed)="onToastDismissed()"
+    />
+
+# ──────────────────────────────────────────────────────────────
+# TABS COMPONENT
+# ──────────────────────────────────────────────────────────────
+tabs:
+  selector: lib-tabs
+  status: planned
+  component:
+    file: src/app/shared/components/tabs/tabs.component.ts
+    template: src/app/shared/components/tabs/tabs.component.html
+    styles: src/app/shared/components/tabs/tabs.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: Tab
+      definition: "{ label: string; value: string; disabled?: boolean }"
+
+  inputs:
+    - name: tabs
+      type: "Tab[]"
+      required: true
+      description: List of tab definitions
+    - name: activeTab
+      type: string
+      required: true
+      description: Currently active tab value
+
+  outputs:
+    - name: tabChange
+      type: string
+      description: Emitted with tab value when active tab changes
+
+  behavior:
+    - "Bottom 2px primary border indicator on active tab"
+    - "Keyboard navigation: left/right arrows move between tabs"
+    - "Home/End keys jump to first/last tab"
+    - "Disabled tabs are visually muted and non-interactive"
+    - "ARIA tabs pattern (role=tablist, role=tab, aria-selected)"
+
+  template: |
+    <div class="tabs" role="tablist">
+      @for (tab of tabs(); track tab.value) {
+        <button
+          class="tab"
+          role="tab"
+          type="button"
+          [class.active]="activeTab() === tab.value"
+          [class.disabled]="tab.disabled"
+          [attr.aria-selected]="activeTab() === tab.value"
+          [attr.aria-disabled]="tab.disabled"
+          [disabled]="tab.disabled"
+          (click)="selectTab(tab.value)"
+          (keydown)="onKeydown($event)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: var(--border-subtle);
+      gap: var(--spacing-xs);
+    }
+
+    .tab {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary-color);
+      font-size: var(--body-medium-size);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition:
+        color var(--duration-normal) var(--easing-ease-in-out),
+        border-color var(--duration-normal) var(--easing-ease-in-out);
+      white-space: nowrap;
+
+      &:hover:not(.disabled) {
+        color: var(--text-primary-color);
+      }
+
+      &.active {
+        color: var(--primary-color-600);
+        border-bottom-color: var(--primary-color-600);
+      }
+
+      &.disabled {
+        color: var(--neutral-color-5);
+        cursor: not-allowed;
+        opacity: var(--opacity-disabled);
+      }
+
+      &:focus-visible {
+        box-shadow: var(--focus-ring);
+        border-radius: var(--radius-xs);
+        outline: none;
+      }
+    }
+
+  usage: |
+    <lib-tabs
+      [tabs]="[
+        { label: 'My Courses', value: 'enrolled' },
+        { label: 'All Courses', value: 'all' },
+        { label: 'Completed', value: 'completed' }
+      ]"
+      [activeTab]="currentTab"
+      (tabChange)="currentTab = $event"
+    />
+
+# ──────────────────────────────────────────────────────────────
+# EMPTY STATE COMPONENT
+# ──────────────────────────────────────────────────────────────
+empty_state:
+  selector: lib-empty-state
+  status: planned
+  component:
+    file: src/app/shared/components/empty-state/empty-state.component.ts
+    template: src/app/shared/components/empty-state/empty-state.component.html
+    styles: src/app/shared/components/empty-state/empty-state.component.scss
+    standalone: true
+    imports: []
+
+  inputs:
+    - name: icon
+      type: string
+      default: "'inbox'"
+      description: Material Symbols icon name
+    - name: title
+      type: string
+      required: true
+      description: Empty state heading
+    - name: message
+      type: "string | null"
+      default: "null"
+      description: Optional descriptive text below title
+
+  behavior:
+    - "Centered layout with icon, title, message, and optional CTA"
+    - "CTA button projected via ng-content"
+    - "Used in empty tables, search results, dashboards"
+
+  template: |
+    <div class="empty-state">
+      <span class="empty-state-icon material-symbols-outlined">{{ icon() }}</span>
+      <h3 class="empty-state-title">{{ title() }}</h3>
+      @if (message()) {
+        <p class="empty-state-message">{{ message() }}</p>
+      }
+      <div class="empty-state-action">
+        <ng-content />
+      </div>
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-3xl) var(--spacing-lg);
+      text-align: center;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      color: var(--neutral-color-4);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .empty-state-title {
+      margin: 0 0 var(--spacing-xs);
+      color: var(--text-primary-color);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .empty-state-message {
+      margin: 0 0 var(--spacing-lg);
+      color: var(--text-secondary-color);
+      max-width: 400px;
+    }
+
+    .empty-state-action {
+      margin-top: var(--spacing-sm);
+    }
+
+  usage: |
+    <lib-empty-state
+      icon="school"
+      title="No courses yet"
+      message="You haven't enrolled in any courses. Browse available courses to get started."
+    >
+      <lib-button variant="primary" routerLink="/">Browse Courses</lib-button>
+    </lib-empty-state>
+
+# ──────────────────────────────────────────────────────────────
+# SKELETON COMPONENT
+# ──────────────────────────────────────────────────────────────
+skeleton:
+  selector: lib-skeleton
+  status: planned
+  component:
+    file: src/app/shared/components/skeleton/skeleton.component.ts
+    template: src/app/shared/components/skeleton/skeleton.component.html
+    styles: src/app/shared/components/skeleton/skeleton.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: SkeletonVariant
+      definition: "'text' | 'circle' | 'rect'"
+
+  inputs:
+    - name: variant
+      type: SkeletonVariant
+      default: "'text'"
+      description: Shape variant (text=line, circle=avatar, rect=card/image)
+    - name: width
+      type: string
+      default: "'100%'"
+      description: Element width
+    - name: height
+      type: string
+      default: "'16px'"
+      description: Element height (ignored for circle, uses width)
+    - name: lines
+      type: number
+      default: "1"
+      description: Number of text lines (only for text variant)
+
+  behavior:
+    - "Shimmer animation using CSS gradient moving left-to-right"
+    - "Text variant: horizontal bar with rounded ends"
+    - "Circle variant: perfect circle (width=height)"
+    - "Rect variant: rectangle with border-radius"
+    - "Multiple lines: last line at 75% width for natural look"
+
+  template: |
+    @if (variant() === 'text') {
+      @for (i of lineArray(); track i) {
+        <div
+          class="skeleton text"
+          [class.last-line]="i === lines() - 1 && lines() > 1"
+          [style.width]="i === lines() - 1 && lines() > 1 ? '75%' : width()"
+          [style.height]="height()"
+        ></div>
+      }
+    } @else if (variant() === 'circle') {
+      <div
+        class="skeleton circle"
+        [style.width]="width()"
+        [style.height]="width()"
+      ></div>
+    } @else {
+      <div
+        class="skeleton rect"
+        [style.width]="width()"
+        [style.height]="height()"
+      ></div>
+    }
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--neutral-color-2) 25%,
+        var(--neutral-color-1) 50%,
+        var(--neutral-color-2) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+
+      &.text {
+        border-radius: var(--radius-xs);
+        margin-bottom: var(--spacing-xs);
+      }
+
+      &.circle {
+        border-radius: var(--radius-full);
+      }
+
+      &.rect {
+        border-radius: var(--radius-md);
+      }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+  computed:
+    - name: lineArray
+      expression: "Array.from({ length: this.lines() }, (_, i) => i)"
+
+  usage: |
+    <!-- Text skeleton (3 lines) -->
+    <lib-skeleton variant="text" [lines]="3" height="14px" />
+
+    <!-- Avatar skeleton -->
+    <lib-skeleton variant="circle" width="40px" />
+
+    <!-- Card image skeleton -->
+    <lib-skeleton variant="rect" width="100%" height="200px" />
+
+# ──────────────────────────────────────────────────────────────
+# AVATAR COMPONENT
+# ──────────────────────────────────────────────────────────────
+avatar:
+  selector: lib-avatar
+  status: planned
+  component:
+    file: src/app/shared/components/avatar/avatar.component.ts
+    template: src/app/shared/components/avatar/avatar.component.html
+    styles: src/app/shared/components/avatar/avatar.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: AvatarSize
+      definition: "'sm' | 'md' | 'lg'"
+
+  inputs:
+    - name: src
+      type: "string | null"
+      default: "null"
+      description: Image URL for the avatar
+    - name: name
+      type: string
+      default: "''"
+      description: User name (used for initials fallback and alt text)
+    - name: size
+      type: AvatarSize
+      default: "'md'"
+      description: "Avatar size (sm=28px, md=36px, lg=48px)"
+
+  computed:
+    - name: initials
+      expression: >
+        this.name().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+      description: Up to 2 initials from the name
+    - name: sizeInPx
+      expression: "{ sm: 28, md: 36, lg: 48 }[this.size()]"
+
+  behavior:
+    - "Shows image when src is provided and loads successfully"
+    - "Falls back to initials on colored background when no image or image fails"
+    - "Initials background uses primary-color-100 with primary-color-700 text"
+    - "Always circular (border-radius: full)"
+
+  template: |
+    <div
+      class="avatar"
+      [class]="'size-' + size()"
+      [attr.aria-label]="name()"
+    >
+      @if (src() && !imgError) {
+        <img
+          [src]="src()"
+          [alt]="name()"
+          (error)="imgError = true"
+        />
+      } @else {
+        <span class="initials">{{ initials() }}</span>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: inline-block;
+    }
+
+    .avatar {
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary-color-100);
+      color: var(--primary-color-700);
+      font-weight: var(--font-weight-medium);
+
+      &.size-sm { width: 28px; height: 28px; font-size: 11px; }
+      &.size-md { width: 36px; height: 36px; font-size: 14px; }
+      &.size-lg { width: 48px; height: 48px; font-size: 18px; }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .initials {
+      line-height: 1;
+      user-select: none;
+    }
+
+  usage: |
+    <lib-avatar src="/api/users/123/avatar" name="John Doe" size="md" />
+    <lib-avatar name="Jane Smith" size="lg" />
+    <lib-avatar size="sm" />
+
+# ──────────────────────────────────────────────────────────────
+# PROGRESS BAR COMPONENT
+# ──────────────────────────────────────────────────────────────
+progress_bar:
+  selector: lib-progress-bar
+  status: planned
+  component:
+    file: src/app/shared/components/progress-bar/progress-bar.component.ts
+    template: src/app/shared/components/progress-bar/progress-bar.component.html
+    styles: src/app/shared/components/progress-bar/progress-bar.component.scss
+    standalone: true
+    imports: []
+
+  inputs:
+    - name: value
+      type: number
+      default: "0"
+      description: Progress percentage (0-100)
+    - name: showLabel
+      type: boolean
+      default: "false"
+      description: Show percentage label
+    - name: variant
+      type: "'primary' | 'success'"
+      default: "'primary'"
+      description: Fill color variant
+
+  computed:
+    - name: clampedValue
+      expression: "Math.max(0, Math.min(100, this.value()))"
+
+  behavior:
+    - "Track + fill bar pattern"
+    - "Fill width is percentage of value"
+    - "Optional label shows percentage text"
+    - "Smooth width transition on value change"
+
+  template: |
+    <div class="progress-bar" role="progressbar"
+      [attr.aria-valuenow]="clampedValue()"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
+      <div class="progress-track">
+        <div
+          class="progress-fill"
+          [class]="variant()"
+          [style.width.%]="clampedValue()"
+        ></div>
+      </div>
+      @if (showLabel()) {
+        <span class="progress-label">{{ clampedValue() }}%</span>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 6px;
+      background-color: var(--neutral-color-2);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width var(--duration-slow) var(--easing-ease-in-out);
+
+      &.primary { background-color: var(--primary-color-500); }
+      &.success { background-color: var(--success-color); }
+    }
+
+    .progress-label {
+      font-size: var(--label-small-size);
+      color: var(--text-secondary-color);
+      min-width: 36px;
+      text-align: right;
+    }
+
+  usage: |
+    <lib-progress-bar [value]="75" [showLabel]="true" />
+    <lib-progress-bar [value]="courseProgress" variant="success" />
+
+# ──────────────────────────────────────────────────────────────
+# BREADCRUMB COMPONENT
+# ──────────────────────────────────────────────────────────────
+breadcrumb:
+  selector: lib-breadcrumb
+  status: planned
+  component:
+    file: src/app/shared/components/breadcrumb/breadcrumb.component.ts
+    template: src/app/shared/components/breadcrumb/breadcrumb.component.html
+    styles: src/app/shared/components/breadcrumb/breadcrumb.component.scss
+    standalone: true
+    imports: [RouterLink]
+
+  types:
+    - name: BreadcrumbItem
+      definition: "{ label: string; routerLink?: string | any[] }"
+
+  inputs:
+    - name: items
+      type: "BreadcrumbItem[]"
+      required: true
+      description: Ordered list of breadcrumb path items
+
+  behavior:
+    - "Displays path items separated by chevron_right icon"
+    - "All items except the last are links"
+    - "Last item is plain text (current page)"
+    - "Uses nav element with aria-label='Breadcrumb'"
+
+  template: |
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <ol>
+        @for (item of items(); track item.label; let last = $last) {
+          <li>
+            @if (!last && item.routerLink) {
+              <a [routerLink]="item.routerLink">{{ item.label }}</a>
+            } @else {
+              <span class="current" [attr.aria-current]="last ? 'page' : null">
+                {{ item.label }}
+              </span>
+            }
+            @if (!last) {
+              <span class="separator material-symbols-outlined">chevron_right</span>
+            }
+          </li>
+        }
+      </ol>
+    </nav>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .breadcrumb ol {
+      display: flex;
+      align-items: center;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: var(--spacing-xxs);
+    }
+
+    .breadcrumb li {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xxs);
+    }
+
+    .breadcrumb a {
+      color: var(--primary-color-600);
+      text-decoration: none;
+      font-size: var(--body-medium-size);
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .current {
+      color: var(--text-secondary-color);
+      font-size: var(--body-medium-size);
+    }
+
+    .separator {
+      font-size: 18px;
+      color: var(--neutral-color-5);
+    }
+
+  usage: |
+    <lib-breadcrumb
+      [items]="[
+        { label: 'Dashboard', routerLink: '/' },
+        { label: 'Course Name', routerLink: '/course/123' },
+        { label: 'Lesson 1' }
+      ]"
+    />
+
+# ──────────────────────────────────────────────────────────────
+# PAGINATION COMPONENT
+# ──────────────────────────────────────────────────────────────
+pagination:
+  selector: lib-pagination
+  status: planned
+  component:
+    file: src/app/shared/components/pagination/pagination.component.ts
+    template: src/app/shared/components/pagination/pagination.component.html
+    styles: src/app/shared/components/pagination/pagination.component.scss
+    standalone: true
+    imports: []
+
+  inputs:
+    - name: totalItems
+      type: number
+      required: true
+      description: Total number of items
+    - name: pageSize
+      type: number
+      default: "10"
+      description: Items per page
+    - name: currentPage
+      type: number
+      default: "1"
+      description: Current active page (1-indexed)
+    - name: pageSizeOptions
+      type: "number[]"
+      default: "[10, 25, 50]"
+      description: Available page size options for dropdown
+
+  outputs:
+    - name: pageChange
+      type: number
+      description: Emitted with new page number
+    - name: pageSizeChange
+      type: number
+      description: Emitted with new page size
+
+  computed:
+    - name: totalPages
+      expression: "Math.ceil(this.totalItems() / this.pageSize())"
+    - name: pages
+      expression: "computed array of visible page numbers with ellipsis"
+      description: >
+        Shows first, last, current, and adjacent pages.
+        Uses -1 sentinel for ellipsis gaps.
+
+  behavior:
+    - "Page number buttons with prev/next navigation"
+    - "Ellipsis for large page ranges"
+    - "Items-per-page dropdown"
+    - "Prev disabled on page 1, next disabled on last page"
+    - "Keyboard accessible"
+
+  template: |
+    <div class="pagination">
+      <div class="page-size">
+        <label class="page-size-label">Items per page:</label>
+        <select
+          class="page-size-select"
+          [value]="pageSize()"
+          (change)="onPageSizeChange($event)"
+        >
+          @for (size of pageSizeOptions(); track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      </div>
+      <div class="page-controls">
+        <button
+          class="page-btn nav"
+          [disabled]="currentPage() <= 1"
+          (click)="goToPage(currentPage() - 1)"
+          aria-label="Previous page"
+        >
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        @for (page of pages(); track $index) {
+          @if (page === -1) {
+            <span class="ellipsis">...</span>
+          } @else {
+            <button
+              class="page-btn"
+              [class.active]="page === currentPage()"
+              (click)="goToPage(page)"
+              [attr.aria-current]="page === currentPage() ? 'page' : null"
+            >
+              {{ page }}
+            </button>
+          }
+        }
+        <button
+          class="page-btn nav"
+          [disabled]="currentPage() >= totalPages()"
+          (click)="goToPage(currentPage() + 1)"
+          aria-label="Next page"
+        >
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+  styles: |
+    :host {
+      display: block;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-sm) 0;
+      gap: var(--spacing-md);
+    }
+
+    .page-size {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+    }
+
+    .page-size-label {
+      font-size: var(--body-medium-size);
+      color: var(--text-secondary-color);
+    }
+
+    .page-size-select {
+      border: var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: var(--spacing-xxs) var(--spacing-xs);
+      font-size: var(--body-medium-size);
+      background-color: var(--neutral-color-0);
+    }
+
+    .page-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xxs);
+    }
+
+    .page-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: none;
+      color: var(--text-primary-color);
+      font-size: var(--body-medium-size);
+      cursor: pointer;
+      transition: background-color var(--duration-fast) var(--easing-ease);
+
+      &:hover:not(:disabled):not(.active) {
+        background-color: var(--surface-hover);
+      }
+
+      &.active {
+        background-color: var(--primary-color-600);
+        color: var(--neutral-color-0);
+      }
+
+      &:disabled {
+        color: var(--neutral-color-4);
+        cursor: not-allowed;
+      }
+
+      &.nav .material-symbols-outlined {
+        font-size: 20px;
+      }
+
+      &:focus-visible {
+        box-shadow: var(--focus-ring);
+        outline: none;
+      }
+    }
+
+    .ellipsis {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      color: var(--text-secondary-color);
+    }
+
+  usage: |
+    <lib-pagination
+      [totalItems]="students.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="currentPage = $event"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+
+# ──────────────────────────────────────────────────────────────
+# DROPDOWN MENU COMPONENT
+# ──────────────────────────────────────────────────────────────
+dropdown_menu:
+  selector: lib-dropdown-menu
+  status: planned
+  component:
+    file: src/app/shared/components/dropdown-menu/dropdown-menu.component.ts
+    template: src/app/shared/components/dropdown-menu/dropdown-menu.component.html
+    styles: src/app/shared/components/dropdown-menu/dropdown-menu.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: DropdownItem
+      definition: "{ label: string; value: string; icon?: string; disabled?: boolean; danger?: boolean }"
+    - name: DropdownPosition
+      definition: "'bottom-left' | 'bottom-right'"
+
+  inputs:
+    - name: items
+      type: "DropdownItem[]"
+      required: true
+      description: Menu items
+    - name: position
+      type: DropdownPosition
+      default: "'bottom-left'"
+      description: Dropdown panel position relative to trigger
+
+  outputs:
+    - name: itemClick
+      type: DropdownItem
+      description: Emitted when a menu item is clicked
+
+  behavior:
+    - "Border-subtle + shadow-lg for floating dropdown feel"
+    - "Trigger element projected via ng-content select='[trigger]'"
+    - "Click on trigger toggles menu open/closed"
+    - "Click outside closes menu"
+    - "Escape key closes menu"
+    - "Hover items show surface-hover background"
+    - "Danger items show error color text"
+    - "Keyboard navigation: up/down arrows, Enter to select"
+
+  template: |
+    <div class="dropdown" (clickOutside)="close()">
+      <div class="dropdown-trigger" (click)="toggle()">
+        <ng-content select="[trigger]" />
+      </div>
+      @if (isOpen) {
+        <div class="dropdown-panel" [class]="position()" (keydown.escape)="close()">
+          @for (item of items(); track item.value) {
+            <button
+              class="dropdown-item"
+              [class.danger]="item.danger"
+              [class.disabled]="item.disabled"
+              [disabled]="item.disabled"
+              (click)="selectItem(item)"
+            >
+              @if (item.icon) {
+                <span class="material-symbols-outlined dropdown-item-icon">{{ item.icon }}</span>
+              }
+              {{ item.label }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+  styles: |
+    :host {
+      display: inline-block;
+      position: relative;
+    }
+
+    .dropdown-trigger {
+      cursor: pointer;
+    }
+
+    .dropdown-panel {
+      position: absolute;
+      top: 100%;
+      margin-top: var(--spacing-xs);
+      min-width: 180px;
+      background-color: var(--neutral-color-0);
+      border: var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: var(--z-index-dropdown);
+      padding: var(--spacing-xs) 0;
+      animation: fadeIn var(--duration-fast) var(--easing-ease-out);
+
+      &.bottom-left { left: 0; }
+      &.bottom-right { right: 0; }
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: none;
+      border: none;
+      color: var(--text-primary-color);
+      font-size: var(--body-medium-size);
+      cursor: pointer;
+      text-align: left;
+      transition: background-color var(--duration-fast) var(--easing-ease);
+
+      &:hover:not(:disabled) {
+        background-color: var(--surface-hover);
+      }
+
+      &.danger {
+        color: var(--error-color);
+      }
+
+      &.disabled {
+        color: var(--neutral-color-5);
+        cursor: not-allowed;
+      }
+
+      &:focus-visible {
+        background-color: var(--surface-hover);
+        outline: none;
+      }
+    }
+
+    .dropdown-item-icon {
+      font-size: 18px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+  usage: |
+    <lib-dropdown-menu
+      [items]="[
+        { label: 'Edit', value: 'edit', icon: 'edit' },
+        { label: 'Duplicate', value: 'duplicate', icon: 'content_copy' },
+        { label: 'Delete', value: 'delete', icon: 'delete', danger: true }
+      ]"
+      (itemClick)="onMenuAction($event)"
+    >
+      <button trigger type="button">
+        <span class="material-symbols-outlined">more_vert</span>
+      </button>
+    </lib-dropdown-menu>

@@ -1,0 +1,32 @@
+@use 'typography' as typography;
+
+.form-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 24px;
+}
+
+.form-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  .form-field-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .form-field-error {
+    @extend .text-body-small;
+    color: var(--error-color);
+    margin-left: var(--spacing-2);
+  }
+}
+
+.form-field.required .form-field-label::after {
+  content: ' *';
+}

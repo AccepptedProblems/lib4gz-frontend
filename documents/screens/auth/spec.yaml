@@ -1,0 +1,499 @@
+openspec: "1.0"
+kind: Screen
+info:
+  title: Auth Screens (Login & Register)
+  version: "1.0.0"
+  description: Public authentication screens for user login and registration.
+  status: scaffold
+
+screens:
+  # ──────────────────────────────────────────────────────────────
+  # LOGIN
+  # ──────────────────────────────────────────────────────────────
+  - id: login
+    name: Login
+    route: /login
+    component:
+      selector: app-login
+      file: src/app/components/auth/login/login.component.ts
+      template: src/app/components/auth/login/login.component.html
+      styles: src/app/components/auth/login/login.component.scss
+      standalone: true
+    guard: none
+    target_users: [public]
+    status: implemented
+
+    purpose: >
+      Authenticate existing users with username/password credentials.
+      On success, store JWT token and redirect to dashboard.
+
+    heading:
+      title:
+        text: Lib4GZ
+        element: h2
+        class: text-headline-medium login-heading
+      caption:
+        text: "A place for \u201C\u0111\u1EB3ng c\u1EA5p\u201D-est writer in Vietnam"
+        element: p
+        class: text-body-medium login-caption
+
+    layout:
+      desktop:
+        description: >
+          Full viewport height, centered content.
+          Two-column layout: illustration on left, form on right.
+        ascii: |
+          +--------------------------------------------------+
+          |                                                  |
+          |  +--------------------+  +--------------------+  |
+          |  |                    |  |  Lib4GZ             |  |
+          |  |   Illustration     |  |  (caption)          |  |
+          |  |                    |  |                    |  |
+          |  |                    |  |  [Email Input]      |  |
+          |  |                    |  |  [Password Input]   |  |
+          |  |                    |  |                    |  |
+          |  |                    |  |  [  Login  ]        |  |
+          |  |                    |  |                    |  |
+          |  |                    |  |  ──── or ────       |  |
+          |  |                    |  |                    |  |
+          |  |                    |  |       [G]           |  |
+          |  |                    |  |                    |  |
+          |  +--------------------+  +--------------------+  |
+          |                                                  |
+          +--------------------------------------------------+
+      mobile:
+        description: Full-width form with title and caption at top.
+        ascii: |
+          +----------------------+
+          |  Lib4GZ              |
+          |  (caption)           |
+          +----------------------+
+          |                      |
+          |  [Email Input]       |
+          |  [Password Input]    |
+          |                      |
+          |  [  Login  ]         |
+          |                      |
+          |  ──── or ────        |
+          |                      |
+          |       [G]            |
+          |                      |
+          +----------------------+
+
+    form:
+      fields:
+        - name: email
+          type: text
+          label: Email or username
+          validation:
+            required: true
+        - name: password
+          type: password
+          label: Password
+          validation:
+            required: true
+      notes:
+        - "Remember me checkbox removed: JWT token is auto-saved to localStorage on login"
+        - "Register link hidden: registration is temporarily disabled on UI"
+
+    actions:
+      - label: Login
+        type: submit
+        variant: primary
+        size: lg
+        width: "100% via parent CSS (lib-button { width: 100% })"
+        handler: Submit form -> AuthService.login() -> store JWT -> navigate /
+
+    social_login:
+      status: ui-only
+      description: >
+        Section below the Login button separated by an "or" divider.
+        UI elements are rendered but not functional yet.
+        Google OAuth integration will be implemented in a future phase.
+      divider:
+        text: or
+        style: "Horizontal line on both sides of text (──── or ────)"
+      providers:
+        - id: google
+          display: icon-only
+          icon: Google "G" logo (centered, no label text)
+          icon_style:
+            default: "grayscale / desaturated: filter: grayscale(1), opacity: 0.5"
+            hover: "full color: filter: none, opacity: 1"
+            transition: "var(--duration-normal) var(--easing-ease-in-out)"
+          variant: secondary
+          size: lg
+          status: ui-only
+          handler: "No-op (UI placeholder only, no OAuth flow connected)"
+
+    data_flow:
+      service_calls:
+        - service: AuthService
+          method: login
+          endpoint: auth.login
+          description: Email/password credential login
+      on_success:
+        - Store token via AuthService.storeToken() (auto-saved, no remember-me needed)
+        - "Navigate to / (dashboard is the root route)"
+      on_error:
+        - Display error message below form
+
+    states:
+      - name: default
+        description: Empty form ready for input
+      - name: submitting
+        description: Form disabled, Login button shows spinner via isLoading
+      - name: error
+        description: Error message displayed below form (invalid credentials, network error)
+      - name: success
+        description: Brief success state before redirect
+      # google_loading state deferred: Google OAuth not yet connected
+
+    current_implementation: |
+      import { Component, inject, signal } from '@angular/core';
+      import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+      import { Router } from '@angular/router';
+      import { ButtonComponent, InputComponent } from '../../../shared/components';
+      import { AuthService } from '../../../services/auth.service';
+      import { LoginRequest } from '../../../shared/models';
+
+      @Component({
+        selector: 'app-login',
+        imports: [ReactiveFormsModule, ButtonComponent, InputComponent],
+        templateUrl: './login.component.html',
+        styleUrl: './login.component.scss'
+      })
+      export class LoginComponent {
+        private readonly fb = inject(FormBuilder);
+        private readonly authService = inject(AuthService);
+        private readonly router = inject(Router);
+
+        isLoading = signal(false);
+        errorMessage = signal('');
+
+        loginForm = this.fb.nonNullable.group({
+          email: ['', [Validators.required]],
+          password: ['', [Validators.required]],
+        });
+
+        onSubmit(): void {
+          if (this.loginForm.invalid) {
+            this.loginForm.markAllAsTouched();
+            return;
+          }
+
+          this.isLoading.set(true);
+          this.errorMessage.set('');
+
+          const { email, password } = this.loginForm.getRawValue();
+          const request: LoginRequest = { username: email, password };
+
+          this.authService.login(request).subscribe({
+            next: () => {
+              this.router.navigate(['/']);
+            },
+            error: (err) => {
+              this.isLoading.set(false);
+              this.errorMessage.set(
+                err.error?.message || 'Invalid credentials. Please try again.'
+              );
+            },
+          });
+        }
+      }
+
+    current_template: |
+      <div class="login-page">
+        <div class="login-illustration">
+          <div class="illustration-placeholder"></div>
+        </div>
+
+        <div class="login-form-container">
+          <div class="login-form-wrapper">
+            <h2 class="text-headline-medium login-heading">Lib4GZ</h2>
+            <p class="text-body-medium login-caption">A place for "đẳng cấp"-est writer in Vietnam</p>
+
+            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+              <div class="form-row">
+                <lib-input
+                  formControlName="email"
+                  label="Email or username"
+                  type="text"
+                  [required]="true"
+                  [error]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid
+                    ? 'Email or username is required'
+                    : null"
+                />
+              </div>
+
+              <div class="form-row">
+                <lib-input
+                  formControlName="password"
+                  label="Password"
+                  type="password"
+                  [required]="true"
+                  [error]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid
+                    ? 'Password is required'
+                    : null"
+                />
+              </div>
+
+              @if (errorMessage()) {
+                <div class="login-error" role="alert">
+                  {{ errorMessage() }}
+                </div>
+              }
+
+              <lib-button
+                type="submit"
+                variant="primary"
+                size="lg"
+                [isLoading]="isLoading()"
+                [disabled]="loginForm.invalid"
+              >
+                Login
+              </lib-button>
+            </form>
+
+            <div class="login-divider">
+              <span class="login-divider-line"></span>
+              <span class="login-divider-text text-body-medium">or</span>
+              <span class="login-divider-line"></span>
+            </div>
+
+            <div class="login-social">
+              <button
+                class="google-btn secondary lg"
+                type="button"
+                aria-label="Sign in with Google"
+              >
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+  # ──────────────────────────────────────────────────────────────
+  # REGISTER
+  # ──────────────────────────────────────────────────────────────
+  - id: register
+    name: Register
+    route: /register
+    component:
+      selector: app-register
+      file: src/app/components/auth/register/register.component.ts
+      template: src/app/components/auth/register/register.component.html
+      styles: src/app/components/auth/register/register.component.scss
+      standalone: true
+    guard: none
+    target_users: [public]
+    status: scaffold
+
+    purpose: >
+      Create a new user account. On success, automatically log in
+      and redirect to dashboard.
+
+    layout:
+      desktop:
+        description: Same two-column layout as login screen.
+        ascii: |
+          +--------------------------------------------------+
+          |                                                  |
+          |  +--------------------+  +--------------------+  |
+          |  |                    |  |  App Logo           |  |
+          |  |   Illustration     |  |                    |  |
+          |  |                    |  |  [Full Name]        |  |
+          |  |                    |  |  [Email]            |  |
+          |  |                    |  |  [Username]         |  |
+          |  |                    |  |  [Password]         |  |
+          |  |                    |  |  [Confirm Password] |  |
+          |  |                    |  |  [x] Terms          |  |
+          |  |                    |  |  [Register Button]  |  |
+          |  |                    |  |  Already have an    |  |
+          |  |                    |  |  account? Login     |  |
+          |  +--------------------+  +--------------------+  |
+          |                                                  |
+          +--------------------------------------------------+
+      mobile:
+        description: Full-width stacked form.
+        ascii: |
+          +----------------------+
+          |  App Logo            |
+          +----------------------+
+          |  [Full Name]         |
+          |  [Email]             |
+          |  [Username]          |
+          |  [Password]          |
+          |  [Confirm Password]  |
+          |  [x] Terms           |
+          |  [Register Button]   |
+          |  Already have an     |
+          |  account? Login      |
+          +----------------------+
+
+    form:
+      fields:
+        - name: fullName
+          type: text
+          label: Full Name
+          validation:
+            required: true
+            minLength: 2
+        - name: email
+          type: email
+          label: Email
+          validation:
+            required: true
+            pattern: valid email
+            unique: true
+        - name: username
+          type: text
+          label: Username
+          validation:
+            required: true
+            minLength: 3
+            pattern: alphanumeric
+        - name: password
+          type: password
+          label: Password
+          validation:
+            required: true
+            minLength: 8
+        - name: confirmPassword
+          type: password
+          label: Confirm Password
+          validation:
+            required: true
+            match: password
+        - name: terms
+          type: checkbox
+          label: I agree to the Terms and Conditions
+          validation:
+            required: true
+
+    actions:
+      - label: Register
+        type: submit
+        variant: primary
+        handler: Submit form -> AuthService.register() -> store JWT -> navigate /
+      - label: Login
+        type: link
+        route: /login
+        description: Navigation link to login page
+
+    data_flow:
+      service_calls:
+        - service: AuthService
+          method: register
+          endpoint: auth.register
+      on_success:
+        - Store token from LoginResponse
+        - Navigate to /
+      on_error:
+        - Display validation errors inline
+        - Display server errors below form
+
+    states:
+      - name: default
+        description: Empty form ready for input
+      - name: submitting
+        description: Form disabled, button shows spinner
+      - name: validation_error
+        description: Inline field errors shown
+      - name: server_error
+        description: Server error message displayed
+      - name: success
+        description: Brief success state before redirect
+
+    current_implementation: |
+      import { Component } from '@angular/core';
+
+      @Component({
+        selector: 'app-register',
+        imports: [],
+        templateUrl: './register.component.html',
+        styleUrl: './register.component.scss'
+      })
+      export class RegisterComponent {
+
+      }
+
+    current_template: |
+      <p>register works!</p>
+
+routing:
+  file: src/app/app.routes.ts
+  entries:
+    - path: login
+      load_component: ./components/auth/login/login.component -> LoginComponent
+    - path: register
+      load_component: ./components/auth/register/register.component -> RegisterComponent
+
+design_system:
+  typography:
+    - $ref: "../../design-system/typography.yaml#/scale/headline/levels/1"
+      usage: Form section headings (text-headline-medium)
+    - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+      usage: Form field labels and body text (text-body-medium)
+    - $ref: "../../design-system/typography.yaml#/scale/body/levels/2"
+      usage: Error messages (text-body-small)
+  colors:
+    - $ref: "../../design-system/color.yaml#/theme_colors/primary"
+      usage: Primary button, focus states
+    - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+      usage: Error messages (--error-color)
+  components:
+    - $ref: "../../design-system/components.yaml#/button"
+      usage: Login/Register submit buttons (primary variant, md size)
+    - $ref: "../../design-system/components.yaml#/input"
+      usage: Input field styling (used via lib-input shared component)
+    - $ref: "../../design-system/components.yaml#/checkbox"
+      usage: Terms acceptance (register only)
+    - $ref: "../../design-system/components.yaml#/form"
+      usage: Form layout with .form-row, .form-field, .form-field-error
+  shared_components:
+    - $ref: "../../design-system/shared-components.yaml#/button"
+      usage: Submit buttons with loading state (lib-button)
+    - $ref: "../../design-system/shared-components.yaml#/spinner"
+      usage: Loading indicator during form submission
+    - $ref: "../../design-system/shared-components.yaml#/input"
+      usage: Email, password, and text form fields with floating label (lib-input)
+  breakpoints:
+    - $ref: "../../design-system/breakpoints.yaml#/breakpoints/1"
+      usage: "768px: Switch from two-column to single-column layout"
+
+related_services:
+  - $ref: "../../network/api-endpoints.yaml#/resources/auth"
+
+accessibility:
+  - All form fields have associated labels
+  - Error messages are linked to fields via aria-describedby
+  - Form submit responds to Enter key
+  - Focus moves to first error on validation failure
+  - Password fields have toggle visibility option
+
+responsive:
+  breakpoints:
+    - above: 768px
+      layout: Two-column (illustration + form)
+    - below: 768px
+      layout: Single column, form only
+
+acceptance_criteria:
+  - Login form validates email and password and submits correctly
+  - Login button displays "Login" text
+  - Google icon displayed (icon-only, no label text), grayscale by default, full color on hover (UI only, not functional)
+  - "or" divider separates credential login from social login
+  - Register link is hidden (no navigation to register from login UI)
+  - JWT token auto-stored on successful auth (no remember-me checkbox)
+  - User redirected to / on success (both credential and Google)
+  - Error messages display for invalid credentials
+  - Register form validates all fields including password match
+  - Forms are keyboard accessible
+  - Mobile layout renders correctly

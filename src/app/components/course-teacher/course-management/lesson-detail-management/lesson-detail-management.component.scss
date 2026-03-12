@@ -1,0 +1,138 @@
+:host { display: block }
+
+.loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 0;
+}
+
+.lesson-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Lesson Header ────────────────────────────────────────────────
+.lesson-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lesson-detail__title { margin: 0 }
+
+.lesson-detail__module-badge {
+  padding: 2px 8px;
+  background: var(--neutral-color-2, #f2f2f2);
+  border-radius: 4px;
+}
+
+// ── Sections ─────────────────────────────────────────────────────
+.lesson-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lesson-detail__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+// ── Summary Card ─────────────────────────────────────────────────
+.summary-card {
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-preview { margin: 0; line-height: 1.6; white-space: pre-wrap }
+
+// ── Inline Forms ─────────────────────────────────────────────────
+.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.inline-form--row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.inline-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--neutral-color-3, #e0e0e0);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.inline-input:focus { border-color: var(--primary-color, #00897b) }
+.inline-input--large { font-size: 18px; padding: 8px 12px }
+
+// ── Icon Buttons ─────────────────────────────────────────────────
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #646464;
+  transition: all 200ms;
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn .material-icons { font-size: 18px }
+.icon-btn:hover { background: #f5f5f5; color: #1a1a1a }
+.icon-btn--danger { color: #c62828 }
+.icon-btn--danger:hover { background: #ffebee }
+
+// ── Exercise List ─────────────────────────────────────────────────
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exercise-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--neutral-color-2, #f2f2f2);
+  transition: background 200ms;
+}
+
+.exercise-item:last-child { border-bottom: none }
+.exercise-item:hover { background: #f8f8f8 }
+
+.exercise-item__title { font-weight: 500; flex: 1; min-width: 0 }
+.exercise-item__meta { white-space: nowrap }
+.exercise-item__actions { display: flex; gap: 4px; margin-left: auto }
+
+// ── Misc ─────────────────────────────────────────────────────────
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.empty-text { padding: 8px 16px; text-align: center }
+.warning-text { color: #e86722; margin-top: 4px }

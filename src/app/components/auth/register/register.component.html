@@ -1,0 +1,83 @@
+<div class="register-page">
+  <div class="register-illustration">
+    <div class="illustration-placeholder"></div>
+  </div>
+
+  <div class="register-form-container">
+    <div class="register-form-wrapper">
+      <h2 class="text-headline-medium register-heading">Lib4GZ</h2>
+
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <div class="form-row">
+          <lib-input
+            formControlName="email"
+            label="Email"
+            type="email"
+            [required]="true"
+            [error]="getFieldError('email')"
+          />
+        </div>
+
+        <div class="form-row">
+          <lib-input
+            formControlName="username"
+            label="Username"
+            type="text"
+            [required]="true"
+            [error]="getFieldError('username')"
+          />
+        </div>
+
+        <div class="form-row">
+          <lib-input
+            formControlName="password"
+            label="Password"
+            type="password"
+            [required]="true"
+            [error]="getFieldError('password')"
+          />
+        </div>
+
+        <div class="form-row">
+          <lib-input
+            formControlName="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            [required]="true"
+            [error]="getFieldError('confirmPassword')"
+          />
+        </div>
+
+        <div class="form-row terms-row">
+          <label class="checkbox">
+            <input type="checkbox" formControlName="terms" />
+            <span class="text-body-medium">I agree to the Terms and Conditions</span>
+          </label>
+          @if (registerForm.get('terms')?.touched && registerForm.get('terms')?.hasError('required')) {
+            <span class="form-field-error text-body-small">You must accept the terms</span>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <div class="register-error" role="alert">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <lib-button
+          type="submit"
+          variant="primary"
+          size="lg"
+          [isLoading]="isLoading()"
+          [disabled]="registerForm.invalid"
+        >
+          Register
+        </lib-button>
+      </form>
+
+      <p class="register-login-link text-body-medium">
+        Already have an account? <a routerLink="/login">Login</a>
+      </p>
+    </div>
+  </div>
+</div>

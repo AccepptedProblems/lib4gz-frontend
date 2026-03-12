@@ -1,0 +1,143 @@
+@use '../../../../../assets/design-system/breakpoint' as bp;
+
+:host { display: block }
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.enrollment-management {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Table Filters ────────────────────────────────────────────────
+.table-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-input {
+  max-width: 320px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--neutral-color-3, #e0e0e0);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.filter-input:focus {
+  border-color: var(--primary-color, #00897b);
+}
+
+// ── Status Chips ────────────────────────────────────────────────
+.status-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// ── Data Tables ──────────────────────────────────────────────────
+.table-wrapper { overflow-x: auto }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 500;
+  color: #646464;
+  border-bottom: 2px solid var(--neutral-color-2, #f2f2f2);
+}
+
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--neutral-color-2, #f2f2f2);
+}
+
+.data-table tbody tr:hover { background: #f8f8f8 }
+
+.col-index { width: 50px }
+.col-date { white-space: nowrap }
+.col-actions { width: 120px }
+.col-email {}
+
+.row-actions { display: flex; gap: 4px }
+
+// ── Icon Buttons ─────────────────────────────────────────────────
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #646464;
+  transition: all 200ms;
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn .material-icons { font-size: 18px }
+.icon-btn:hover { background: #f5f5f5; color: #1a1a1a }
+.icon-btn--danger:hover { color: #c62828; background: #ffebee }
+
+// ── Pagination ───────────────────────────────────────────────────
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-top: 8px;
+}
+
+.pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--neutral-color-3, #e0e0e0);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination-btn:disabled { opacity: .4; cursor: not-allowed }
+.pagination-btn:not(:disabled):hover { background: #f8f8f8 }
+
+// ── Empty States ─────────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-icon { font-size: 48px; color: #c0c0c0 }
+
+// ── Misc ─────────────────────────────────────────────────────────
+.warning-text { color: #e86722; margin-top: 4px }
+
+// ── Responsive ───────────────────────────────────────────────────
+@media (max-width: bp.$mobile-large-breakpoint) {
+  .col-email { display: none }
+}

@@ -1,0 +1,796 @@
+openspec: "1.0"
+kind: ChildComponent
+info:
+  title: Enrollment Management
+  version: "1.1.0"
+  description: >
+    Child component of Course Management. Displays the enrollment
+    management view with a compact search input, inline chip-based status
+    filters (with pending badge count), a data table with role-colored
+    badges, and actions for approving, rejecting, toggling roles (with
+    confirmation dialog), and removing enrollments. Handles its own
+    pagination, role-change dialog, and delete dialog.
+
+component:
+  id: enrollment-management
+  name: Enrollment Management
+  parent_screen: course-management
+  selector: app-enrollment-management
+  file: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.ts
+  template: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.html
+  styles: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.scss
+  standalone: true
+  status: scaffold
+
+  purpose: >
+    Extracted from the Course Management component's enrollment view.
+    Renders when the teacher selects the "Enrollment Management" nav item
+    in the sidebar. Receives the full enrollments array from the parent,
+    handles search/filter/pagination internally, and emits events when
+    enrollments are approved, rejected, role-changed, or removed so the
+    parent can update its master list.
+
+  # ────────────────────────────────────────────────────────────────────
+  # INPUTS & OUTPUTS
+  # ────────────────────────────────────────────────────────────────────
+  inputs:
+    - name: enrollments
+      type: "EnrollmentResponse[]"
+      required: true
+      description: >
+        Full list of enrollments for the course. Passed from the parent
+        component's enrollments signal. The child filters and paginates
+        this list internally.
+
+  outputs:
+    - name: enrollmentUpdated
+      type: EnrollmentResponse
+      description: >
+        Emitted after a successful approve, reject, or role change.
+        Parent replaces the enrollment in its master list.
+
+    - name: enrollmentRemoved
+      type: string
+      description: >
+        Emitted with enrollmentId after a successful removal.
+        Parent filters the enrollment from its master list.
+
+  # ────────────────────────────────────────────────────────────────────
+  # LAYOUT
+  # ────────────────────────────────────────────────────────────────────
+  layout: |
+    +----------------------------------------------------+
+    |  [Search..........] (compact, max-width: 320px)     |
+    +----------------------------------------------------+
+    |  [All] [Active] [Pending (3)] [Rejected] [Inactive] |  <-- chip list
+    +----------------------------------------------------+
+    |  #  | Name  | Email   | Role       | Status | Joined | Actions |
+    |  1  | Alice | a@e.com | 🟢LEARNER  | Active | Jan 5  | [⇄][✕] |
+    |  2  | Bob   | b@e.com | 🔵TEACHER  | Active | Jan 3  | [⇄][✕] |
+    |  3  | Carol | c@e.com | 🟢LEARNER  | Pending| —      | [✓][✕] |
+    +----------------------------------------------------+
+    |  Showing 1–20 of 45       [<] 1 / 3 [>]            |
+    +----------------------------------------------------+
+
+  # ────────────────────────────────────────────────────────────────────
+  # ELEMENTS
+  # ────────────────────────────────────────────────────────────────────
+  elements:
+    - name: Search Input
+      element: input
+      class: filter-input
+      placeholder: "Search by name or email..."
+      data_binding: "search()"
+      description: >
+        Text input that filters enrollments by name or email.
+        Compact width: max-width 320px (no longer flex-grows to fill).
+        Resets pagination to page 1 on change.
+
+    - name: Status Filter Chips
+      component: lib-chip
+      class: status-chips
+      description: >
+        Horizontal list of filter chips replacing the previous select
+        dropdown. Rendered between the search bar and the data table.
+        Each chip represents a status filter option. Only one chip can
+        be selected at a time. The Pending chip displays a count badge
+        showing the number of pending enrollments.
+      chips:
+        - { label: "All", value: "All", variant: "default" }
+        - { label: "Active", value: "ACTIVE", variant: "success" }
+        - { label: "Pending", value: "PENDING", variant: "warning", count: "pendingRequestCount()" }
+        - { label: "Rejected", value: "REJECTED", variant: "error" }
+        - { label: "Inactive", value: "INACTIVE", variant: "neutral" }
+      data_binding: "statusFilter()"
+      action: "onChipFilter(value) — sets statusFilter to value, resets page to 1"
+
+    - name: Enrollments Table
+      element: table
+      class: data-table
+      description: >
+        Table of course enrollments. Columns: #, Name, Email (hidden on
+        mobile), Role (with color-coded badge), Status (badge), Joined
+        date, Actions.
+      columns:
+        - { header: "#", class: "col-index", field: "row index" }
+        - { header: "Name", field: "user.name" }
+        - { header: "Email", class: "col-email", field: "user.email", responsive: "hidden on mobile" }
+        - header: "Role"
+          field: "role"
+          description: >
+            Displayed as a colored badge for quick recognition.
+            TEACHER uses primary color (teal), LEARNER uses neutral color.
+          component: lib-badge
+        - { header: "Status", field: "status", component: "lib-badge" }
+        - { header: "Joined", class: "col-date", field: "joinedAt | date:'mediumDate'" }
+        - { header: "", class: "col-actions", field: "actions" }
+      row_actions:
+        - name: Approve
+          visibility: "status === PENDING"
+          description: "EnrollmentService.approve(id), emits enrollmentUpdated"
+        - name: Reject
+          visibility: "status === PENDING"
+          description: "EnrollmentService.reject(id), emits enrollmentUpdated"
+        - name: Toggle Role
+          visibility: "status !== PENDING"
+          description: >
+            Opens role-change confirmation dialog. On confirm, toggles
+            LEARNER<->TEACHER via EnrollmentService.update(), emits
+            enrollmentUpdated.
+        - name: Remove
+          visibility: "status !== PENDING"
+          description: "Opens removal confirmation dialog, then EnrollmentService.delete(), emits enrollmentRemoved"
+      empty_state: "No enrollments match your search/filter criteria."
+      default_empty: "No students enrolled yet. Share your course to get started."
+
+    - name: Pagination
+      description: >
+        Shows "Showing X-Y of Z" and prev/next page buttons.
+        Page size: 20 items per page.
+
+    - name: Role Change Dialog
+      component: lib-dialog
+      description: >
+        Confirmation dialog shown before changing a user's role.
+        Displays the user's name and the target role. Uses primary
+        variant for the confirm button with "Change Role" label.
+
+    - name: Remove Enrollment Dialog
+      component: lib-dialog
+      description: >
+        Confirmation dialog for enrollment removal. Shows student name
+        and warning that they will be removed from the course.
+
+  # ────────────────────────────────────────────────────────────────────
+  # STATES
+  # ────────────────────────────────────────────────────────────────────
+  states:
+    - name: has-enrollments
+      description: Table with data, chip filters, and pagination visible
+    - name: empty-no-filter
+      description: "No students enrolled yet message with group icon"
+    - name: empty-filtered
+      description: "No enrollments match search/filter criteria message"
+    - name: changing-role
+      description: Role change dialog open with confirm/cancel buttons
+    - name: deleting
+      description: Remove dialog open with loading spinner on confirm button
+
+  # ────────────────────────────────────────────────────────────────────
+  # DATA FLOW
+  # ────────────────────────────────────────────────────────────────────
+  data_flow:
+    inputs_from_parent:
+      - signal: enrollments
+        source: "CourseManagementComponent.enrollments()"
+        description: >
+          Parent loads enrollments in forkJoin during initial data load.
+          Array is passed as an input to this child component.
+
+    write_operations:
+      - service: EnrollmentService
+        method: approve
+        signature: "approve(enrollmentId: string): Observable<EnrollmentResponse>"
+        trigger: Click Approve button on pending enrollment row
+
+      - service: EnrollmentService
+        method: reject
+        signature: "reject(enrollmentId: string): Observable<EnrollmentResponse>"
+        trigger: Click Reject button on pending enrollment row
+
+      - service: EnrollmentService
+        method: update
+        signature: "update(enrollmentId: string, request: UpdateEnrollmentRequest): Observable<EnrollmentResponse>"
+        trigger: Confirm in role-change dialog (Toggle Role button opens dialog first)
+
+      - service: EnrollmentService
+        method: delete
+        signature: "delete(enrollmentId: string): Observable<void>"
+        trigger: Confirm in remove enrollment dialog
+
+  # ────────────────────────────────────────────────────────────────────
+  # DESIGN SYSTEM
+  # ────────────────────────────────────────────────────────────────────
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/0"
+        usage: "Table cells, filter inputs (text-body-large)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        usage: "Pagination info, empty state text (text-body-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/2"
+        usage: "Pagination controls, warning text (text-body-small)"
+    colors:
+      - $ref: "../../design-system/color.yaml#/theme_colors/neutral"
+        usage: "Table borders, icon colors, filter borders, learner role badge"
+      - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        usage: "Status badges (success/warning/error/neutral), danger button hover"
+      - $ref: "../../design-system/color.yaml#/theme_colors/primary"
+        usage: "Teacher role badge (primary teal color)"
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        usage: "Approve/Reject buttons"
+      - $ref: "../../design-system/shared-components.yaml#/badge"
+        usage: "Enrollment status badge, role badge (teacher=primary, learner=neutral)"
+      - $ref: "../../design-system/shared-components.yaml#/chip"
+        usage: "Status filter chip list with variant colors and pending count badge"
+      - $ref: "../../design-system/shared-components.yaml#/dialog"
+        usage: "Remove enrollment confirmation, role-change confirmation"
+
+  # ────────────────────────────────────────────────────────────────────
+  # CURRENT IMPLEMENTATION
+  # ────────────────────────────────────────────────────────────────────
+  current_implementation: |
+    import { Component, inject, signal, computed, input, output } from '@angular/core';
+    import { DatePipe } from '@angular/common';
+    import {
+      EnrollmentService,
+    } from '../../../../services';
+    import {
+      EnrollmentResponse,
+      EnrollmentStatus,
+      EnrollmentRole,
+    } from '../../../../shared/models';
+    import {
+      ButtonComponent,
+      BadgeComponent,
+      DialogComponent,
+      ChipComponent,
+    } from '../../../../shared/components';
+    import { ToastService } from '../../../../shared/components/toast/toast.component';
+
+    @Component({
+      selector: 'app-enrollment-management',
+      imports: [
+        DatePipe,
+        ButtonComponent,
+        BadgeComponent,
+        DialogComponent,
+        ChipComponent,
+      ],
+      templateUrl: './enrollment-management.component.html',
+      styleUrl: './enrollment-management.component.scss',
+    })
+    export class EnrollmentManagementComponent {
+      private readonly enrollmentService = inject(EnrollmentService);
+      private readonly toast = inject(ToastService);
+
+      readonly Math = Math;
+      readonly EnrollmentStatus = EnrollmentStatus;
+      readonly EnrollmentRole = EnrollmentRole;
+
+      // Inputs
+      enrollments = input.required<EnrollmentResponse[]>();
+
+      // Outputs
+      enrollmentUpdated = output<EnrollmentResponse>();
+      enrollmentRemoved = output<string>();
+
+      // Filter / pagination state
+      search = signal('');
+      statusFilter = signal<string>('All');
+      page = signal(1);
+      readonly pageSize = 20;
+
+      // Delete dialog
+      deleteDialogOpen = signal(false);
+      deleteEnrollmentId = signal('');
+      deleteEnrollmentName = signal('');
+      deleting = signal(false);
+
+      // Role-change dialog
+      roleDialogOpen = signal(false);
+      roleChangeEnrollment = signal<EnrollmentResponse | null>(null);
+      roleChangeTarget = signal<EnrollmentRole>(EnrollmentRole.LEARNER);
+      changingRole = signal(false);
+
+      // Computed
+      pendingRequestCount = computed(() => {
+        return this.enrollments().filter(e => e.status === EnrollmentStatus.PENDING).length;
+      });
+
+      filteredEnrollments = computed(() => {
+        let list = this.enrollments();
+        const searchTerm = this.search().toLowerCase().trim();
+        const status = this.statusFilter();
+
+        if (searchTerm) {
+          list = list.filter(e =>
+            e.user.name.toLowerCase().includes(searchTerm) ||
+            e.user.email.toLowerCase().includes(searchTerm)
+          );
+        }
+        if (status !== 'All') {
+          list = list.filter(e => e.status === status);
+        }
+        return list;
+      });
+
+      paginatedEnrollments = computed(() => {
+        const all = this.filteredEnrollments();
+        const start = (this.page() - 1) * this.pageSize;
+        return all.slice(start, start + this.pageSize);
+      });
+
+      totalPages = computed(() => Math.ceil(this.filteredEnrollments().length / this.pageSize) || 1);
+
+      // ── Filter actions ─────────────────────────────────────────────────
+      onSearchChange(event: Event): void {
+        this.search.set((event.target as HTMLInputElement).value);
+        this.page.set(1);
+      }
+
+      onChipFilter(value: string): void {
+        this.statusFilter.set(value);
+        this.page.set(1);
+      }
+
+      // ── Enrollment actions ─────────────────────────────────────────────
+      approveEnrollment(enrollment: EnrollmentResponse): void {
+        this.enrollmentService.approve(enrollment.id).subscribe({
+          next: updated => {
+            this.enrollmentUpdated.emit(updated);
+            this.toast.success('Enrollment approved');
+          },
+          error: () => this.toast.error('Failed to approve enrollment'),
+        });
+      }
+
+      rejectEnrollment(enrollment: EnrollmentResponse): void {
+        this.enrollmentService.reject(enrollment.id).subscribe({
+          next: updated => {
+            this.enrollmentUpdated.emit(updated);
+            this.toast.success('Enrollment rejected');
+          },
+          error: () => this.toast.error('Failed to reject enrollment'),
+        });
+      }
+
+      // ── Role change (with confirmation dialog) ──────────────────────────
+      confirmRoleChange(enrollment: EnrollmentResponse): void {
+        const newRole = enrollment.role === EnrollmentRole.LEARNER ? EnrollmentRole.TEACHER : EnrollmentRole.LEARNER;
+        this.roleChangeEnrollment.set(enrollment);
+        this.roleChangeTarget.set(newRole);
+        this.roleDialogOpen.set(true);
+      }
+
+      cancelRoleChange(): void {
+        this.roleDialogOpen.set(false);
+      }
+
+      executeRoleChange(): void {
+        const enrollment = this.roleChangeEnrollment();
+        if (!enrollment) return;
+        this.changingRole.set(true);
+        this.enrollmentService.update(enrollment.id, { role: this.roleChangeTarget() }).subscribe({
+          next: updated => {
+            this.roleDialogOpen.set(false);
+            this.changingRole.set(false);
+            this.enrollmentUpdated.emit(updated);
+            this.toast.success(`Role changed to ${this.roleChangeTarget()}`);
+          },
+          error: () => {
+            this.changingRole.set(false);
+            this.toast.error('Failed to change role');
+          },
+        });
+      }
+
+      // ── Delete ─────────────────────────────────────────────────────────
+      confirmRemove(enrollmentId: string, name: string): void {
+        this.deleteEnrollmentId.set(enrollmentId);
+        this.deleteEnrollmentName.set(name);
+        this.deleteDialogOpen.set(true);
+      }
+
+      cancelDelete(): void {
+        this.deleteDialogOpen.set(false);
+      }
+
+      executeDelete(): void {
+        this.deleting.set(true);
+        const id = this.deleteEnrollmentId();
+        this.enrollmentService.delete(id).subscribe({
+          next: () => {
+            this.deleteDialogOpen.set(false);
+            this.deleting.set(false);
+            this.enrollmentRemoved.emit(id);
+            this.toast.success('Enrollment removed');
+          },
+          error: () => {
+            this.deleting.set(false);
+            this.toast.error('Failed to remove enrollment');
+          },
+        });
+      }
+
+      // ── Badge helpers ──────────────────────────────────────────────────
+      getStatusBadgeVariant(status: EnrollmentStatus): 'success' | 'warning' | 'error' | 'neutral' {
+        const map: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+          [EnrollmentStatus.ACTIVE]: 'success',
+          [EnrollmentStatus.PENDING]: 'warning',
+          [EnrollmentStatus.REJECTED]: 'error',
+          [EnrollmentStatus.INACTIVE]: 'neutral',
+        };
+        return map[status] ?? 'neutral';
+      }
+
+      getRoleBadgeVariant(role: EnrollmentRole): 'primary' | 'neutral' {
+        return role === EnrollmentRole.TEACHER ? 'primary' : 'neutral';
+      }
+    }
+
+  current_template: |
+    <div class="enrollment-management" role="region" aria-label="Enrollment management">
+      <!-- Search -->
+      <div class="table-filters">
+        <input
+          class="filter-input"
+          type="text"
+          placeholder="Search by name or email..."
+          [value]="search()"
+          (input)="onSearchChange($event)"
+        />
+      </div>
+
+      <!-- Status Filter Chips -->
+      <div class="status-chips" role="listbox" aria-label="Filter by status">
+        <lib-chip
+          label="All"
+          value="All"
+          [selected]="statusFilter() === 'All'"
+          (chipClick)="onChipFilter($event)"
+        />
+        <lib-chip
+          label="Active"
+          value="ACTIVE"
+          variant="success"
+          [selected]="statusFilter() === 'ACTIVE'"
+          (chipClick)="onChipFilter($event)"
+        />
+        <lib-chip
+          label="Pending"
+          value="PENDING"
+          variant="warning"
+          [selected]="statusFilter() === 'PENDING'"
+          [count]="pendingRequestCount()"
+          (chipClick)="onChipFilter($event)"
+        />
+        <lib-chip
+          label="Rejected"
+          value="REJECTED"
+          variant="error"
+          [selected]="statusFilter() === 'REJECTED'"
+          (chipClick)="onChipFilter($event)"
+        />
+        <lib-chip
+          label="Inactive"
+          value="INACTIVE"
+          variant="neutral"
+          [selected]="statusFilter() === 'INACTIVE'"
+          (chipClick)="onChipFilter($event)"
+        />
+      </div>
+
+      @if (filteredEnrollments().length === 0) {
+        <div class="empty-state">
+          <span class="material-icons empty-icon">group</span>
+          @if (search() || statusFilter() !== 'All') {
+            <p class="text-body-large text-secondary">No enrollments match your search/filter criteria.</p>
+          } @else {
+            <p class="text-body-large text-secondary">No students enrolled yet. Share your course to get started.</p>
+          }
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col" class="col-index">#</th>
+                <th scope="col">Name</th>
+                <th scope="col" class="col-email">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="col-date">Joined</th>
+                <th scope="col" class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (enrollment of paginatedEnrollments(); track enrollment.id; let i = $index) {
+                <tr>
+                  <td class="col-index">{{ (page() - 1) * pageSize + i + 1 }}</td>
+                  <td>{{ enrollment.user.name }}</td>
+                  <td class="col-email">{{ enrollment.user.email }}</td>
+                  <td>
+                    <lib-badge [variant]="getRoleBadgeVariant(enrollment.role)">
+                      {{ enrollment.role }}
+                    </lib-badge>
+                  </td>
+                  <td>
+                    <lib-badge [variant]="getStatusBadgeVariant(enrollment.status)" [ariaLabel]="enrollment.status">
+                      {{ enrollment.status }}
+                    </lib-badge>
+                  </td>
+                  <td class="col-date">
+                    @if (enrollment.joinedAt) {
+                      {{ enrollment.joinedAt | date:'mediumDate' }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td class="col-actions">
+                    <div class="row-actions">
+                      @if (enrollment.status === EnrollmentStatus.PENDING) {
+                        <lib-button
+                          variant="primary"
+                          size="sm"
+                          [ariaLabel]="'Approve ' + enrollment.user.name"
+                          (buttonClick)="approveEnrollment(enrollment)"
+                        >
+                          Approve
+                        </lib-button>
+                        <lib-button
+                          variant="destructive"
+                          size="sm"
+                          [ariaLabel]="'Reject ' + enrollment.user.name"
+                          (buttonClick)="rejectEnrollment(enrollment)"
+                        >
+                          Reject
+                        </lib-button>
+                      } @else {
+                        <button
+                          class="icon-btn"
+                          (click)="confirmRoleChange(enrollment)"
+                          [attr.aria-label]="'Change role for ' + enrollment.user.name"
+                          title="Toggle Role"
+                        >
+                          <span class="material-icons">swap_horiz</span>
+                        </button>
+                        <button
+                          class="icon-btn icon-btn--danger"
+                          (click)="confirmRemove(enrollment.id, enrollment.user.name)"
+                          [attr.aria-label]="'Remove ' + enrollment.user.name"
+                          title="Remove"
+                        >
+                          <span class="material-icons">person_remove</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <span class="text-body-small text-secondary">
+            Showing {{ (page() - 1) * pageSize + 1 }}–{{ Math.min(page() * pageSize, filteredEnrollments().length) }}
+            of {{ filteredEnrollments().length }}
+          </span>
+          <div class="pagination__controls">
+            <button
+              class="pagination-btn"
+              [disabled]="page() <= 1"
+              (click)="page.set(page() - 1)"
+            >&lt;</button>
+            <span class="text-body-small">{{ page() }} / {{ totalPages() }}</span>
+            <button
+              class="pagination-btn"
+              [disabled]="page() >= totalPages()"
+              (click)="page.set(page() + 1)"
+            >&gt;</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Role Change Confirmation Dialog -->
+    <lib-dialog
+      [open]="roleDialogOpen()"
+      title="Change Role"
+      icon="swap_horiz"
+      iconClass="primary"
+      confirmLabel="Change Role"
+      confirmVariant="primary"
+      [loading]="changingRole()"
+      (confirm)="executeRoleChange()"
+      (cancel)="cancelRoleChange()"
+    >
+      @if (roleChangeEnrollment(); as enrollment) {
+        <p>Change <strong>{{ enrollment.user.name }}</strong>'s role to
+          <lib-badge [variant]="getRoleBadgeVariant(roleChangeTarget())">{{ roleChangeTarget() }}</lib-badge>?
+        </p>
+      }
+    </lib-dialog>
+
+    <!-- Remove Enrollment Confirmation Dialog -->
+    <lib-dialog
+      [open]="deleteDialogOpen()"
+      title="Remove Enrollment"
+      icon="warning"
+      iconClass="warning"
+      confirmLabel="Remove"
+      confirmVariant="destructive"
+      [loading]="deleting()"
+      (confirm)="executeDelete()"
+      (cancel)="cancelDelete()"
+    >
+      <p>Are you sure you want to remove <strong>{{ deleteEnrollmentName() }}</strong>?</p>
+      <p class="text-body-small warning-text">This will remove the student from the course.</p>
+    </lib-dialog>
+
+  current_styles: |
+    @use '../../../../../assets/design-system/breakpoint' as bp;
+
+    :host { display: block }
+
+    .enrollment-management {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    // ── Table Filters ────────────────────────────────────────────────
+    .table-filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-input {
+      max-width: 320px;
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--neutral-color-3, #e0e0e0);
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .filter-input:focus {
+      border-color: var(--primary-color, #00897b);
+    }
+
+    // ── Status Chips ────────────────────────────────────────────────
+    .status-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    // ── Data Tables ──────────────────────────────────────────────────
+    .table-wrapper { overflow-x: auto }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 500;
+      color: #646464;
+      border-bottom: 2px solid var(--neutral-color-2, #f2f2f2);
+    }
+
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--neutral-color-2, #f2f2f2);
+    }
+
+    .data-table tbody tr:hover { background: #f8f8f8 }
+
+    .col-index { width: 50px }
+    .col-date { white-space: nowrap }
+    .col-actions { width: 120px }
+    .col-email {}
+
+    .row-actions { display: flex; gap: 4px }
+
+    // ── Icon Buttons ─────────────────────────────────────────────────
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      color: #646464;
+      transition: all 200ms;
+      display: flex;
+      align-items: center;
+    }
+
+    .icon-btn .material-icons { font-size: 18px }
+    .icon-btn:hover { background: #f5f5f5; color: #1a1a1a }
+    .icon-btn--danger:hover { color: #c62828; background: #ffebee }
+
+    // ── Pagination ───────────────────────────────────────────────────
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      margin-top: 8px;
+    }
+
+    .pagination__controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pagination-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--neutral-color-3, #e0e0e0);
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .pagination-btn:disabled { opacity: .4; cursor: not-allowed }
+    .pagination-btn:not(:disabled):hover { background: #f8f8f8 }
+
+    // ── Empty States ─────────────────────────────────────────────────
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .empty-icon { font-size: 48px; color: #c0c0c0 }
+
+    // ── Misc ─────────────────────────────────────────────────────────
+    .warning-text { color: #e86722; margin-top: 4px }
+
+    // ── Responsive ───────────────────────────────────────────────────
+    @media (max-width: bp.$mobile-large-breakpoint) {
+      .col-email { display: none }
+    }
+
+  acceptance_criteria:
+    - Search input has compact width (max-width 320px), filters by name and email
+    - Status filter uses inline chip list instead of dropdown select
+    - Each chip uses semantic variant color (success, warning, error, neutral)
+    - Pending chip displays count badge showing number of pending enrollments
+    - Only one chip can be selected at a time
+    - Role column displays colored badge (primary for TEACHER, neutral for LEARNER)
+    - Toggle Role button opens confirmation dialog before changing role
+    - Role-change dialog shows target role and user name
+    - Enrollment table shows correct columns with responsive email hiding
+    - Approve/Reject buttons appear for PENDING enrollments
+    - Toggle Role and Remove buttons appear for non-PENDING enrollments
+    - Remove shows confirmation dialog before deletion
+    - Pagination shows correct page counts and navigates pages
+    - Empty states differentiate between no-data and no-filter-match
+    - All mutations emit events to parent for master list updates

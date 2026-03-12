@@ -1,0 +1,222 @@
+<div class="content-view" role="region" aria-label="Course material">
+  @if (loading()) {
+    <div class="skeleton-table">
+      <lib-skeleton width="100%" height="40px" variant="rect" />
+      <lib-skeleton width="100%" height="40px" variant="rect" />
+      <lib-skeleton width="100%" height="40px" variant="rect" />
+    </div>
+  } @else {
+    <!-- Module List -->
+    @if (modulesWithLessons().length === 0 && !showAddModuleForm()) {
+      <div class="empty-state">
+        <span class="material-icons empty-icon">folder_open</span>
+        <p class="text-body-large text-secondary">No modules yet. Create your first module to start building your course.</p>
+      </div>
+    }
+
+    @for (mwl of modulesWithLessons(); track mwl.module.id; let mi = $index) {
+      <div class="module-section">
+        <!-- Module Header -->
+        <div class="module-header">
+          <button
+            class="module-toggle"
+            (click)="toggleModule(mi)"
+            [attr.aria-expanded]="mwl.expanded"
+            [attr.aria-controls]="'module-body-' + mwl.module.id"
+          >
+            <span class="material-icons module-chevron" [class.rotated]="mwl.expanded">
+              chevron_right
+            </span>
+          </button>
+
+          @if (editingModuleId() === mwl.module.id) {
+            <div class="inline-form inline-form--row">
+              <input
+                class="inline-input"
+                [value]="editModuleTitle()"
+                (input)="editModuleTitle.set($any($event.target).value)"
+                (keydown.enter)="saveEditModule(mwl.module.id, mi)"
+                (keydown.escape)="cancelEditModule()"
+              />
+              <lib-button variant="primary" size="sm" [isLoading]="savingModule()" (buttonClick)="saveEditModule(mwl.module.id, mi)">
+                Save
+              </lib-button>
+              <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditModule()">
+                Cancel
+              </lib-button>
+            </div>
+          } @else {
+            <span class="text-title-medium module-title" (click)="toggleModule(mi)">
+              Module {{ mi + 1 }}: {{ mwl.module.title }}
+            </span>
+            <div class="module-actions">
+              <button
+                class="icon-btn"
+                (click)="startEditModule(mwl.module.id, mwl.module.title)"
+                [attr.aria-label]="'Edit Module: ' + mwl.module.title"
+                title="Edit"
+              >
+                <span class="material-icons">edit</span>
+              </button>
+              <button
+                class="icon-btn icon-btn--danger"
+                (click)="confirmDeleteModule(mwl.module.id, mwl.module.title)"
+                [attr.aria-label]="'Delete Module: ' + mwl.module.title"
+                title="Delete"
+              >
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Module Body (lessons) -->
+        @if (mwl.expanded) {
+          <div class="module-body" [id]="'module-body-' + mwl.module.id">
+            @if (!mwl.lessonsLoaded) {
+              <div class="lesson-skeletons">
+                <lib-skeleton width="80%" height="14px" />
+                <lib-skeleton width="60%" height="14px" />
+                <lib-skeleton width="70%" height="14px" />
+              </div>
+            }
+
+            @for (lesson of mwl.lessons; track lesson.id; let li = $index) {
+              <div class="lesson-row">
+                <div class="lesson-row__main">
+                  @if (editingLessonId() === lesson.id) {
+                    <div class="inline-form inline-form--row">
+                      <input
+                        class="inline-input"
+                        [value]="editLessonTitle()"
+                        (input)="editLessonTitle.set($any($event.target).value)"
+                        (keydown.enter)="saveEditLesson(lesson.id, mi, li)"
+                        (keydown.escape)="cancelEditLesson()"
+                      />
+                      <lib-button variant="primary" size="sm" [isLoading]="savingLesson()" (buttonClick)="saveEditLesson(lesson.id, mi, li)">
+                        Save
+                      </lib-button>
+                      <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditLesson()">
+                        Cancel
+                      </lib-button>
+                    </div>
+                  } @else {
+                    <span
+                      class="text-body-medium lesson-title lesson-title--clickable"
+                      (click)="enterLessonDetail(lesson)"
+                    >
+                      <span class="lesson-prefix">{{ mi + 1 }}.{{ li + 1 }}</span>
+                      {{ lesson.title }}
+                    </span>
+                    <div class="lesson-meta">
+                      @if (lesson.hasSummary) {
+                        <span class="material-icons summary-icon" title="Has summary">description</span>
+                      }
+                    </div>
+                    <div class="lesson-actions">
+                      <button
+                        class="icon-btn"
+                        (click)="startEditLesson(lesson.id, lesson.title)"
+                        [attr.aria-label]="'Edit Lesson: ' + lesson.title"
+                        title="Edit"
+                      >
+                        <span class="material-icons">edit</span>
+                      </button>
+                      <button
+                        class="icon-btn icon-btn--danger"
+                        (click)="confirmDeleteLesson(lesson.id, lesson.title, mwl.module.id)"
+                        [attr.aria-label]="'Delete Lesson: ' + lesson.title"
+                        title="Delete"
+                      >
+                        <span class="material-icons">delete</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (mwl.lessonsLoaded && mwl.lessons.length === 0) {
+              <p class="text-body-medium text-secondary empty-text">No lessons in this module yet.</p>
+            }
+
+            <!-- Add Lesson (bottom) -->
+            @if (addingLessonModuleId() === mwl.module.id) {
+              <div class="inline-form lesson-add-form">
+                <input
+                  class="inline-input"
+                  [value]="newLessonTitle()"
+                  (input)="newLessonTitle.set($any($event.target).value)"
+                  placeholder="Lesson title"
+                  (keydown.enter)="submitAddLesson(mwl.module.id, mi)"
+                  (keydown.escape)="cancelAddLesson()"
+                />
+                <div class="inline-form__actions">
+                  <lib-button variant="primary" size="sm" [isLoading]="addingLesson()" (buttonClick)="submitAddLesson(mwl.module.id, mi)">
+                    Save
+                  </lib-button>
+                  <lib-button variant="secondary" size="sm" (buttonClick)="cancelAddLesson()">
+                    Cancel
+                  </lib-button>
+                </div>
+              </div>
+            } @else {
+              <lib-button variant="secondary" size="sm" (buttonClick)="showAddLesson(mwl.module.id)">
+                + Add Lesson
+              </lib-button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Add Module (bottom) -->
+    @if (showAddModuleForm()) {
+      <div class="inline-form module-add-form">
+        <input
+          class="inline-input"
+          [value]="newModuleTitle()"
+          (input)="newModuleTitle.set($any($event.target).value)"
+          placeholder="Module title"
+          (keydown.enter)="submitAddModule()"
+          (keydown.escape)="cancelAddModule()"
+        />
+        <div class="inline-form__actions">
+          <lib-button variant="primary" size="sm" [isLoading]="addingModule()" (buttonClick)="submitAddModule()">
+            Save
+          </lib-button>
+          <lib-button variant="secondary" size="sm" (buttonClick)="cancelAddModule()">
+            Cancel
+          </lib-button>
+        </div>
+      </div>
+    } @else {
+      <lib-button variant="primary" size="sm" (buttonClick)="showAddModule()">
+        + Add Module
+      </lib-button>
+    }
+  }
+</div>
+
+<!-- Delete Confirmation Dialog -->
+<lib-dialog
+  [open]="deleteDialogOpen()"
+  [title]="'Delete ' + deleteType()"
+  icon="warning"
+  iconClass="warning"
+  confirmLabel="Delete"
+  confirmVariant="destructive"
+  [loading]="deleting()"
+  (confirm)="executeDelete()"
+  (cancel)="cancelDelete()"
+>
+  <p>Are you sure you want to delete <strong>{{ deleteEntityName() }}</strong>?</p>
+  @switch (deleteType()) {
+    @case ('module') {
+      <p class="text-body-small warning-text">This will also delete all lessons and exercises in this module.</p>
+    }
+    @case ('lesson') {
+      <p class="text-body-small warning-text">This will also delete the lesson summary and any linked exercises.</p>
+    }
+  }
+</lib-dialog>

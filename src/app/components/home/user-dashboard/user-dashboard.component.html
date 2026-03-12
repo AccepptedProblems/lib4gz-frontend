@@ -1,0 +1,239 @@
+<div class="dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h2 class="text-headline-medium welcome-message">Welcome back, {{ userName() }}!</h2>
+    <div class="search-wrapper">
+      <span class="search-icon material-icons">search</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Enter course code..."
+        [value]="searchCodeInput()"
+        (input)="onSearchInput($event)"
+        (keydown)="onSearchKeydown($event)"
+        (blur)="hideDropdown()"
+        aria-label="Search course by code"
+      />
+      @if (isSearching()) {
+        <span class="search-spinner"></span>
+      } @else if (searchCodeInput()) {
+        <button class="search-clear" (click)="clearSearch()" aria-label="Clear search">
+          &times;
+        </button>
+      }
+      @if (searchError()) {
+        <span class="search-error-msg text-label-medium">{{ searchError() }}</span>
+      }
+
+      <!-- Search Dropdown -->
+      @if (showDropdown() && matchingEnrolledCourses().length > 0) {
+        <div class="search-dropdown">
+          @for (course of matchingEnrolledCourses(); track course.id) {
+            <div
+              class="search-dropdown-item"
+              (mousedown)="selectDropdownCourse(course)"
+            >
+              <span class="dropdown-code text-label-medium">{{ course.code }}</span>
+              <span class="dropdown-title text-body-medium">{{ course.title }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation" role="tablist">
+    <button
+      class="tab-button"
+      [class.active]="activeTab() === 'enrolled'"
+      (click)="switchTab('enrolled')"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'enrolled'"
+    >
+      My Courses
+      <span class="tab-count">{{ enrolledCourses().length }}</span>
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab() === 'created'"
+      (click)="switchTab('created')"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'created'"
+    >
+      Teaching
+      <span class="tab-count">{{ createdCourses().length }}</span>
+    </button>
+    <div class="tab-spacer"></div>
+    @if (activeTab() === 'created') {
+      <lib-button variant="primary" size="sm" (buttonClick)="openCreateDialog()">
+        + Create Course
+      </lib-button>
+    }
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="course-grid">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="skeleton-card">
+          <div class="skeleton-thumbnail"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-subtitle"></div>
+            <div class="skeleton-line skeleton-progress"></div>
+            <div class="skeleton-line skeleton-meta"></div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (errorMessage()) {
+    <div class="error-state">
+      <span class="error-icon">!</span>
+      <p class="text-body-large">{{ errorMessage() }}</p>
+      <lib-button variant="primary" (buttonClick)="retry()">Retry</lib-button>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @else if (filteredCourses().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        @if (activeTab() === 'enrolled') {
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+          </svg>
+        } @else {
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 4.5v15m7.5-7.5h-15"/>
+          </svg>
+        }
+      </div>
+      <p class="text-title-large">No courses yet</p>
+      @if (activeTab() === 'enrolled') {
+        <p class="text-body-medium empty-subtitle">Enroll in a course to get started</p>
+      } @else {
+        <p class="text-body-medium empty-subtitle">Create your first course</p>
+      }
+    </div>
+  }
+
+  <!-- Course Grid -->
+  @else {
+    <div class="course-grid">
+      @for (course of filteredCourses(); track course.id) {
+        <div
+          class="course-card"
+          tabindex="0"
+          role="link"
+          [attr.aria-label]="'Go to course: ' + course.title"
+          (click)="navigateToCourse(course)"
+          (keydown.enter)="navigateToCourse(course)"
+        >
+          <div class="card-thumbnail">
+            <div class="thumbnail-placeholder">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card-body">
+            <h3 class="card-title text-title-medium">{{ course.title }}</h3>
+            <p class="card-instructor text-body-medium">Instructor: {{ course.createdBy.name }}</p>
+
+            @if (activeTab() === 'enrolled') {
+              <div class="card-progress">
+                <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-fill" [style.width.%]="0"></div>
+                </div>
+                <span class="progress-text text-label-medium">0%</span>
+              </div>
+            }
+
+            <div class="card-meta">
+              <span class="role-badge text-label-medium" [class.teacher]="activeTab() === 'created'">
+                {{ activeTab() === 'enrolled' ? 'Student' : 'Teacher' }}
+              </span>
+              @if (course.moduleCount !== null && course.moduleCount !== undefined) {
+                <span class="meta-info text-label-medium">{{ course.moduleCount }} modules</span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Create Course Dialog -->
+<lib-dialog
+  [open]="showCreateDialog()"
+  title="Create Course"
+  confirmLabel="Create"
+  cancelLabel="Cancel"
+  [loading]="isCreating()"
+  (confirm)="onCreateConfirm()"
+  (cancel)="onCreateCancel()"
+>
+  <form [formGroup]="createForm" class="create-course-form">
+    <lib-input
+      label="Course Title"
+      [required]="true"
+      formControlName="title"
+      [error]="createForm.controls.title.touched && createForm.controls.title.errors?.['required'] ? 'Title is required' : null"
+    />
+    <lib-textarea
+      label="Description"
+      formControlName="description"
+      [minRows]="10"
+    />
+    <div class="form-field">
+      <label class="form-label text-label-medium" for="visibility-select">Visibility</label>
+      <select id="visibility-select" class="form-select" formControlName="visibility">
+        @for (opt of visibilityOptions; track opt) {
+          <option [value]="opt">{{ opt }}</option>
+        }
+      </select>
+    </div>
+    @if (createError()) {
+      <p class="create-error text-body-medium">{{ createError() }}</p>
+    }
+  </form>
+</lib-dialog>
+
+<!-- Course Preview Dialog -->
+<lib-dialog
+  [open]="showCoursePreview()"
+  title="Course Details"
+  confirmLabel="Apply"
+  cancelLabel="Cancel"
+  [loading]="isApplying()"
+  (confirm)="onApplyConfirm()"
+  (cancel)="onPreviewCancel()"
+>
+  @if (previewCourse(); as course) {
+    <div class="course-preview">
+      <h3 class="text-title-large course-preview-title">{{ course.title }}</h3>
+      <span class="course-code-chip text-label-medium">CODE {{ course.code }}</span>
+      @if (course.description) {
+        <p class="text-body-medium course-preview-desc">{{ course.description }}</p>
+      }
+      <div class="course-meta-grid">
+        <span class="meta-key text-label-medium">Instructor</span>
+        <span class="meta-value text-body-medium">{{ course.createdBy.name }}</span>
+        <span class="meta-key text-label-medium">Modules</span>
+        <span class="meta-value text-body-medium">{{ course.moduleCount ?? '—' }}</span>
+        <span class="meta-key text-label-medium">Students</span>
+        <span class="meta-value text-body-medium">{{ course.enrollmentCount ?? '—' }}</span>
+        <span class="meta-key text-label-medium">Visibility</span>
+        <span class="meta-value text-body-medium">{{ course.visibility }}</span>
+      </div>
+      @if (applyError()) {
+        <p class="apply-error text-body-medium">{{ applyError() }}</p>
+      }
+    </div>
+  }
+</lib-dialog>

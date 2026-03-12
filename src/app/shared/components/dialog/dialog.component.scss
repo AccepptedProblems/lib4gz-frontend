@@ -1,0 +1,60 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, var(--opacity-backdrop, 0.5));
+  z-index: var(--z-index-modal-backdrop, 500);
+  animation: fadeIn var(--duration-fast, 150ms) ease;
+}
+
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-index-modal, 600);
+  background: var(--surface-page, #fff);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.03));
+  width: min(90vw, 440px);
+  padding: 24px;
+  animation: slideUp var(--duration-slow, 300ms) var(--easing-ease-in-out, cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.dialog__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dialog__icon {
+  font-size: 24px;
+  &.warning { color: var(--warning-color-8, #e86722) }
+  &.error { color: var(--error-color-8, #c62828) }
+}
+
+.dialog__title {
+  margin: 0;
+}
+
+.dialog__body {
+  margin-bottom: 24px;
+  color: var(--text-secondary-color, #646464);
+  line-height: 1.5;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, -45%) }
+  to { opacity: 1; transform: translate(-50%, -50%) }
+}

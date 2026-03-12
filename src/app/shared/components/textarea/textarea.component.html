@@ -1,0 +1,38 @@
+<div
+  class="textarea-wrapper"
+  [class.normal]="size() === 'normal'"
+  [class.small]="size() === 'small'"
+  [class.focused]="focused()"
+  [class.floating]="isFloating()"
+  [class.has-error]="error()"
+  [class.disabled]="isDisabled()"
+  [class.has-label]="!!label()"
+>
+  <div class="textarea-field">
+    <textarea
+      #textareaEl
+      [id]="textareaId"
+      [attr.rows]="minRows()"
+      [disabled]="isDisabled()"
+      [required]="required()"
+      [value]="internalValue()"
+      [placeholder]="label() && !isFloating() ? '' : placeholder()"
+      [attr.aria-label]="ariaLabel() || label() || null"
+      [attr.aria-invalid]="!!error()"
+      [attr.aria-describedby]="error() ? textareaId + '-error' : null"
+      (input)="onInput($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+    ></textarea>
+    @if (label()) {
+      <label [for]="textareaId" [class.required]="required()">
+        {{ label() }}
+      </label>
+    }
+  </div>
+  @if (error()) {
+    <span class="error-text" [id]="textareaId + '-error'" role="alert">
+      {{ error() }}
+    </span>
+  }
+</div>

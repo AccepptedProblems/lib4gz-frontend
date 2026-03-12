@@ -1,0 +1,346 @@
+openspec: "1.0"
+kind: Screen
+info:
+  title: Enrollment Requests (Teacher)
+  version: "2.0.0"
+  description: >
+    DEPRECATED — Route removed. Enrollment request approval/rejection is now
+    handled within the Course Management screen's Enrollment Management view.
+
+screen:
+  id: enrollment-requests
+  name: Enrollment Requests
+  route: /course/:id/manage/requests
+  component:
+    selector: app-enrollment-requests
+    file: src/app/components/course-teacher/enrollment-requests/enrollment-requests.component.ts
+    template: src/app/components/course-teacher/enrollment-requests/enrollment-requests.component.html
+    styles: src/app/components/course-teacher/enrollment-requests/enrollment-requests.component.scss
+    standalone: true
+  guard: [authGuard, roleGuard]
+  guard_data:
+    roles: [teacher]
+  target_users: [teacher]
+  status: deprecated
+  deprecated: true
+  deprecated_note: >
+    This screen's route has been removed. Enrollment request management
+    (approve/reject pending enrollments) is now part of the Course Management
+    screen's Enrollment Management view. The "Requests" button with pending
+    count badge filters the enrollment table to show pending requests.
+
+  purpose: >
+    Review and manage student enrollment requests for courses that
+    require approval. Teachers can approve or reject requests
+    individually or in bulk.
+
+  layout:
+    desktop:
+      description: "Request cards with bulk action bar. >1200px."
+      ascii: |
+        +----------------------------------------------------------+
+        |  Navbar                                                  |
+        +----------------------------------------------------------+
+        |  < Back to Course Management                             |
+        |  Enrollment Requests (5 pending)                         |
+        |  Course: Introduction to Angular                         |
+        +----------------------------------------------------------+
+        |  [Select All]                [Approve All] [Reject All]  |
+        +----------------------------------------------------------+
+        |  +----------------------------------------------------+  |
+        |  | [Avatar] John Doe                                   |  |
+        |  | john@example.com                                    |  |
+        |  | Requested: Jan 25, 2026                            |  |
+        |  | Message: "I'm interested in learning Angular..."   |  |
+        |  |                         [Reject]  [Approve]         |  |
+        |  +----------------------------------------------------+  |
+        |                                                          |
+        |  +----------------------------------------------------+  |
+        |  | [Avatar] Jane Smith                                 |  |
+        |  | ...                                                |  |
+        |  +----------------------------------------------------+  |
+        +----------------------------------------------------------+
+    mobile:
+      description: "Compact cards with stacked buttons. <768px."
+      ascii: |
+        +----------------------+
+        |  Navbar              |
+        +----------------------+
+        |  < Back              |
+        |  Enrollment Requests |
+        |  (5 pending)         |
+        +----------------------+
+        | [All] [Approve][Rej] |
+        +----------------------+
+        |  +----------------+  |
+        |  | [Av] John Doe  |  |
+        |  | john@ex.com    |  |
+        |  | Jan 25, 2026   |  |
+        |  | "I'm interes.."|  |
+        |  | [Reject][Appr] |  |
+        |  +----------------+  |
+        +----------------------+
+
+  components:
+    - id: page-header
+      name: Page Header
+      type: inline
+      elements:
+        - Back link to Course Management
+        - 'Title: "Enrollment Requests"'
+        - Pending count badge "(X pending)"
+        - Course name subtitle
+
+    - id: bulk-actions-bar
+      name: Bulk Actions Bar
+      type: inline
+      layout: |
+        +----------------------------------------------------+
+        |  ☐ Select All (5)      [Approve All]  [Reject All] |
+        +----------------------------------------------------+
+      elements:
+        - name: Select All
+          description: Checkbox with count
+        - name: Approve All
+          variant: primary
+          disabled_when: None selected
+        - name: Reject All
+          variant: destructive
+          disabled_when: None selected
+
+    - id: request-card
+      name: Request Card
+      type: inline
+      layout: |
+        +----------------------------------------------------+
+        |  ☐  [Avatar]  John Doe                              |
+        |               john@example.com                      |
+        |               Requested: January 25, 2026           |
+        |  ────────────────────────────────────────────────── |
+        |  Message: "I'm interested in learning Angular..."   |
+        |                         [Reject]  [Approve]         |
+        +----------------------------------------------------+
+      elements:
+        - name: Checkbox
+          description: For bulk selection
+        - name: Avatar
+          description: Student profile picture
+        - name: Name
+          description: Student full name
+        - name: Email
+          description: Student email
+        - name: Date
+          description: Request submission date
+        - name: Message
+          description: Optional message from student
+        - name: Reject Button
+          variant: secondary/destructive
+        - name: Approve Button
+          variant: primary
+
+    - id: empty-state
+      name: Empty State
+      type: inline
+      layout: |
+        +----------------------------------------------------+
+        |  [Icon: Checkmark in circle]                       |
+        |  All caught up!                                    |
+        |  No pending enrollment requests.                   |
+        +----------------------------------------------------+
+
+    - id: confirmation-modals
+      name: Confirmation Modals
+      type: inline
+      variants:
+        - name: Approve
+          title: Approve Enrollment
+          message: "Approve {name}'s request to join this course?"
+          actions: [Cancel, Approve]
+        - name: Reject
+          title: Reject Enrollment
+          message: "Reject {name}'s request?"
+          fields:
+            - name: reason
+              type: textarea
+              label: Reason (optional)
+          actions: [Cancel, Reject]
+        - name: Bulk Approve
+          title: "Approve {count} Requests"
+          message: "Approve enrollment for {count} students?"
+          actions: [Cancel, Approve All]
+        - name: Bulk Reject
+          title: "Reject {count} Requests"
+          message: "Reject enrollment for {count} students?"
+          fields:
+            - name: reason
+              type: textarea
+              label: Reason (optional)
+          actions: [Cancel, Reject All]
+
+  states:
+    - name: loading
+      description: Skeleton cards, bulk actions disabled
+    - name: loaded
+      description: Request cards displayed, all actions enabled
+    - name: empty
+      description: '"All caught up!" success illustration'
+    - name: processing
+      description: Card being processed shows spinner, other cards still interactive
+    - name: error
+      description: Error message on failed action with retry option
+
+  data_flow:
+    route_params:
+      - name: id
+        type: string
+        description: Course UUID
+    service_calls:
+      - service: EnrollmentService
+        method: listByCourse
+        params: courseId
+        description: Filter by status PENDING
+      - service: EnrollmentService
+        method: approve
+        params: enrollmentId
+      - service: EnrollmentService
+        method: reject
+        params: enrollmentId
+
+  interactions:
+    - action: Select request
+      trigger: Click checkbox
+      result: Add to selection
+    - action: Select all
+      trigger: Click "Select All"
+      result: Select all visible requests
+    - action: Approve single
+      trigger: Click Approve on card
+      result: Confirm -> Approve -> Remove card with animation
+    - action: Reject single
+      trigger: Click Reject on card
+      result: Confirm (+ reason) -> Reject -> Remove card with animation
+    - action: Approve all
+      trigger: Click "Approve All"
+      result: Confirm -> Approve selected -> Remove cards
+    - action: Reject all
+      trigger: Click "Reject All"
+      result: Confirm (+ reason) -> Reject selected -> Remove cards
+    - action: Back
+      trigger: Click back link
+      result: Navigate to Course Management
+
+  business_logic:
+    display_order: Sorted by request date (oldest first)
+    approval_flow:
+      - Click Approve
+      - Show confirmation (optional, can skip)
+      - Call EnrollmentService.approve()
+      - Remove card from list with animation
+      - Show success toast
+      - Update pending count
+    rejection_flow:
+      - Click Reject
+      - Show confirmation with optional reason input
+      - Call EnrollmentService.reject()
+      - Remove card from list with animation
+      - Show success toast
+      - Update pending count
+    bulk_actions:
+      - Select requests via checkboxes
+      - Click bulk action button
+      - Show confirmation with count
+      - Process all selected
+      - Remove processed cards
+      - 'Show summary toast ("5 requests approved")'
+
+  accessibility:
+    - Cards are focusable
+    - Checkboxes properly labeled
+    - Buttons have descriptive labels
+    - Modal traps focus correctly
+    - Success/error announced to screen readers
+
+  responsive:
+    breakpoints:
+      - range: "> 768px"
+        layout: Full card layout
+      - range: "<= 768px"
+        layout: Compact card, stacked buttons
+
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/headline/levels/1"
+        usage: "Page title: Enrollment Requests (text-headline-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/1"
+        usage: Student name in request cards (text-title-medium)
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        usage: Email, date, message content (text-body-medium)
+      - $ref: "../../design-system/typography.yaml#/scale/label/levels/0"
+        usage: Pending count badge (text-label-large)
+    colors:
+      - $ref: "../../design-system/color.yaml#/theme_colors/primary"
+        usage: Approve button, Select All checkbox
+      - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        usage: >
+          Approve action (--success-color), Reject action (--error-color),
+          Empty state checkmark (--success-color)
+      - $ref: "../../design-system/color.yaml#/theme_colors/neutral"
+        usage: Card borders, dividers, secondary text
+    components:
+      - $ref: "../../design-system/components.yaml#/button"
+        usage: Approve (primary), Reject (destructive), Bulk action buttons
+      - $ref: "../../design-system/components.yaml#/checkbox"
+        usage: Card selection checkboxes, Select All
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        usage: Approve/Reject buttons with loading states (lib-button)
+      - $ref: "../../design-system/shared-components.yaml#/spinner"
+        usage: Card processing indicator, page loading
+    tokens:
+      - $ref: "../../design-system/tokens.yaml#/spacing"
+        usage: Card padding, bulk actions bar spacing
+      - $ref: "../../design-system/tokens.yaml#/border_radius"
+        usage: Card corners (--radius-md), avatar (--radius-full)
+      - $ref: "../../design-system/tokens.yaml#/motion"
+        usage: Card removal animation (--duration-slow, --easing-ease-out)
+      - $ref: "../../design-system/tokens.yaml#/z_index"
+        usage: Confirmation modal (--z-index-modal)
+    breakpoints:
+      - $ref: "../../design-system/breakpoints.yaml#/breakpoints/1"
+        usage: "768px: Compact cards, stacked buttons"
+
+  related_services:
+    - $ref: "../../network/api-endpoints.yaml#/resources/enrollments"
+
+  current_implementation: |
+    import { Component } from '@angular/core';
+
+    @Component({
+      selector: 'app-enrollment-requests',
+      imports: [],
+      templateUrl: './enrollment-requests.component.html',
+      styleUrl: './enrollment-requests.component.scss'
+    })
+    export class EnrollmentRequestsComponent {
+
+    }
+
+  current_template: |
+    <p>enrollment-requests works!</p>
+
+  acceptance_criteria:
+    - Page loads with pending requests
+    - Request cards display all information
+    - Individual approve works with confirmation
+    - Individual reject works with optional reason
+    - Select all selects all requests
+    - Bulk approve works
+    - Bulk reject works with optional reason
+    - Processed cards animate out of list
+    - Pending count updates after actions
+    - Empty state shows when no requests
+    - Loading state shows skeleton cards
+    - Error handling for failed actions
+    - Back navigation works
+    - Works on mobile devices
+    - Keyboard accessible

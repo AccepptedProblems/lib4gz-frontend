@@ -1,0 +1,2621 @@
+openspec: "1.0"
+kind: Screen
+info:
+  title: Exercise Editor (Teacher)
+  version: "2.0.0"
+  description: >
+    Create and edit exercises with questions. Supports two exercise types:
+    Multiple Choice (questions with selectable answer options) and
+    Text Answer (questions where students type free-form responses).
+    Includes a Fast Create feature for bulk-importing questions from
+    pasted numbered text. Splits by numbered index at line start;
+    multi-line content between indices is preserved per question.
+
+screen:
+  id: exercise-editor
+  name: Exercise Editor
+  routes:
+    create: /course/:id/manage/exercise/new
+    edit: /course/:id/manage/exercise/:exerciseId/edit
+  component:
+    selector: app-exercise-editor
+    file: src/app/components/course-teacher/exercise-editor/exercise-editor.component.ts
+    template: src/app/components/course-teacher/exercise-editor/exercise-editor.component.html
+    styles: src/app/components/course-teacher/exercise-editor/exercise-editor.component.scss
+    standalone: true
+  guard: [authGuard, roleGuard]
+  guard_data:
+    roles: [teacher]
+  target_users: [teacher]
+  status: implemented
+
+  purpose: >
+    Provide teachers with an intuitive editor for creating and managing
+    exercises attached to a lesson. The editor supports two question types
+    (Multiple Choice and Text Answer), manual question creation, inline
+    question editing, and a Fast Create feature that parses numbered
+    text into individual questions (splitting by numbered index at
+    line start, supporting multi-line question content). An unsaved-changes confirmation dialog
+    prevents accidental data loss.
+
+  # ────────────────────────────────────────────────────────────────────
+  # LAYOUT
+  # ────────────────────────────────────────────────────────────────────
+  navbar_visibility: hidden
+  navbar_visibility_description: >
+    The navigation bar is hidden while creating or editing exercises to
+    provide a distraction-free, full-screen editor experience. This is
+    achieved by adding exercise editor route patterns to the hiddenRoutes
+    array in AppComponent.
+
+  layout:
+    desktop:
+      description: >
+        Single-column centered layout (max-width 800px). Navbar is hidden.
+        Page header contains the title on the left and Cancel/Save buttons
+        on the right (same row). No back icon button — Cancel handles
+        navigation. Exercise Title field appears first, then a compact
+        Exercise Type selector, then an optional placeholder answers section
+        (for MULTIPLE_CHOICE with True/False-style defaults), then the
+        questions section with inline editing. >=768px.
+      ascii: |
+        +──────────────────────────────────────────────────────────────+
+        │                                                              │
+        │  Create Exercise          [Cancel]  [Save Exercise]          │
+        │                                                              │
+        │  Exercise Title*                                             │
+        │  ┌──────────────────────────────────────────────────────┐   │
+        │  │ What do you know about Angular?                      │   │
+        │  │ ________________________________________________     │   │
+        │  └──────────────────────────────────────────────────────┘   │
+        │                                                              │
+        │  Exercise Type*                                              │
+        │  [Text Answer ▼]  (compact/small select)                 │
+        │                                                              │
+        │  Default Answers  (only for MULTIPLE_CHOICE)                 │
+        │  ┌────────────────────────────────────────────────────────┐  │
+        │  │  (●) [True______________________]                [✕]  │  │
+        │  │  ( ) [False_____________________]                [✕]  │  │
+        │  │  [+ Add Answer]                                       │  │
+        │  └────────────────────────────────────────────────────────┘  │
+        │                                                              │
+        │  Questions (3)                                               │
+        │                                                              │
+        │  ┌──────────────────────────────────────────────────────┐    │
+        │  │ 1.  What is Angular?                      [✎]  [✕]  │    │
+        │  │     ● A framework    ○ A library    ○ A language     │    │
+        │  └──────────────────────────────────────────────────────┘    │
+        │  ┌──────────────────────────────────────────────────────┐    │
+        │  │ 2.  Select the JS superset                [✎]  [✕]  │    │
+        │  │     ● TypeScript    ○ CoffeeScript                  │    │
+        │  └──────────────────────────────────────────────────────┘    │
+        │  ┌──────────────────────────────────────────────────────┐    │
+        │  │ 3.  Explain dependency injection          [✎]  [✕]  │    │
+        │  │     (Text answer)                                   │    │
+        │  └──────────────────────────────────────────────────────┘    │
+        │                                                              │
+        │  [+ Add Question]              [⚡ Fast Create]             │
+        │                                                              │
+        +──────────────────────────────────────────────────────────────+
+
+    mobile:
+      description: >
+        Stacked full-width layout with collapsible question cards. Navbar
+        is hidden. Header shows title and sticky Cancel/Save buttons. <768px.
+      ascii: |
+        +──────────────────────────+
+        │                          │
+        │  Create Exercise         │
+        │  [Cancel]  [Save]        │
+        │                          │
+        │  Exercise Title*         │
+        │  ┌────────────────────┐  │
+        │  │ __________________ │  │
+        │  │ __________________ │  │
+        │  └────────────────────┘  │
+        │                          │
+        │  Exercise Type*          │
+        │  [Text Answer ▼]     │
+        │                          │
+        │  Default Answers         │
+        │  (●) [True_______]       │
+        │  ( ) [False______]       │
+        │  [+ Add Answer]          │
+        │                          │
+        │  Questions (3)           │
+        │                          │
+        │  ┌────────────────────┐  │
+        │  │ 1. What is...  [✎] │  │
+        │  │  ● A framework     │  │
+        │  │  ○ A library       │  │
+        │  └────────────────────┘  │
+        │  ┌────────────────────┐  │
+        │  │ 2. Select... [✎]  │  │
+        │  └────────────────────┘  │
+        │  ┌────────────────────┐  │
+        │  │ 3. Explain... [✎] │  │
+        │  └────────────────────┘  │
+        │                          │
+        │  [+ Add Question]        │
+        │  [⚡ Fast Create]       │
+        │                          │
+        +──────────────────────────+
+
+  # ────────────────────────────────────────────────────────────────────
+  # COMPONENTS
+  # ────────────────────────────────────────────────────────────────────
+  components:
+
+    # ── PAGE HEADER ──────────────────────────────────────────────────
+    - id: page-header
+      name: Page Header
+      type: inline
+      description: >
+        Flex row with the page title on the left and Cancel/Save action
+        buttons on the right, aligned vertically center. No back icon
+        button — the Cancel button handles navigation (triggers unsaved
+        changes dialog if dirty, otherwise navigates back).
+      elements:
+        - id: page-title
+          description: >
+            "Create Exercise" (create mode) or "Edit Exercise" (edit mode).
+            Uses text-title-large (22px). CSS class: editor-title.
+        - id: header-actions
+          description: >
+            Flex row containing Cancel (secondary, md size) and Save Exercise
+            (primary, md size, with loading state) buttons. Buttons use md
+            size for prominent visibility in the header. On mobile, buttons
+            may wrap below the title.
+
+    # ── EXERCISE FORM ────────────────────────────────────────────────
+    - id: exercise-form
+      name: Exercise Metadata Form
+      type: inline
+      description: >
+        Flat content section with form fields. No card wrapper — follows
+        Unified Surface principle. Fields are separated by `--spacing-lg`
+        vertical gap. Exercise Type field and Exercise Title field must have
+        `--spacing-lg` gap between them.
+      fields:
+        - name: title
+          type: textarea
+          label: Exercise Title
+          placeholder: "Enter the main question or title for this exercise"
+          minRows: 1
+          description: >
+            The main question or prompt of the exercise. This is what
+            students see as the exercise heading. Uses the shared
+            lib-textarea component with floating label, auto-expanding
+            height, required validation, and error display. Starts at
+            minRows=1 and grows as the teacher types. Auto-resize is
+            handled internally by the component.
+          validation:
+            required: true
+          component: lib-textarea
+
+        - name: type
+          type: select
+          label: Exercise Type
+          description: >
+            Determines how all questions in this exercise behave.
+            Only two types are currently supported. Displayed SECOND in the
+            form (after exercise title). Uses a compact/small select box
+            (small-input class, reduced width via max-width: 280px) to
+            avoid the selector dominating the form visually.
+          options:
+            - value: MULTIPLE_CHOICE
+              label: Multiple Choice
+              description: >
+                Each question has a set of answer options. Students select
+                one or more correct answers.
+            - value: TEXT_ANSWER
+              label: Text Answer
+              description: >
+                Students type a free-form text response for each question.
+                No predefined answer options.
+          validation:
+            required: true
+          default: TEXT_ANSWER
+          behavior: >
+            Changing the exercise type after questions have been added shows
+            a confirmation: "Changing the type will reset answer options for
+            all existing questions. Continue?" If confirmed, answer options
+            (meta.options) are cleared from all questions.
+
+    # ── DEFAULT ANSWERS (PLACEHOLDER) ─────────────────────────────────
+    - id: default-answers
+      name: Default Answers (Placeholder)
+      type: inline
+      description: >
+        Only visible when exercise type is MULTIPLE_CHOICE. Allows the
+        teacher to define placeholder/default answer options at the exercise
+        level (e.g., "True" / "False"). When a new question is added
+        (manually or via Fast Create), it inherits these default answers
+        instead of blank options. Questions that already exist are NOT
+        retroactively updated — only newly created questions use the
+        defaults. If the teacher has not edited the defaults, new questions
+        get the standard 2 empty options. This is useful for true/false
+        exercises where every question shares the same answer choices.
+      elements:
+        - id: default-answers-label
+          description: >
+            "Default Answers (new questions will use these)" — label uses
+            text-label-large with inline hint in parentheses using
+            text-body-small and --text-secondary-color. Concise single-line.
+        - id: default-answer-rows
+          description: >
+            Same UI as the question-level answer rows: radio + text input +
+            delete button. Min 2, max 6 options. Radio selects the default
+            correct answer.
+        - id: add-default-answer-button
+          description: >
+            "+ Add Answer" button. Hidden when max (6) reached.
+      styling:
+        container: >
+          margin-top: var(--spacing-md). Uses the same .answers-section,
+          .answers-list, .answer-row classes as question-level answers.
+
+    # ── QUESTIONS SECTION ────────────────────────────────────────────
+    - id: questions-section
+      name: Questions Section
+      type: inline
+      description: >
+        Flat content section. No card wrapper. Contains the question count
+        header, the list of question cards, and the action buttons (Add
+        Question, Fast Create). Individual question cards retain their
+        own card styling.
+      elements:
+        - id: questions-header
+          description: >
+            "Questions (N)" where N is the current count.
+            Uses text-title-medium. If N = 0, shows "Questions" without count.
+        - id: question-list
+          description: List of question-card components (view or edit mode).
+        - id: action-buttons
+          description: >
+            Row with "Add Question" (secondary button) on the left and
+            "Fast Create" (primary button with ⚡ icon) on the right.
+            On mobile, buttons stack vertically full-width.
+
+    # ── QUESTION CARD (VIEW MODE) ───────────────────────────────────
+    - id: question-card-view
+      name: Question Card — View Mode
+      type: inline
+      description: >
+        Compact read-only card for each question. Shows order number,
+        question text, and a preview of answer options (if MULTIPLE_CHOICE).
+        Has edit (pencil) and delete (×) icon buttons in the top-right.
+      layout: |
+        ┌──────────────────────────────────────────────────────────┐
+        │  1.  What is Angular?                         [✎]  [✕]  │
+        │      ● A framework    ○ A library    ○ A language        │
+        └──────────────────────────────────────────────────────────┘
+      elements:
+        - id: order-number
+          description: >
+            Sequential number (1, 2, 3...). Uses text-label-large,
+            --text-secondary color.
+        - id: question-text
+          description: >
+            The question content. Uses text-body-medium. Truncated to
+            2 lines with ellipsis in view mode.
+        - id: edit-button
+          description: >
+            Pencil icon button (material icon "edit"). On click, switches
+            this card to edit mode.
+        - id: delete-button
+          description: >
+            × icon button (material icon "close"). On click, removes the
+            question from the list with a brief fade-out animation.
+            No confirmation dialog for individual question delete (instant,
+            undoable via Cancel at exercise level).
+        - id: answer-preview
+          description: >
+            Only shown when exercise type is MULTIPLE_CHOICE.
+            Displays answer options inline as a wrapped row of chips/labels:
+            "● Correct answer" (--primary-color-600 text, --primary-color-50 bg)
+            "○ Wrong answer" (--text-secondary, no bg).
+            If TEXT_ANSWER type, shows a muted label "(Text answer)" in
+            --text-tertiary italic.
+      styling:
+        card: >
+          background: white; border: 1px solid var(--neutral-color-3, #e0e0e0);
+          border-radius: var(--radius-md); padding: var(--spacing-md);
+          margin-bottom: var(--spacing-sm).
+        hover: >
+          border-color: var(--neutral-color-5, #9e9e9e); transition: var(--duration-normal).
+
+    # ── QUESTION CARD (EDIT MODE) ───────────────────────────────────
+    - id: question-card-edit
+      name: Question Card — Edit Mode (Inline)
+      type: inline
+      description: >
+        Expanded inline editor that replaces the view card when editing.
+        Contains the question text field and, for MULTIPLE_CHOICE,
+        an answer options section. Has Save and Cancel buttons at the
+        bottom of the card.
+      layout:
+        multiple_choice: |
+          ┌──────────────────────────────────────────────────────────┐
+          │  Question 1                                              │
+          │  [What is Angular?________________________________]      │
+          │                                                          │
+          │  Answers                                                 │
+          │  ┌────────────────────────────────────────────────────┐  │
+          │  │  (●) [A framework___________________]        [✕]  │  │
+          │  │  ( ) [A library_____________________]        [✕]  │  │
+          │  │  ( ) [A language____________________]        [✕]  │  │
+          │  │                                                   │  │
+          │  │  [+ Add Answer]                                   │  │
+          │  └────────────────────────────────────────────────────┘  │
+          │                                                          │
+          │  [Cancel]                             [Save Question]    │
+          └──────────────────────────────────────────────────────────┘
+        text_answer: |
+          ┌──────────────────────────────────────────────────────────┐
+          │  Question 3                                              │
+          │  [Explain dependency injection_____________________]     │
+          │                                                          │
+          │  Students will type their answer as free text.           │
+          │                                                          │
+          │  [Cancel]                             [Save Question]    │
+          └──────────────────────────────────────────────────────────┘
+      fields:
+        - name: content
+          type: textarea
+          label: Question Text
+          placeholder: "Enter the question"
+          minRows: 1
+          description: >
+            The question content shown to students. Uses the shared
+            lib-textarea component with floating label and auto-expanding
+            height. Starts at minRows=1 and grows as the teacher types.
+            Auto-resize is handled internally by the component, including
+            on entering edit mode when existing content is loaded.
+          validation:
+            required: true
+          component: lib-textarea
+
+      answer_options_section:
+        description: >
+          Only visible when exercise type is MULTIPLE_CHOICE. Contains
+          a list of answer option rows and an "Add Answer" button.
+        label: Answers
+        elements:
+          - id: answer-row
+            description: >
+              Each row: radio button (marks correct) + text input + delete (×).
+              Radio buttons are mutually exclusive — only one answer can be
+              marked correct per question.
+            layout: |
+              (●) [Answer text input_______________]  [✕]
+            fields:
+              - name: text
+                type: text
+                placeholder: "Answer option"
+                validation:
+                  required: true
+              - name: isCorrect
+                type: radio
+                description: >
+                  Selecting a radio marks this answer as the correct one.
+                  Uses --primary-color-600 for the selected radio fill.
+            min_options: 2
+            max_options: 6
+            delete_behavior: >
+              Cannot delete if only 2 options remain (min 2). Delete button
+              is hidden/disabled when at minimum.
+          - id: add-answer-button
+            description: >
+              "+ Add Answer" text button (secondary style). Hidden when
+              max options (6) reached.
+
+      card_actions:
+        - id: cancel-question
+          label: Cancel
+          variant: secondary
+          description: >
+            Discards edits to this question and returns card to view mode.
+            If this was a newly added question with no saved content,
+            removes the card entirely.
+        - id: save-question
+          label: Save Question
+          variant: primary
+          description: >
+            Validates the question (content required; if MC, at least 2
+            options with text, exactly 1 marked correct). On success,
+            collapses to view mode. On validation failure, shows inline
+            error messages.
+
+      styling:
+        card: >
+          background: var(--primary-color-50); border: 2px solid
+          var(--primary-color-200); border-radius: var(--radius-md);
+          padding: var(--spacing-lg); margin-bottom: var(--spacing-sm).
+        description: >
+          The edit card uses a tinted background to visually distinguish
+          it from view-mode cards, making it clear which question is
+          being edited. Follows Subtle Interaction States principle.
+
+    # ── FAST CREATE DIALOG ─────────────────────────────────────────
+    - id: fast-create-dialog
+      name: Fast Create Dialog
+      type: dialog
+      description: >
+        A modal dialog (max-width 600px) opened by the "Fast Create" button.
+        Allows teachers to paste a numbered list of questions in a textarea.
+        Questions are split by numbered indices (e.g. "1.", "2)") at the
+        start of new lines. Multi-line content between indices is preserved
+        as a single question. The confirm button shows the count of detected
+        questions. On confirm, all parsed questions are appended to the
+        question list. No preview section — only the textarea and action
+        buttons.
+      layout: |
+        ┌──────────────────────────────────────────────────────────────┐
+        │  ⚡ Fast Create                                       [✕]   │
+        │                                                              │
+        │  Paste your numbered question list below:                    │
+        │  ┌────────────────────────────────────────────────────────┐  │
+        │  │ 1. What is Angular? It is a framework                  │  │
+        │  │ that helps build web applications                      │  │
+        │  │ 2. What is TypeScript?                                 │  │
+        │  │ It extends JavaScript with types                       │  │
+        │  │ 3. Explain dependency injection                        │  │
+        │  └────────────────────────────────────────────────────────┘  │
+        │                                                              │
+        │  [Cancel]                             [Add 3 Questions]      │
+        └──────────────────────────────────────────────────────────────┘
+      fields:
+        - name: rawText
+          type: textarea
+          label: Paste your numbered question list below
+          placeholder: |
+            1. First question
+            2. Second question
+            3. Third question
+          minRows: 8
+          description: >
+            Uses lib-textarea with floating label, minRows=8, auto-expanding
+            height. Parses on every keystroke (debounced 200ms) to update the
+            detected question count in the confirm button.
+          component: lib-textarea
+
+      parsing_rules:
+        description: >
+          Splits text by numbered indices at the start of new lines only.
+          A new question begins when a line matches the numbered pattern.
+          All lines between one numbered index and the next are joined
+          with newlines and treated as that question's content. Numbers
+          appearing mid-text are NOT treated as split points.
+        patterns:
+          - regex: '^\s*(\d+)\s*[.)]\s*'
+            description: >
+              Matches the start of a line with a number followed by a dot
+              or closing parenthesis. Examples: "1. Question", "2) Question".
+              The number prefix is stripped; text after it (and all
+              subsequent non-numbered lines) becomes the question content.
+        behavior:
+          - A new question starts only at a numbered index on a new line
+          - Lines between indices are continuation lines (joined with newlines)
+          - Lines before the first numbered index are ignored
+          - Leading/trailing whitespace is trimmed from the final question text
+          - Duplicate question texts are preserved (teacher's responsibility)
+          - Parsed questions inherit the next available orderIndex
+
+      actions:
+        - id: cancel-fast-create
+          label: Cancel
+          variant: secondary
+          description: Closes the dialog without adding questions.
+        - id: confirm-fast-create
+          label: "Add N Questions"
+          variant: primary
+          description: >
+            Dynamic label shows the count. Disabled when 0 questions
+            detected. On click, appends all parsed questions to the
+            question list, closes the dialog. For MULTIPLE_CHOICE exercises,
+            new questions are added with 2 empty answer options as defaults.
+
+    # ── UNSAVED CHANGES DIALOG ───────────────────────────────────────
+    - id: unsaved-changes-dialog
+      name: Unsaved Changes Confirmation Dialog
+      type: dialog
+      description: >
+        Shown when the user attempts to navigate away (back icon button, browser
+        back, route change) while there are unsaved changes. Uses the
+        shared lib-dialog component.
+      layout: |
+        ┌──────────────────────────────────────────────────────────┐
+        │  Unsaved Changes                                         │
+        │                                                          │
+        │  You have unsaved changes. Are you sure you want to      │
+        │  leave? Your changes will be lost.                       │
+        │                                                          │
+        │  [Stay]                                    [Leave]       │
+        └──────────────────────────────────────────────────────────┘
+      actions:
+        - id: stay
+          label: Stay
+          variant: primary
+          description: Closes dialog, user remains on editor.
+        - id: leave
+          label: Leave
+          variant: destructive
+          description: Allows navigation, discards all changes.
+      trigger: >
+        Activated by the Cancel button, canDeactivate route guard, and the
+        browser beforeunload event. The isDirty signal tracks whether any
+        form field or question has been modified since the last save
+        (or since initial load in create mode).
+
+    # ── HEADER ACTIONS (Cancel / Save) ────────────────────────────────
+    # NOTE: Cancel and Save buttons are located in the page-header
+    # component (not in a separate footer). See page-header.header-actions.
+    # The previous footer-actions component has been removed. Cancel and
+    # Save are now prominently placed in the header for immediate access
+    # without scrolling.
+    - id: header-action-buttons
+      name: Header Action Buttons
+      type: inline
+      description: >
+        Cancel and Save Exercise buttons in the page header row. Uses md
+        size for both buttons. Cancel triggers unsaved-changes-dialog if
+        dirty, otherwise navigates back. Save validates and calls API.
+      elements:
+        - id: cancel-button
+          label: Cancel
+          variant: secondary
+          size: md
+          description: >
+            Triggers unsaved-changes-dialog if dirty, otherwise navigates
+            back to the lesson detail screen via /course/:id/manage with
+            { lessonId } in router state.
+        - id: save-button
+          label: Save Exercise
+          variant: primary
+          size: md
+          description: >
+            Validates exercise form + all questions, then calls API.
+            Shows loading spinner (lib-button isLoading) during save.
+
+  # ────────────────────────────────────────────────────────────────────
+  # STATES
+  # ────────────────────────────────────────────────────────────────────
+  states:
+    - name: loading
+      description: >
+        Edit mode only. Skeleton placeholders for the title field,
+        type selector, and question list while ExerciseService.get()
+        and QuestionService.listByExercise() resolve.
+
+    - name: create-mode
+      description: >
+        Empty form. Title blank, type defaults to TEXT_ANSWER,
+        question list is empty. Page title: "Create Exercise".
+
+    - name: edit-mode
+      description: >
+        Form populated from ExerciseResponse. Title and type filled.
+        Question list populated from QuestionResponse[] with answer
+        options reconstructed from each question's meta field.
+        Page title: "Edit Exercise".
+
+    - name: question-editing
+      description: >
+        One question card is in edit mode (expanded inline editor).
+        Only one question can be edited at a time. Clicking edit on
+        another question first saves/discards the current one.
+
+    - name: fast-create-open
+      description: >
+        Fast Create dialog is visible. Background is dimmed.
+        Dialog traps focus.
+
+    - name: saving
+      description: >
+        Save button shows spinner (isLoading=true). All form fields
+        and question actions are disabled during the API call.
+
+    - name: unsaved-prompt
+      description: >
+        Unsaved Changes dialog is visible. User must choose Stay or Leave.
+
+    - name: validation-errors
+      description: >
+        Inline error messages appear below invalid fields. Save button
+        remains enabled but re-triggers validation on click. Errors:
+        "Title is required", "At least one question is required",
+        "Question N: text is required",
+        "Question N: at least 2 answer options required",
+        "Question N: select a correct answer".
+
+  # ────────────────────────────────────────────────────────────────────
+  # DATA FLOW
+  # ────────────────────────────────────────────────────────────────────
+  data_flow:
+    route_params:
+      create_mode:
+        - name: id
+          type: string
+          description: Course UUID (used for back-navigation context)
+      edit_mode:
+        - name: id
+          type: string
+          description: Course UUID
+        - name: exerciseId
+          type: string
+          description: Exercise UUID to load for editing
+
+    signals:
+      - name: isEditMode
+        type: "Signal<boolean>"
+        description: "computed(() => !!route.params['exerciseId'])"
+      - name: exerciseTitle
+        type: "WritableSignal<string>"
+        description: Bound to the title textarea field (multi-line)
+      - name: exerciseType
+        type: "WritableSignal<ExerciseType>"
+        description: "Bound to the type selector. Default: TEXT_ANSWER"
+      - name: questions
+        type: "WritableSignal<EditorQuestion[]>"
+        description: >
+          Array of questions being edited. EditorQuestion is a local
+          interface extending the question content with UI state
+          (isEditing, tempContent, tempOptions, isNew).
+      - name: originalQuestions
+        type: "WritableSignal<EditorQuestion[]>"
+        description: >
+          Snapshot of questions as loaded from the server (edit mode only).
+          Set once in loadExercise() after mapping QuestionResponse[] to
+          EditorQuestion[]. Used by buildUpdateItems() to compute the diff
+          between the original server state and the current editor state:
+          questions present in original but missing from current → DELETE,
+          questions with no id in current → CREATE, questions whose content,
+          meta, or orderIndex changed compared to original → UPDATE,
+          unchanged questions → skipped (not sent to API).
+      - name: editingIndex
+        type: "WritableSignal<number | null>"
+        description: >
+          Index of the question currently in edit mode. null if none.
+      - name: isDirty
+        type: "Signal<boolean>"
+        description: >
+          computed() that compares current form state against the last
+          saved snapshot. True if any field or question has changed.
+      - name: defaultOptions
+        type: "WritableSignal<AnswerOption[]>"
+        description: >
+          Placeholder/default answer options for MULTIPLE_CHOICE exercises.
+          New questions inherit these options when added. Initialized with
+          DEFAULT_MC_OPTIONS (2 empty options). Teacher can customize these
+          (e.g., True/False) and all subsequently added questions will use
+          them. Only visible and editable when exerciseType is MULTIPLE_CHOICE.
+      - name: isSaving
+        type: "WritableSignal<boolean>"
+        description: True while the save API call is in flight.
+      - name: showFastCreate
+        type: "WritableSignal<boolean>"
+        description: Controls Fast Create dialog visibility.
+      - name: showUnsavedDialog
+        type: "WritableSignal<boolean>"
+        description: Controls Unsaved Changes dialog visibility.
+
+    local_interfaces:
+      - name: EditorQuestion
+        description: >
+          Local UI model for questions in the editor. Extends API data
+          with editing state.
+        fields:
+          - name: id
+            type: "string | null"
+            description: "null for newly created questions, UUID for existing"
+          - name: content
+            type: string
+            description: Question text
+          - name: orderIndex
+            type: number
+          - name: meta
+            type: "Record<string, any>"
+            description: >
+              For MULTIPLE_CHOICE: { options: AnswerOption[] }.
+              For TEXT_ANSWER: {} (empty).
+          - name: isNew
+            type: boolean
+            description: True if this question was created in this session
+          - name: isEditing
+            type: boolean
+            description: True if this card is in edit mode
+
+      - name: AnswerOption
+        description: Single answer option for a MULTIPLE_CHOICE question
+        fields:
+          - name: text
+            type: string
+          - name: isCorrect
+            type: boolean
+
+    service_calls:
+      - service: ExerciseService
+        method: get
+        params: exerciseId
+        trigger: On init (edit mode only)
+        description: Load exercise metadata (title, type, settings)
+
+      - service: QuestionService
+        method: listByExercise
+        params: exerciseId
+        trigger: On init (edit mode only)
+        description: >
+          Load all questions. Map QuestionResponse[] to EditorQuestion[]
+          by extracting meta.options for MULTIPLE_CHOICE type.
+
+      - service: ExerciseService
+        method: create
+        params: "lessonId, { title, type, settings }"
+        trigger: Save (create mode)
+        description: >
+          Create the exercise first, then batch-create questions.
+          The lessonId comes from navigation state or a query parameter
+          passed from the lesson management screen.
+
+      - service: ExerciseService
+        method: update
+        params: "exerciseId, { title, type, settings }"
+        trigger: Save (edit mode)
+        description: Update exercise metadata
+
+      - service: QuestionService
+        method: batchCreate
+        params: "exerciseId, { questions: CreateQuestionItem[] }"
+        trigger: Save (create mode, after exercise is created)
+        description: >
+          Create all questions at once. Each question's meta contains
+          { options: AnswerOption[] } for MULTIPLE_CHOICE.
+
+      - service: QuestionService
+        method: batchUpdate
+        params: "exerciseId, { questions: UpdateQuestionItem[] }"
+        trigger: Save (edit mode)
+        description: >
+          Uses QuestionAction enum to CREATE new questions, UPDATE
+          modified ones, and DELETE removed ones in a single call.
+
+  # ────────────────────────────────────────────────────────────────────
+  # INTERACTIONS
+  # ────────────────────────────────────────────────────────────────────
+  interactions:
+    - action: Edit exercise title
+      trigger: Type in title textarea (multi-line)
+      result: Updates exerciseTitle signal, sets isDirty
+
+    - action: Change exercise type
+      trigger: Select from type dropdown
+      result: >
+        If questions exist with answer options, show confirmation dialog
+        ("Changing type will reset answer options. Continue?"). On confirm,
+        update exerciseType signal and clear meta.options from all questions.
+        On cancel, revert the selector.
+
+    - action: Add question manually
+      trigger: Click "+ Add Question"
+      result: >
+        Appends a new EditorQuestion to the list with empty content,
+        isNew=true, isEditing=true. If type is MULTIPLE_CHOICE, initializes
+        with 2 empty answer options. Scrolls to the new question card.
+        If another question was being edited, saves/discards it first.
+
+    - action: Edit question
+      trigger: Click edit (✎) button on a question card
+      result: >
+        Sets editingIndex to this question's index. The card expands to
+        edit mode. If another question was being edited, saves/discards
+        it first.
+
+    - action: Save question (inline)
+      trigger: Click "Save Question" in the expanded card
+      result: >
+        Validates question content (required), and for MULTIPLE_CHOICE:
+        at least 2 options with text + exactly 1 correct. On success,
+        collapses card to view mode. On failure, shows inline errors.
+
+    - action: Cancel question edit
+      trigger: Click "Cancel" in the expanded card
+      result: >
+        Reverts question to its pre-edit state. If the question was newly
+        added (isNew=true) and has no saved content, removes it from the
+        list entirely.
+
+    - action: Delete question
+      trigger: Click delete (✕) button on a question card
+      result: >
+        Removes the question from the list immediately. Remaining questions
+        re-number automatically (1, 2, 3...). No confirmation dialog
+        (exercise-level Cancel reverts all changes).
+
+    - action: Open Fast Create
+      trigger: Click "⚡ Fast Create" button
+      result: Opens the Fast Create dialog
+
+    - action: Paste text in Fast Create
+      trigger: Type or paste in the textarea
+      result: >
+        Parses input after 200ms debounce. Splits by numbered index
+        (e.g. "1.", "2)") at start of new lines. Multi-line content
+        between indices is kept as one question. Updates the detected
+        question count shown in the confirm button label ("Add N Questions").
+
+    - action: Confirm Fast Create
+      trigger: Click "Add N Questions" in dialog
+      result: >
+        Appends all parsed questions to the question list. For
+        MULTIPLE_CHOICE, each new question gets 2 empty answer options.
+        Closes dialog. New questions appear in view mode (not editing).
+
+    - action: Cancel Fast Create
+      trigger: Click "Cancel" or close (✕) in dialog
+      result: Closes dialog without changes
+
+    - action: Save exercise
+      trigger: Click "Save Exercise"
+      result: >
+        1. Validate: title required, at least 1 question, all questions
+           have content, MC questions have ≥2 options + 1 correct.
+        2. If validation fails: scroll to first error, show inline messages.
+        3. If valid: set isSaving=true. Create mode: single call to exercise
+           create API with inline questions. Edit mode: call exercise update API,
+           then question batchUpdate API.
+        4. On success: navigate to /course/:id/manage with { lessonId } in
+           router state (lesson detail screen).
+        5. On error: show toast error, remain on page, set isSaving=false.
+
+    - action: Cancel / navigate away
+      trigger: Click "Cancel" or browser back or route change
+      result: >
+        If isDirty: show Unsaved Changes dialog. If "Stay": close dialog.
+        If "Leave": navigate away. If NOT dirty: navigate immediately.
+
+  # ────────────────────────────────────────────────────────────────────
+  # BUSINESS LOGIC
+  # ────────────────────────────────────────────────────────────────────
+  business_logic:
+
+    supported_exercise_types:
+      description: >
+        The application currently supports only two exercise types.
+        The UI restricts the type selector to these values.
+      types:
+        - MULTIPLE_CHOICE
+        - TEXT_ANSWER
+
+    exercise_validation:
+      - field: title
+        rules: Required, no character limit
+      - field: type
+        rules: Required, must be MULTIPLE_CHOICE or TEXT_ANSWER
+      - field: questions
+        rules: At least 1 question required
+
+    question_validation:
+      - field: content
+        rules: Required, non-empty after trim
+      - field: meta.options (MULTIPLE_CHOICE only)
+        rules:
+          - At least 2 answer options
+          - Each option text is required (non-empty after trim)
+          - Exactly 1 option must be marked isCorrect=true
+          - Maximum 6 options
+
+    question_meta_structure:
+      multiple_choice:
+        description: "meta field stores answer options for MULTIPLE_CHOICE questions"
+        schema: |
+          {
+            options: [
+              { text: "Answer text", isCorrect: true },
+              { text: "Answer text", isCorrect: false },
+              ...
+            ]
+          }
+      text_answer:
+        description: "meta field is empty for TEXT_ANSWER questions"
+        schema: |
+          {}
+
+    fast_create_parsing:
+      algorithm: >
+        Split by numbered index at start of new lines only. A new question
+        starts when a line matches /^\s*(\d+)\s*[.)]\s*/. All subsequent
+        lines (until the next numbered index or end of input) are joined
+        with newline and treated as the question content. Numbers appearing
+        mid-text do NOT trigger a split — only numbers at line start do.
+      input_example: |
+        1. What is Angular? It is a framework
+        that helps build web applications
+        2. What is TypeScript?
+        It extends JavaScript with types
+        3) Explain dependency injection
+      output: >
+        3 questions extracted:
+        ["What is Angular? It is a framework\nthat helps build web applications",
+         "What is TypeScript?\nIt extends JavaScript with types",
+         "Explain dependency injection"]
+      edge_cases:
+        - "Empty input: 0 questions, preview shows hint text"
+        - "Only blank lines: 0 questions"
+        - "Lines before the first numbered index: ignored"
+        - "Multi-line question content: preserved with newlines"
+        - "Numbers inside question text (e.g. 'Angular 17'): not treated as split points"
+        - "Mixed formats (1. and 2) ): all accepted"
+        - "Very long question text: preserved as-is, no truncation"
+
+    order_management:
+      - Questions maintain sequential order (1, 2, 3...)
+      - New questions (manual or fast-create) append at the end
+      - Deleting a question re-numbers all remaining questions
+      - orderIndex values are assigned on save (0-based for API)
+
+    save_flow:
+      create_mode:
+        steps:
+          - Validate exercise form and all questions
+          - "Call ExerciseService.create(lessonId, { title, type, questions }) — single API call with inline questions"
+          - Navigate to lesson detail screen on success (with lessonId in router state)
+      edit_mode:
+        steps:
+          - Validate exercise form and all questions
+          - "Call ExerciseService.update(exerciseId, { title, type })"
+          - "Build UpdateQuestionItem[] via buildUpdateItems() diff algorithm"
+          - "Call QuestionService.batchUpdate(exerciseId, { questions }) — only if items.length > 0"
+          - Navigate to lesson detail screen on success (with lessonId in router state)
+        build_update_items_algorithm:
+          description: >
+            Computes a minimal diff between originalQuestions (server state
+            at load time) and the current questions array. Only changed items
+            are sent to the API — unchanged questions are skipped entirely.
+          steps:
+            - "Build a Map<string, EditorQuestion> from originalQuestions keyed by id"
+            - "Collect IDs still present in the current questions into a Set"
+            - >
+              For each original question whose id is NOT in the current Set,
+              emit { action: DELETE, questionId: id }
+            - >
+              For each current question without an id (id === null),
+              emit { action: CREATE, content, orderIndex, meta }
+            - >
+              For each current question with an id, look up the original
+              by id. If content, orderIndex, or meta (JSON-compared) differ,
+              emit { action: UPDATE, questionId, content, orderIndex, meta }.
+              If nothing changed, skip it (do not send to API).
+
+    unsaved_changes_detection:
+      description: >
+        The isDirty signal is computed by comparing the current editor
+        state against a snapshot taken at load time (edit mode) or
+        the initial empty state (create mode). Tracked fields:
+        exerciseTitle, exerciseType, questions array (deep comparison
+        of content + meta for each question).
+      guard: |
+        canDeactivate(): boolean | Observable<boolean> {
+          if (!this.isDirty()) return true;
+          this.showUnsavedDialog.set(true);
+          return this.unsavedDialogResult$;
+        }
+      browser_event: |
+        @HostListener('window:beforeunload', ['$event'])
+        onBeforeUnload(event: BeforeUnloadEvent) {
+          if (this.isDirty()) {
+            event.preventDefault();
+          }
+        }
+
+  # ────────────────────────────────────────────────────────────────────
+  # ACCESSIBILITY
+  # ────────────────────────────────────────────────────────────────────
+  accessibility:
+    - Form fields have associated labels via lib-input component
+    - Error messages use aria-describedby linked to their field
+    - Fast Create dialog traps focus (lib-dialog)
+    - Unsaved Changes dialog traps focus (lib-dialog)
+    - Question edit/delete buttons have aria-label ("Edit question 1", "Delete question 1")
+    - Radio buttons in answer options are grouped with role="radiogroup" and aria-label
+    - Save/Cancel buttons are keyboard accessible (tab order, Enter/Space activation)
+    - Fast Create dialog textarea has appropriate aria-label for screen readers
+
+  # ────────────────────────────────────────────────────────────────────
+  # RESPONSIVE
+  # ────────────────────────────────────────────────────────────────────
+  responsive:
+    breakpoints:
+      - range: ">= 768px"
+        layout: >
+          Centered single-column (max-width: 800px, margin: 0 auto).
+          Navbar hidden. Header shows title left, Cancel/Save right.
+          Question cards show answer options in a wrapped inline row.
+          Action buttons (Add Question, Fast Create) on one row.
+      - range: "< 768px"
+        layout: >
+          Full-width with --spacing-md (16px) horizontal padding.
+          Navbar hidden. Header stacks: title on top, buttons below
+          (flex-wrap). Question cards stack answer options vertically.
+          Action buttons stack vertically, full-width.
+          Fast Create dialog becomes full-screen panel.
+
+  # ────────────────────────────────────────────────────────────────────
+  # DESIGN SYSTEM REFERENCES
+  # ────────────────────────────────────────────────────────────────────
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/1"
+        usage: "Page title: Create/Edit Exercise (text-title-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/1"
+        usage: "Section headers: Questions (N) (text-title-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        usage: "Question text, answer option text (text-body-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/label/levels/0"
+        usage: "Field labels, preview header, question numbers (text-label-large)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/2"
+        usage: "Helper text, hints, text-answer label (text-body-small)"
+    colors:
+      - $ref: "../../design-system/color.yaml#/theme_colors/primary"
+        usage: >
+          Save button, correct-answer radio fill, edit-mode card border
+          (--primary-color-200), edit-mode card bg (--primary-color-50),
+          back icon button (--primary-color-600).
+      - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        usage: >
+          Leave button in unsaved dialog (--error-color),
+          validation error messages (--error-color).
+      - $ref: "../../design-system/color.yaml#/theme_colors/neutral"
+        usage: >
+          Question card borders (--neutral-color-3), hover borders
+          (--neutral-color-5), question numbers (--text-secondary-color),
+          text-answer hint (--neutral-color-5), answer preview wrong
+          answers (--text-secondary-color), input borders (--input-border-color).
+    components:
+      - $ref: "../../design-system/components.yaml#/button"
+        usage: Save, Cancel, Add Question, Fast Create, Add Answer
+      - $ref: "../../design-system/components.yaml#/input"
+        usage: Title input, question text textarea, answer option inputs
+      - $ref: "../../design-system/components.yaml#/select_box"
+        usage: Exercise type dropdown
+      - $ref: "../../design-system/components.yaml#/form"
+        usage: Exercise metadata form layout (.form-row, .form-field)
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        usage: Save (primary, loading), Cancel (secondary), action buttons
+      - $ref: "../../design-system/shared-components.yaml#/input"
+        usage: Title, question text, answer option text inputs
+      - $ref: "../../design-system/shared-components.yaml#/dialog"
+        usage: Fast Create dialog, Unsaved Changes dialog
+      - $ref: "../../design-system/shared-components.yaml#/spinner"
+        usage: Page loading skeleton (edit mode)
+      - $ref: "../../design-system/shared-components.yaml#/toast"
+        usage: Save success/error notifications
+      - $ref: "../../design-system/shared-components.yaml#/textarea"
+        usage: Exercise title, question content, fast-create paste area (auto-expanding)
+    tokens:
+      - $ref: "../../design-system/tokens.yaml#/spacing"
+        usage: >
+          Form gaps (--spacing-lg), card padding (--spacing-md),
+          question list gaps (--spacing-sm), section spacing (--spacing-xl)
+      - $ref: "../../design-system/tokens.yaml#/border_radius"
+        usage: Form card (--radius-md), question cards (--radius-md), dialog (--radius-lg)
+      - $ref: "../../design-system/tokens.yaml#/z_index"
+        usage: Dialog overlay (--z-index-modal), sticky footer (--z-index-sticky)
+      - $ref: "../../design-system/tokens.yaml#/motion"
+        usage: >
+          Card expand/collapse (--duration-normal 200ms),
+          card hover border (--duration-normal 200ms)
+    breakpoints:
+      - $ref: "../../design-system/breakpoints.yaml#/breakpoints/1"
+        usage: "768px: Mobile stacked layout, full-screen dialog"
+
+  # ────────────────────────────────────────────────────────────────────
+  # RELATED SERVICES
+  # ────────────────────────────────────────────────────────────────────
+  related_services:
+    - $ref: "../../network/api-endpoints.yaml#/resources/exercises"
+    - $ref: "../../network/api-endpoints.yaml#/resources/questions"
+
+  # ────────────────────────────────────────────────────────────────────
+  # CURRENT IMPLEMENTATION
+  # ────────────────────────────────────────────────────────────────────
+  current_implementation: |
+    import {
+      Component, inject, signal, computed, OnInit, DestroyRef, HostListener,
+    } from '@angular/core';
+    import { Router, ActivatedRoute } from '@angular/router';
+    import { FormsModule } from '@angular/forms';
+    import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+    import { forkJoin, Subject, debounceTime } from 'rxjs';
+
+    import { ExerciseService, QuestionService } from '../../../services';
+    import { ToastService } from '../../../shared/components/toast/toast.component';
+    import {
+      ExerciseResponse, QuestionResponse,
+      ExerciseType, QuestionAction
+    } from '../../../shared/models';
+    import {
+      ButtonComponent, DialogComponent,
+      SkeletonComponent, TextareaComponent,
+    } from '../../../shared/components';
+
+    // ── Local interfaces ──────────────────────────────────────────────
+
+    export interface AnswerOption {
+      text: string;
+      isCorrect: boolean;
+    }
+
+    export interface EditorQuestion {
+      id: string | null;
+      content: string;
+      orderIndex: number;
+      meta: Record<string, any>;
+      isNew: boolean;
+      isEditing: boolean;
+    }
+
+    // ── Constants ────────────────────────────────────────────────────
+
+    /** Default answer options for a new MULTIPLE_CHOICE question. */
+    const DEFAULT_MC_OPTIONS: AnswerOption[] = [
+      { text: '', isCorrect: true },
+      { text: '', isCorrect: false },
+    ];
+
+    @Component({
+      selector: 'app-exercise-editor',
+      standalone: true,
+      imports: [
+        FormsModule,
+        ButtonComponent,
+        DialogComponent,
+        SkeletonComponent,
+        TextareaComponent,
+      ],
+      templateUrl: './exercise-editor.component.html',
+      styleUrl: './exercise-editor.component.scss'
+    })
+    export class ExerciseEditorComponent implements OnInit {
+      private readonly router = inject(Router);
+      private readonly route = inject(ActivatedRoute);
+      private readonly destroyRef = inject(DestroyRef);
+      private readonly exerciseService = inject(ExerciseService);
+      private readonly questionService = inject(QuestionService);
+      private readonly toast = inject(ToastService);
+
+      // ── Route params ────────────────────────────────────────────────
+      courseId = signal<string>('');
+      exerciseId = signal<string | null>(null);
+      lessonId = signal<string | null>(null);
+      isEditMode = computed(() => !!this.exerciseId());
+
+      // ── Screen state ────────────────────────────────────────────────
+      screenState = signal<'loading' | 'loaded' | 'error'>('loaded');
+
+      // ── Form state ──────────────────────────────────────────────────
+      exerciseTitle = signal<string>('');
+      exerciseType = signal<ExerciseType>(ExerciseType.TEXT_ANSWER);
+      questions = signal<EditorQuestion[]>([]);
+      originalQuestions = signal<EditorQuestion[]>([]);
+      editingIndex = signal<number | null>(null);
+
+      // ── Default/placeholder answers (exercise-level) ───────────────
+      defaultOptions = signal<AnswerOption[]>(
+        DEFAULT_MC_OPTIONS.map(o => ({ ...o }))
+      );
+
+      // ── Temp question edit state ────────────────────────────────────
+      tempContent = signal<string>('');
+      tempOptions = signal<AnswerOption[]>([]);
+
+      // ── Save state ──────────────────────────────────────────────────
+      isSaving = signal<boolean>(false);
+
+      // ── Validation errors ───────────────────────────────────────────
+      titleError = signal<string | null>(null);
+      questionsError = signal<string | null>(null);
+      questionErrors = signal<Map<number, string>>(new Map());
+      questionOptionErrors = signal<Map<number, string>>(new Map());
+
+      // ── Dialogs ─────────────────────────────────────────────────────
+      showFastCreate = signal<boolean>(false);
+      showUnsavedDialog = signal<boolean>(false);
+      showTypeChangeDialog = signal<boolean>(false);
+      pendingTypeChange = signal<ExerciseType | null>(null);
+
+      // ── Fast Create ────────────────────────────────────────────────
+      fastCreateText = signal<string>('');
+      parsedQuestions = signal<string[]>([]);
+      private fastCreateInput$ = new Subject<string>();
+
+      // ── Dirty tracking ──────────────────────────────────────────────
+      private savedSnapshot = signal<string>('');
+      isDirty = computed(() => {
+        return this.currentSnapshot() !== this.savedSnapshot();
+      });
+
+      private currentSnapshot = computed(() => {
+        return JSON.stringify({
+          title: this.exerciseTitle(),
+          type: this.exerciseType(),
+          questions: this.questions().map(q => ({
+            id: q.id,
+            content: q.content,
+            meta: q.meta,
+          })),
+        });
+      });
+
+      // ── Navigation guard ────────────────────────────────────────────
+      private pendingNavigation: (() => void) | null = null;
+
+      questionCount = computed(() => this.questions().length);
+
+      // ── Exercise type options ───────────────────────────────────────
+      readonly typeOptions = [
+        { value: ExerciseType.TEXT_ANSWER, label: 'Text Answer' },
+        { value: ExerciseType.MULTIPLE_CHOICE, label: 'Multiple Choice' },
+      ];
+
+      ExerciseType = ExerciseType;
+
+      @HostListener('window:beforeunload', ['$event'])
+      onBeforeUnload(event: BeforeUnloadEvent): void {
+        if (this.isDirty()) {
+          event.preventDefault();
+        }
+      }
+
+      ngOnInit(): void {
+        // Extract route params
+        this.route.parent?.params
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(params => {
+            this.courseId.set(params['id'] || '');
+          });
+
+        this.route.params
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(params => {
+            if (params['exerciseId']) {
+              this.exerciseId.set(params['exerciseId']);
+            }
+          });
+
+        // Get lessonId from router state (passed from lesson management)
+        const nav = this.router.getCurrentNavigation();
+        const state = nav?.extras.state ?? history.state;
+        if (state?.['lessonId']) {
+          this.lessonId.set(state['lessonId']);
+        }
+
+        // Smart create debounce
+        this.fastCreateInput$
+          .pipe(debounceTime(200), takeUntilDestroyed(this.destroyRef))
+          .subscribe(text => {
+            this.parsedQuestions.set(this.parseQuestions(text));
+          });
+
+        // Load data if edit mode
+        if (this.exerciseId()) {
+          this.loadExercise();
+        } else {
+          this.takeSnapshot();
+        }
+      }
+
+      // ── Data loading ────────────────────────────────────────────────
+
+      private loadExercise(): void {
+        const id = this.exerciseId()!;
+        this.screenState.set('loading');
+
+        forkJoin({
+          exercise: this.exerciseService.get(id),
+          questions: this.questionService.listByExercise(id),
+        })
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: ({ exercise, questions }) => {
+              this.exerciseTitle.set(exercise.title);
+              this.exerciseType.set(exercise.type);
+              this.lessonId.set(exercise.lessonId);
+              const mapped = questions
+                .sort((a, b) => a.orderIndex - b.orderIndex)
+                .map((q, i) => this.mapQuestionResponse(q, i));
+              this.questions.set(mapped);
+              this.originalQuestions.set(mapped.map(q => ({ ...q })));
+              this.screenState.set('loaded');
+              this.takeSnapshot();
+            },
+            error: () => {
+              this.screenState.set('error');
+              this.toast.error('Failed to load exercise');
+            },
+          });
+      }
+
+      private mapQuestionResponse(q: QuestionResponse, index: number): EditorQuestion {
+        return {
+          id: q.id,
+          content: q.content,
+          orderIndex: index,
+          meta: q.meta ?? {},
+          isNew: false,
+          isEditing: false,
+        };
+      }
+
+      private takeSnapshot(): void {
+        this.savedSnapshot.set(this.currentSnapshot());
+      }
+
+      // ── Helpers ─────────────────────────────────────────────────────
+
+      /** Build initial meta for a question based on the current exercise type. */
+      private buildDefaultMeta(): Record<string, any> {
+        return this.exerciseType() === ExerciseType.MULTIPLE_CHOICE
+          ? { options: this.defaultOptions().map(o => ({ ...o })) }
+          : {};
+      }
+
+      /** Remove an error entry from a Map<number, string> signal by key. */
+      private clearMapEntry(
+        mapSignal: typeof this.questionErrors,
+        key: number,
+      ): void {
+        mapSignal.update(m => { const n = new Map(m); n.delete(key); return n; });
+      }
+
+      onTitleInput(value: string): void {
+        this.exerciseTitle.set(value);
+        if (value.trim()) {
+          this.titleError.set(null);
+        }
+      }
+
+      getOptions(q: EditorQuestion): AnswerOption[] {
+        return q.meta?.['options'] || [];
+      }
+
+      // ── Exercise type change ────────────────────────────────────────
+
+      onTypeChange(newType: ExerciseType): void {
+        const currentType = this.exerciseType();
+        if (newType === currentType) return;
+
+        // If switching away from MC and there are questions with options, confirm
+        const hasOptions = this.questions().some(
+          q => q.meta?.['options']?.length > 0
+        );
+
+        if (currentType === ExerciseType.MULTIPLE_CHOICE && hasOptions) {
+          this.pendingTypeChange.set(newType);
+          this.showTypeChangeDialog.set(true);
+        } else {
+          this.applyTypeChange(newType);
+        }
+      }
+
+      confirmTypeChange(): void {
+        const newType = this.pendingTypeChange();
+        if (newType) {
+          this.applyTypeChange(newType);
+        }
+        this.showTypeChangeDialog.set(false);
+        this.pendingTypeChange.set(null);
+      }
+
+      cancelTypeChange(): void {
+        this.showTypeChangeDialog.set(false);
+        this.pendingTypeChange.set(null);
+      }
+
+      private applyTypeChange(newType: ExerciseType): void {
+        this.exerciseType.set(newType);
+        // Clear answer options from all questions
+        if (newType === ExerciseType.TEXT_ANSWER) {
+          this.questions.update(qs =>
+            qs.map(q => ({ ...q, meta: {} }))
+          );
+        } else if (newType === ExerciseType.MULTIPLE_CHOICE) {
+          this.questions.update(qs =>
+            qs.map(q => ({
+              ...q,
+              meta: { options: DEFAULT_MC_OPTIONS.map(o => ({ ...o })) },
+            }))
+          );
+        }
+        // If currently editing, update temp options
+        if (this.editingIndex() !== null) {
+          const idx = this.editingIndex()!;
+          const q = this.questions()[idx];
+          this.tempOptions.set(q.meta?.['options'] ? [...q.meta['options']] : []);
+        }
+      }
+
+      // ── Question CRUD ───────────────────────────────────────────────
+
+      addQuestion(): void {
+        this.saveOrDiscardCurrentEdit();
+
+        const newQ: EditorQuestion = {
+          id: null,
+          content: '',
+          orderIndex: this.questions().length,
+          meta: this.buildDefaultMeta(),
+          isNew: true,
+          isEditing: true,
+        };
+
+        this.questions.update(qs => [...qs, newQ]);
+        const idx = this.questions().length - 1;
+        this.editingIndex.set(idx);
+        this.tempContent.set('');
+        this.tempOptions.set(
+          newQ.meta?.['options'] ? newQ.meta['options'].map((o: AnswerOption) => ({ ...o })) : []
+        );
+      }
+
+      editQuestion(index: number): void {
+        if (this.editingIndex() === index) return;
+        this.saveOrDiscardCurrentEdit();
+
+        const q = this.questions()[index];
+        this.editingIndex.set(index);
+        this.tempContent.set(q.content);
+        this.tempOptions.set(
+          q.meta?.['options'] ? q.meta['options'].map((o: AnswerOption) => ({ ...o })) : []
+        );
+        this.questions.update(qs =>
+          qs.map((item, i) => ({ ...item, isEditing: i === index }))
+        );
+      }
+
+      saveQuestion(): void {
+        const idx = this.editingIndex();
+        if (idx === null) return;
+
+        // Validate
+        const content = this.tempContent().trim();
+        if (!content) {
+          this.questionErrors.update(m => {
+            const next = new Map(m);
+            next.set(idx, 'Question text is required');
+            return next;
+          });
+          return;
+        }
+
+        if (this.exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+          const options = this.tempOptions();
+          const filledOptions = options.filter(o => o.text.trim());
+          if (filledOptions.length < 2) {
+            this.questionOptionErrors.update(m => {
+              const next = new Map(m);
+              next.set(idx, 'At least 2 answer options are required');
+              return next;
+            });
+            return;
+          }
+          const emptyOption = options.find(o => !o.text.trim());
+          if (emptyOption) {
+            this.questionOptionErrors.update(m => {
+              const next = new Map(m);
+              next.set(idx, 'All answer options must have text');
+              return next;
+            });
+            return;
+          }
+          const hasCorrect = options.some(o => o.isCorrect);
+          if (!hasCorrect) {
+            this.questionOptionErrors.update(m => {
+              const next = new Map(m);
+              next.set(idx, 'Select a correct answer');
+              return next;
+            });
+            return;
+          }
+        }
+
+        // Clear errors
+        this.clearMapEntry(this.questionErrors, idx);
+        this.clearMapEntry(this.questionOptionErrors, idx);
+
+        // Apply changes
+        this.questions.update(qs =>
+          qs.map((q, i) => {
+            if (i !== idx) return q;
+            return {
+              ...q,
+              content,
+              meta: this.exerciseType() === ExerciseType.MULTIPLE_CHOICE
+                ? { options: this.tempOptions().map(o => ({ ...o })) }
+                : {},
+              isEditing: false,
+              isNew: false,
+            };
+          })
+        );
+        this.editingIndex.set(null);
+      }
+
+      cancelQuestionEdit(): void {
+        const idx = this.editingIndex();
+        if (idx === null) return;
+
+        const q = this.questions()[idx];
+
+        // If new and no saved content, remove entirely
+        if (q.isNew && !q.content) {
+          this.questions.update(qs => qs.filter((_, i) => i !== idx));
+        } else {
+          this.questions.update(qs =>
+            qs.map((item, i) => (i === idx ? { ...item, isEditing: false } : item))
+          );
+        }
+
+        this.editingIndex.set(null);
+        this.clearMapEntry(this.questionErrors, idx);
+        this.clearMapEntry(this.questionOptionErrors, idx);
+      }
+
+      deleteQuestion(index: number): void {
+        if (this.editingIndex() === index) {
+          this.editingIndex.set(null);
+        } else if (this.editingIndex() !== null && this.editingIndex()! > index) {
+          this.editingIndex.update(i => i !== null ? i - 1 : null);
+        }
+
+        this.questions.update(qs =>
+          qs.filter((_, i) => i !== index).map((q, i) => ({ ...q, orderIndex: i }))
+        );
+      }
+
+      private saveOrDiscardCurrentEdit(): void {
+        const idx = this.editingIndex();
+        if (idx === null) return;
+
+        const q = this.questions()[idx];
+        const content = this.tempContent().trim();
+
+        if (content) {
+          // Auto-save if there's content
+          this.questions.update(qs =>
+            qs.map((item, i) => {
+              if (i !== idx) return item;
+              return {
+                ...item,
+                content,
+                meta: this.exerciseType() === ExerciseType.MULTIPLE_CHOICE
+                  ? { options: this.tempOptions().map(o => ({ ...o })) }
+                  : {},
+                isEditing: false,
+                isNew: false,
+              };
+            })
+          );
+        } else if (q.isNew) {
+          // Remove empty new question
+          this.questions.update(qs => qs.filter((_, i) => i !== idx));
+        } else {
+          // Revert to previous state
+          this.questions.update(qs =>
+            qs.map((item, i) => (i === idx ? { ...item, isEditing: false } : item))
+          );
+        }
+
+        this.editingIndex.set(null);
+      }
+
+      // ── Answer option editing ───────────────────────────────────────
+
+      updateOptionText(optionIndex: number, text: string): void {
+        this.tempOptions.update(opts =>
+          opts.map((o, i) => (i === optionIndex ? { ...o, text } : o))
+        );
+      }
+
+      setCorrectOption(optionIndex: number): void {
+        this.tempOptions.update(opts =>
+          opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex }))
+        );
+      }
+
+      addOption(): void {
+        if (this.tempOptions().length >= 6) return;
+        this.tempOptions.update(opts => [...opts, { text: '', isCorrect: false }]);
+      }
+
+      removeOption(optionIndex: number): void {
+        if (this.tempOptions().length <= 2) return;
+        const wasCorrect = this.tempOptions()[optionIndex].isCorrect;
+        this.tempOptions.update(opts => opts.filter((_, i) => i !== optionIndex));
+        // If removed option was correct, mark the first one as correct
+        if (wasCorrect) {
+          this.tempOptions.update(opts =>
+            opts.map((o, i) => ({ ...o, isCorrect: i === 0 }))
+          );
+        }
+      }
+
+      // ── Default answer options (exercise-level placeholders) ────────
+
+      updateDefaultOptionText(optionIndex: number, text: string): void {
+        this.defaultOptions.update(opts =>
+          opts.map((o, i) => (i === optionIndex ? { ...o, text } : o))
+        );
+      }
+
+      setDefaultCorrectOption(optionIndex: number): void {
+        this.defaultOptions.update(opts =>
+          opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex }))
+        );
+      }
+
+      addDefaultOption(): void {
+        if (this.defaultOptions().length >= 6) return;
+        this.defaultOptions.update(opts => [...opts, { text: '', isCorrect: false }]);
+      }
+
+      removeDefaultOption(optionIndex: number): void {
+        if (this.defaultOptions().length <= 2) return;
+        const wasCorrect = this.defaultOptions()[optionIndex].isCorrect;
+        this.defaultOptions.update(opts => opts.filter((_, i) => i !== optionIndex));
+        if (wasCorrect) {
+          this.defaultOptions.update(opts =>
+            opts.map((o, i) => ({ ...o, isCorrect: i === 0 }))
+          );
+        }
+      }
+
+      // ── Fast Create ────────────────────────────────────────────────
+
+      openFastCreate(): void {
+        this.fastCreateText.set('');
+        this.parsedQuestions.set([]);
+        this.showFastCreate.set(true);
+      }
+
+      onFastCreateInput(text: string): void {
+        this.fastCreateText.set(text);
+        this.fastCreateInput$.next(text);
+      }
+
+      confirmFastCreate(): void {
+        const parsed = this.parsedQuestions();
+        if (parsed.length === 0) return;
+
+        this.saveOrDiscardCurrentEdit();
+
+        const startIndex = this.questions().length;
+        const newQuestions: EditorQuestion[] = parsed.map((text, i) => ({
+          id: null,
+          content: text,
+          orderIndex: startIndex + i,
+          meta: this.buildDefaultMeta(),
+          isNew: true,
+          isEditing: false,
+        }));
+
+        this.questions.update(qs => [...qs, ...newQuestions]);
+        this.showFastCreate.set(false);
+      }
+
+      cancelFastCreate(): void {
+        this.showFastCreate.set(false);
+      }
+
+      private parseQuestions(text: string): string[] {
+        if (!text.trim()) return [];
+
+        const lines = text.split('\n');
+        const result: string[] = [];
+        const numberedRegex = /^\s*(\d+)\s*[.)]\s*/;
+        let current: string[] = [];
+
+        for (const line of lines) {
+          const match = numberedRegex.exec(line);
+          if (match) {
+            // Flush previous question
+            const prev = current.join('\n').trim();
+            if (prev) result.push(prev);
+            // Start new question with the remainder after the number prefix
+            current = [line.slice(match[0].length)];
+          } else {
+            // Continuation line — append to current question
+            current.push(line);
+          }
+        }
+
+        // Flush last question
+        const last = current.join('\n').trim();
+        if (last) result.push(last);
+
+        return result;
+      }
+
+      // ── Validation ──────────────────────────────────────────────────
+
+      private validate(): boolean {
+        let valid = true;
+
+        // Title
+        if (!this.exerciseTitle().trim()) {
+          this.titleError.set('Title is required');
+          valid = false;
+        } else {
+          this.titleError.set(null);
+        }
+
+        // At least 1 question
+        if (this.questions().length === 0) {
+          this.questionsError.set('At least one question is required');
+          valid = false;
+        } else {
+          this.questionsError.set(null);
+        }
+
+        // Each question
+        const qErrors = new Map<number, string>();
+        const qOptErrors = new Map<number, string>();
+
+        this.questions().forEach((q, i) => {
+          if (!q.content.trim()) {
+            qErrors.set(i, `Question ${i + 1}: text is required`);
+            valid = false;
+          }
+          if (this.exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+            const options: AnswerOption[] = q.meta?.['options'] || [];
+            if (options.length < 2) {
+              qOptErrors.set(i, `Question ${i + 1}: at least 2 answer options required`);
+              valid = false;
+            } else {
+              const emptyOpt = options.find(o => !o.text.trim());
+              if (emptyOpt) {
+                qOptErrors.set(i, `Question ${i + 1}: all answer options must have text`);
+                valid = false;
+              }
+              if (!options.some(o => o.isCorrect)) {
+                qOptErrors.set(i, `Question ${i + 1}: select a correct answer`);
+                valid = false;
+              }
+            }
+          }
+        });
+
+        this.questionErrors.set(qErrors);
+        this.questionOptionErrors.set(qOptErrors);
+
+        return valid;
+      }
+
+      // ── Save ────────────────────────────────────────────────────────
+
+      saveExercise(): void {
+        // First close any open editing
+        this.saveOrDiscardCurrentEdit();
+
+        if (!this.validate()) return;
+
+        this.isSaving.set(true);
+        const title = this.exerciseTitle().trim();
+        const type = this.exerciseType();
+
+        if (this.isEditMode()) {
+          this.saveEdit(title, type);
+        } else {
+          this.saveCreate(title, type);
+        }
+      }
+
+      private saveCreate(title: string, type: ExerciseType): void {
+        const lid = this.lessonId();
+        if (!lid) {
+          this.toast.error('Lesson context is missing. Please go back and try again.');
+          this.isSaving.set(false);
+          return;
+        }
+
+        const questions = this.questions().map((q, i) => ({
+          content: q.content,
+          orderIndex: i,
+          meta: q.meta,
+        }));
+
+        this.exerciseService.create(lid, { title, type, questions })
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => this.onSaveSuccess(),
+            error: () => this.onSaveError(),
+          });
+      }
+
+      private saveEdit(title: string, type: ExerciseType): void {
+        const eid = this.exerciseId()!;
+
+        this.exerciseService.update(eid, { title, type })
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              const updateItems = this.buildUpdateItems();
+              if (updateItems.length === 0) {
+                this.onSaveSuccess();
+                return;
+              }
+
+              this.questionService.batchUpdate(eid, { questions: updateItems })
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                  next: () => this.onSaveSuccess(),
+                  error: () => this.onSaveError(),
+                });
+            },
+            error: () => this.onSaveError(),
+          });
+      }
+
+      private buildUpdateItems(): any[] {
+        const items: any[] = [];
+        const current = this.questions();
+        const originals = this.originalQuestions();
+
+        // Build lookup of original questions by id
+        const originalMap = new Map<string, EditorQuestion>();
+        for (const oq of originals) {
+          if (oq.id) originalMap.set(oq.id, oq);
+        }
+
+        // Collect ids still present in the editor
+        const currentIds = new Set<string>();
+        for (const q of current) {
+          if (q.id) currentIds.add(q.id);
+        }
+
+        // Deleted questions: in original but not in current → DELETE
+        for (const oq of originals) {
+          if (oq.id && !currentIds.has(oq.id)) {
+            items.push({
+              action: QuestionAction.DELETE,
+              questionId: oq.id,
+            });
+          }
+        }
+
+        // New and updated questions
+        current.forEach((q, i) => {
+          if (!q.id) {
+            // New question → CREATE
+            items.push({
+              action: QuestionAction.CREATE,
+              content: q.content,
+              orderIndex: i,
+              meta: q.meta,
+            });
+          } else {
+            // Existing → UPDATE only if changed
+            const orig = originalMap.get(q.id);
+            if (orig &&
+                orig.content === q.content &&
+                orig.orderIndex === i &&
+                JSON.stringify(orig.meta) === JSON.stringify(q.meta)) {
+              return; // skip unchanged
+            }
+            items.push({
+              action: QuestionAction.UPDATE,
+              questionId: q.id,
+              content: q.content,
+              orderIndex: i,
+              meta: q.meta,
+            });
+          }
+        });
+
+        return items;
+      }
+
+      private onSaveSuccess(): void {
+        this.isSaving.set(false);
+        this.takeSnapshot(); // Clear dirty state before navigation
+        this.toast.success(this.isEditMode() ? 'Exercise updated successfully' : 'Exercise created successfully');
+        this.router.navigate(['/course', this.courseId(), 'manage'], {
+          state: { lessonId: this.lessonId() },
+        });
+      }
+
+      private onSaveError(): void {
+        this.isSaving.set(false);
+        this.toast.error('Failed to save exercise. Please try again.');
+      }
+
+      // ── Navigation ──────────────────────────────────────────────────
+
+      goBack(): void {
+        const nav = () => {
+          this.router.navigate(['/course', this.courseId(), 'manage'], {
+            state: { lessonId: this.lessonId() },
+          });
+        };
+        if (this.isDirty()) {
+          this.pendingNavigation = nav;
+          this.showUnsavedDialog.set(true);
+        } else {
+          nav();
+        }
+      }
+
+      cancelExercise(): void {
+        this.goBack();
+      }
+
+      confirmLeave(): void {
+        this.showUnsavedDialog.set(false);
+        this.takeSnapshot(); // Clear dirty before navigation
+        if (this.pendingNavigation) {
+          this.pendingNavigation();
+          this.pendingNavigation = null;
+        }
+      }
+
+      stayOnPage(): void {
+        this.showUnsavedDialog.set(false);
+        this.pendingNavigation = null;
+      }
+    }
+
+  current_template: |
+    <!-- Loading state (edit mode) -->
+    @if (screenState() === 'loading') {
+      <div class="editor-page">
+        <div class="editor-container">
+          <div class="page-header">
+            <lib-skeleton variant="rect" width="32px" height="32px" />
+            <lib-skeleton variant="text" width="160px" height="28px" />
+          </div>
+          <div class="form-section">
+            <lib-skeleton variant="rect" width="100%" height="56px" />
+            <lib-skeleton variant="rect" width="100%" height="56px" />
+          </div>
+          <div class="questions-section">
+            <lib-skeleton variant="text" width="140px" height="24px" />
+            <lib-skeleton variant="rect" width="100%" height="80px" />
+            <lib-skeleton variant="rect" width="100%" height="80px" />
+            <lib-skeleton variant="rect" width="100%" height="80px" />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Error state -->
+    @if (screenState() === 'error') {
+      <div class="editor-page">
+        <div class="editor-container">
+          <div class="error-state">
+            <span class="material-icons error-state__icon">error_outline</span>
+            <p class="text-body-medium">Failed to load exercise. Please try again.</p>
+            <lib-button variant="secondary" (buttonClick)="goBack()">
+              Go Back
+            </lib-button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Loaded state -->
+    @if (screenState() === 'loaded') {
+      <div class="editor-page">
+        <div class="editor-container">
+
+          <!-- Page header with Cancel/Save -->
+          <div class="page-header">
+            <h1 class="text-title-large editor-title">
+              {{ isEditMode() ? 'Edit Exercise' : 'Create Exercise' }}
+            </h1>
+            <div class="header-actions">
+              <lib-button variant="secondary" (buttonClick)="cancelExercise()" [disabled]="isSaving()">
+                Cancel
+              </lib-button>
+              <lib-button
+                variant="primary"
+                [isLoading]="isSaving()"
+                (buttonClick)="saveExercise()"
+              >
+                Save Exercise
+              </lib-button>
+            </div>
+          </div>
+
+          <!-- Exercise metadata form -->
+          <div class="form-section">
+            <div class="form-field">
+              <lib-textarea
+                label="Exercise Title"
+                placeholder="Enter the main question or title for this exercise"
+                [minRows]="1"
+                [value]="exerciseTitle()"
+                (valueChange)="onTitleInput($event)"
+                [disabled]="isSaving()"
+                [required]="true"
+                [error]="titleError()"
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="form-field-label text-label-large" for="exercise-type">
+                Exercise Type <span class="required">*</span>
+              </label>
+              <div class="select-box-container select-box-container--compact">
+                <select
+                  id="exercise-type"
+                  class="select-box small-input"
+                  [value]="exerciseType()"
+                  (change)="onTypeChange($any($event.target).value)"
+                  [disabled]="isSaving()"
+                >
+                  @for (opt of typeOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+                <span class="material-symbols-outlined select-box-icon">keyboard_arrow_down</span>
+              </div>
+            </div>
+
+            <!-- Default answers (placeholder) for MULTIPLE_CHOICE -->
+            @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+              <div class="default-answers-section">
+                <label class="form-field-label text-label-large">Default Answers <span class="default-answers-hint text-body-small">(new questions will use these)</span></label>
+                <div class="answers-list">
+                  @for (opt of defaultOptions(); track $index; let oi = $index) {
+                    <div class="answer-row">
+                      <input
+                        type="radio"
+                        name="default-correct"
+                        [checked]="opt.isCorrect"
+                        (change)="setDefaultCorrectOption(oi)"
+                        class="answer-radio"
+                        [attr.aria-label]="'Mark default answer ' + (oi + 1) + ' as correct'"
+                      />
+                      <input
+                        type="text"
+                        class="small-input answer-input"
+                        placeholder="Answer option"
+                        [value]="opt.text"
+                        (input)="updateDefaultOptionText(oi, $any($event.target).value)"
+                        [disabled]="isSaving()"
+                      />
+                      @if (defaultOptions().length > 2) {
+                        <button
+                          class="icon-btn icon-btn--delete icon-btn--small"
+                          (click)="removeDefaultOption(oi)"
+                          [attr.aria-label]="'Remove default answer option ' + (oi + 1)"
+                        >
+                          <span class="material-icons">close</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (defaultOptions().length < 6) {
+                  <button class="add-answer-btn text-body-medium" (click)="addDefaultOption()">
+                    <span class="material-icons">add</span>
+                    Add Answer
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Questions section -->
+          <div class="questions-section">
+            <h2 class="text-title-medium section-title">
+              Questions{{ questionCount() > 0 ? ' (' + questionCount() + ')' : '' }}
+            </h2>
+
+            @if (questionsError()) {
+              <p class="form-field-error" role="alert">{{ questionsError() }}</p>
+            }
+
+            <!-- Question list -->
+            <div class="question-list">
+              @for (q of questions(); track $index; let i = $index) {
+                <!-- View mode -->
+                @if (!q.isEditing) {
+                  <div class="question-card question-card--view" [class.has-error]="questionErrors().has(i) || questionOptionErrors().has(i)">
+                    <div class="question-card__header">
+                      <div class="question-card__info">
+                        <span class="question-number text-label-large">{{ i + 1 }}.</span>
+                        <p class="question-text text-body-medium">{{ q.content || '(No content)' }}</p>
+                      </div>
+                      <div class="question-card__actions">
+                        <button
+                          class="icon-btn"
+                          (click)="editQuestion(i)"
+                          [attr.aria-label]="'Edit question ' + (i + 1)"
+                          [disabled]="isSaving()"
+                        >
+                          <span class="material-icons">edit</span>
+                        </button>
+                        <button
+                          class="icon-btn icon-btn--delete"
+                          (click)="deleteQuestion(i)"
+                          [attr.aria-label]="'Delete question ' + (i + 1)"
+                          [disabled]="isSaving()"
+                        >
+                          <span class="material-icons">close</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Answer preview (MC) -->
+                    @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+                      <div class="answer-preview">
+                        @for (opt of getOptions(q); track $index) {
+                          <span class="answer-chip" [class.correct]="opt.isCorrect">
+                            {{ opt.isCorrect ? '●' : '○' }} {{ opt.text || '(empty)' }}
+                          </span>
+                        }
+                      </div>
+                    }
+
+                    <!-- Text answer label -->
+                    @if (exerciseType() === ExerciseType.TEXT_ANSWER) {
+                      <p class="text-answer-label text-body-small">(Text answer)</p>
+                    }
+
+                    <!-- Validation errors for this question -->
+                    @if (questionErrors().has(i)) {
+                      <p class="form-field-error" role="alert">{{ questionErrors().get(i) }}</p>
+                    }
+                    @if (questionOptionErrors().has(i)) {
+                      <p class="form-field-error" role="alert">{{ questionOptionErrors().get(i) }}</p>
+                    }
+                  </div>
+                }
+
+                <!-- Edit mode -->
+                @if (q.isEditing) {
+                  <div class="question-card question-card--edit">
+                    <h3 class="text-label-large edit-card-title">Question {{ i + 1 }}</h3>
+
+                    <div class="form-field">
+                      <lib-textarea
+                        label="Question Text"
+                        placeholder="Enter the question"
+                        [minRows]="1"
+                        [value]="tempContent()"
+                        (valueChange)="tempContent.set($event)"
+                        [disabled]="isSaving()"
+                        [required]="true"
+                        [error]="questionErrors().has(i) ? questionErrors().get(i)! : null"
+                      />
+                    </div>
+
+                    <!-- Answer options (MC only) -->
+                    @if (exerciseType() === ExerciseType.MULTIPLE_CHOICE) {
+                      <div class="answers-section">
+                        <label class="form-field-label">Answers</label>
+                        <div class="answers-list">
+                          @for (opt of tempOptions(); track $index; let oi = $index) {
+                            <div class="answer-row">
+                              <input
+                                type="radio"
+                                [name]="'correct-' + i"
+                                [checked]="opt.isCorrect"
+                                (change)="setCorrectOption(oi)"
+                                class="answer-radio"
+                                [attr.aria-label]="'Mark answer ' + (oi + 1) + ' as correct'"
+                              />
+                              <input
+                                type="text"
+                                class="small-input answer-input"
+                                placeholder="Answer option"
+                                [value]="opt.text"
+                                (input)="updateOptionText(oi, $any($event.target).value)"
+                                [disabled]="isSaving()"
+                              />
+                              @if (tempOptions().length > 2) {
+                                <button
+                                  class="icon-btn icon-btn--delete icon-btn--small"
+                                  (click)="removeOption(oi)"
+                                  [attr.aria-label]="'Remove answer option ' + (oi + 1)"
+                                >
+                                  <span class="material-icons">close</span>
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+
+                        @if (tempOptions().length < 6) {
+                          <button class="add-answer-btn text-body-medium" (click)="addOption()">
+                            <span class="material-icons">add</span>
+                            Add Answer
+                          </button>
+                        }
+
+                        @if (questionOptionErrors().has(i)) {
+                          <p class="form-field-error" role="alert">{{ questionOptionErrors().get(i) }}</p>
+                        }
+                      </div>
+                    }
+
+                    <!-- Text answer hint -->
+                    @if (exerciseType() === ExerciseType.TEXT_ANSWER) {
+                      <p class="text-answer-hint text-body-small">
+                        Students will type their answer as free text.
+                      </p>
+                    }
+
+                    <!-- Card actions -->
+                    <div class="question-card__footer">
+                      <lib-button variant="secondary" size="sm" (buttonClick)="cancelQuestionEdit()">
+                        Cancel
+                      </lib-button>
+                      <lib-button variant="primary" size="sm" (buttonClick)="saveQuestion()">
+                        Save Question
+                      </lib-button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Question action buttons -->
+            <div class="question-actions">
+              <lib-button variant="secondary" (buttonClick)="addQuestion()" [disabled]="isSaving()">
+                <span class="material-icons btn-icon">add</span>
+                Add Question
+              </lib-button>
+              <lib-button variant="primary" (buttonClick)="openFastCreate()" [disabled]="isSaving()">
+                <span class="btn-icon">⚡</span>
+                Fast Create
+              </lib-button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    }
+
+    <!-- Fast Create Dialog -->
+    <lib-dialog
+      [open]="showFastCreate()"
+      title="⚡ Fast Create"
+      [confirmLabel]="'Add ' + parsedQuestions().length + ' Questions'"
+      cancelLabel="Cancel"
+      width="600px"
+      (confirm)="confirmFastCreate()"
+      (cancel)="cancelFastCreate()"
+    >
+      <div class="fast-create-content">
+        <lib-textarea
+          label="Paste your numbered question list below"
+          [placeholder]="'1. First question\n2. Second question\n3. Third question'"
+          [minRows]="8"
+          [value]="fastCreateText()"
+          (valueChange)="onFastCreateInput($event)"
+        />
+      </div>
+    </lib-dialog>
+
+    <!-- Unsaved Changes Dialog -->
+    <lib-dialog
+      [open]="showUnsavedDialog()"
+      title="Unsaved Changes"
+      icon="warning"
+      iconClass="warning-icon"
+      confirmLabel="Leave"
+      cancelLabel="Stay"
+      confirmVariant="destructive"
+      (confirm)="confirmLeave()"
+      (cancel)="stayOnPage()"
+    >
+      You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+    </lib-dialog>
+
+    <!-- Type Change Confirmation Dialog -->
+    <lib-dialog
+      [open]="showTypeChangeDialog()"
+      title="Change Exercise Type"
+      icon="warning"
+      iconClass="warning-icon"
+      confirmLabel="Continue"
+      cancelLabel="Cancel"
+      confirmVariant="primary"
+      (confirm)="confirmTypeChange()"
+      (cancel)="cancelTypeChange()"
+    >
+      Changing the type will reset answer options for all existing questions. Continue?
+    </lib-dialog>
+
+  current_styles: |
+    // ── Layout ──────────────────────────────────────────────────────
+    .editor-page {
+      min-height: 100vh;
+      padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .editor-container { max-width: 800px; margin: 0 auto; }
+
+    // ── Page header ─────────────────────────────────────────────────
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+
+    .editor-title { margin: 0; color: var(--text-primary-color); }
+
+    .header-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+      flex-shrink: 0;
+    }
+
+    // ── Form section ────────────────────────────────────────────────
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    // ── Questions section ───────────────────────────────────────────
+    .section-title { margin: 0 0 var(--spacing-md); color: var(--text-primary-color); }
+    .question-list { margin-bottom: var(--spacing-md); }
+
+    // ── Question card ───────────────────────────────────────────────
+    .question-card {
+      border-radius: var(--radius-md);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
+      transition: border-color 200ms ease;
+    }
+
+    .question-card--view {
+      background: white;
+      border: 1px solid var(--neutral-color-3, #e0e0e0);
+      &:hover { border-color: var(--neutral-color-5, #9e9e9e); }
+      &.has-error { border-color: var(--error-color); }
+    }
+
+    .question-card--edit {
+      background: var(--primary-color-50);
+      border: 2px solid var(--primary-color-200);
+      padding: var(--spacing-lg);
+    }
+
+    .question-card__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--spacing-sm);
+    }
+
+    .question-card__info {
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-sm);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .question-number { color: var(--text-secondary-color); flex-shrink: 0; min-width: 24px; }
+
+    .question-text {
+      margin: 0;
+      color: var(--text-primary-color);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .question-card__actions { display: flex; gap: var(--spacing-xs); flex-shrink: 0; }
+
+    // ── Icon buttons ────────────────────────────────────────────────
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-sm, 4px);
+      cursor: pointer;
+      color: var(--text-secondary-color);
+      transition: all 200ms ease;
+      .material-icons { font-size: 18px; }
+      &:hover { background: var(--primary-color-50); color: var(--primary-color-600); }
+      &:disabled { opacity: 0.4; cursor: not-allowed; &:hover { background: transparent; color: var(--text-secondary-color); } }
+    }
+
+    .icon-btn--delete:hover { background: var(--error-color-0, #ffebee); color: var(--error-color); }
+    .icon-btn--small { width: 28px; height: 28px; .material-icons { font-size: 16px; } }
+
+    // ── Answer preview (view) ───────────────────────────────────────
+    .answer-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-xs);
+      margin-top: var(--spacing-sm);
+      padding-left: 32px;
+    }
+
+    .answer-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm, 4px);
+      font-size: 13px;
+      color: var(--text-secondary-color);
+      &.correct { color: var(--primary-color-600); background: var(--primary-color-50); }
+    }
+
+    .text-answer-label {
+      margin: var(--spacing-xs) 0 0;
+      padding-left: 32px;
+      color: var(--neutral-color-5);
+      font-style: italic;
+    }
+
+    // ── Edit card ───────────────────────────────────────────────────
+    .edit-card-title { margin: 0 0 var(--spacing-md); color: var(--text-primary-color); }
+
+    // ── Answers (edit) ──────────────────────────────────────────────
+    .answers-section { margin-top: var(--spacing-md); }
+    .answers-list { display: flex; flex-direction: column; gap: var(--spacing-sm); margin-top: var(--spacing-xs); }
+    .answer-row { display: flex; align-items: center; gap: var(--spacing-sm); }
+
+    .answer-radio { flex-shrink: 0; width: 18px; height: 18px; accent-color: var(--primary-color-600); cursor: pointer; }
+
+    // flex override only — .small-input provides border/height/padding
+    .answer-input { flex: 1; }
+
+    .add-answer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: var(--spacing-sm);
+      padding: 4px 8px;
+      border: none;
+      background: transparent;
+      color: var(--primary-color-600);
+      cursor: pointer;
+      border-radius: var(--radius-sm, 4px);
+      // font-family: inherit is set globally in _typography.scss
+      .material-icons { font-size: 18px; }
+      &:hover { background: var(--primary-color-50); }
+    }
+
+    .text-answer-hint { margin: var(--spacing-md) 0 0; color: var(--neutral-color-5); font-style: italic; }
+
+    .question-card__footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-lg);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--primary-color-100);
+    }
+
+    // ── Compact select ──────────────────────────────────────────────
+    .select-box-container--compact { max-width: 280px; }
+
+    // ── Default answers (exercise-level placeholders) ───────────────
+    .default-answers-section { margin-top: var(--spacing-xs); }
+    .default-answers-hint { color: var(--text-secondary-color); font-weight: normal; }
+
+    // ── Action buttons ──────────────────────────────────────────────
+    .question-actions { display: flex; gap: var(--spacing-sm); justify-content: space-between; }
+    .btn-icon { margin-right: 4px; font-size: 18px; vertical-align: middle; }
+
+    // ── Error state ─────────────────────────────────────────────────
+    .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-xl) 0;
+      text-align: center;
+    }
+
+    .error-state__icon { font-size: 48px; color: var(--neutral-color-5); }
+
+    // ── Fast Create ────────────────────────────────────────────────
+    .fast-create-content { display: flex; flex-direction: column; gap: var(--spacing-md); }
+
+    :host ::ng-deep .warning-icon { color: var(--warning-color, #f59e0b); }
+
+    // ── Responsive ──────────────────────────────────────────────────
+    @media (max-width: 767px) {
+      .editor-page { padding: var(--spacing-md); }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .header-actions { width: 100%; justify-content: flex-end; }
+      .question-card--edit { padding: var(--spacing-md); }
+      .answer-preview { flex-direction: column; padding-left: var(--spacing-lg); }
+      .question-actions { flex-direction: column; lib-button { width: 100%; } }
+      .select-box-container--compact { max-width: 100%; }
+    }
+  # ────────────────────────────────────────────────────────────────────
+  # ACCEPTANCE CRITERIA
+  # ────────────────────────────────────────────────────────────────────
+  acceptance_criteria:
+    # Layout & navigation
+    - Navigation bar is hidden while creating or editing exercises
+    - No back icon button — Cancel button handles navigation
+    - Cancel and Save Exercise buttons are in the page header (not footer)
+    - Cancel and Save buttons use md size for prominent visibility
+
+    # Exercise form
+    - Create mode shows empty form with TEXT_ANSWER as default type
+    - Edit mode loads existing exercise title, type, and questions
+    - Exercise Title field appears FIRST (before exercise type)
+    - Title field uses lib-textarea with auto-expanding height based on content
+    - Title field is required with inline validation error
+    - Exercise Type selector appears SECOND with compact/small styling
+    - Type selector shows only Multiple Choice and Text Answer options
+    - Changing type with existing MC questions shows confirmation dialog
+
+    # Default answers (placeholder)
+    - Default answers section visible only when type is MULTIPLE_CHOICE
+    - Shows hint text "(new questions will use these answers by default)"
+    - Teacher can edit default answer options (radio + text + delete)
+    - New questions inherit the current default answers
+    - Default answers support 2-6 options with one correct selection
+
+    # Questions — manual
+    - Can add a new question via "+ Add Question" button
+    - New MC question initializes with current default answer options
+    - New TEXT_ANSWER question has no answer options section
+    - Can edit a question inline (card expands to edit mode)
+    - Only one question can be edited at a time
+    - Can delete a question (instant removal, no individual confirm)
+    - Questions re-number after deletion (1, 2, 3...)
+
+    # Questions — MULTIPLE_CHOICE answers
+    - "MC question edit shows answer options with radio + text + delete"
+    - Can add answer options (up to 6)
+    - Can remove answer options (minimum 2 remain)
+    - Can select exactly one correct answer via radio button
+    - Validation requires ≥2 options, all with text, 1 correct
+
+    # Questions — TEXT_ANSWER
+    - "TEXT_ANSWER question edit shows only the question text field"
+    - "View mode shows '(Text answer)' label in muted style"
+
+    # Fast Create
+    - Fast Create button opens a dialog
+    - "Textarea accepts numbered list (1. / 2) formats) — splits by numbered index at line start only"
+    - Multi-line content between numbered indices is preserved as one question
+    - Numbers appearing mid-text do not trigger a new question split
+    - Real-time preview shows detected question count (debounced 200ms)
+    - "Add N Questions" button appends parsed questions to the list
+    - Cancel closes dialog without changes
+    - Parsed MC questions inherit current default answer options
+
+    # Save
+    - Save validates all fields before API call
+    - "Validation errors: title required, ≥1 question, question content required, MC options valid"
+    - Save button shows loading spinner during API call
+    - Successful save navigates to course management
+    - Save error shows toast and stays on page
+
+    # Unsaved changes
+    - Navigating away with unsaved changes shows confirmation dialog
+    - "Stay" keeps user on editor
+    - "Leave" discards changes and navigates away
+    - Browser close/refresh triggers native beforeunload prompt
+    - Clean state (no changes) navigates without prompt
+
+    # Responsive
+    - Works on mobile (<768px) with stacked layout
+    - Header wraps: title on top, buttons below on mobile
+    - Fast Create dialog becomes full-screen on mobile

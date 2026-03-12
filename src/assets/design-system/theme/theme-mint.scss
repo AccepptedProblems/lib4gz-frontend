@@ -1,0 +1,45 @@
+@use "../tokens/token" as token;
+
+// Single theme applied directly to :root
+:root {
+  // Typography
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+
+  // Primary Colors (Mint/Teal) — overrides base blue in _color.scss
+  --primary-color-900: #004d40;
+  --primary-color-800: #00695c;
+  --primary-color-700: #00796b;
+  --primary-color-600: #00897b;
+  --primary-color-500: #26a69a;
+  --primary-color-400: #4db6ac;
+  --primary-color-300: #80cbc4;
+  --primary-color-200: #b2dfdb;
+  --primary-color-100: #e0f2f1;
+  --primary-color-50: #f1f8f6;
+
+  // Neutral Colors (0=white, 9=darkest)
+  --neutral-color-0: #ffffff;
+  --neutral-color-1: #f8f8f8;
+  --neutral-color-2: #f2f2f2;
+  --neutral-color-3: #e4e4e4;
+  --neutral-color-4: #cecece;
+  --neutral-color-5: #adadad;
+  --neutral-color-6: #808080;
+  --neutral-color-7: #646464;
+  --neutral-color-8: #484848;
+  --neutral-color-9: #333333;
+
+  // Semantic Colors
+  --warning-color: #fbaa21;
+  --success-color: #4caf50;
+  --error-color: #f44336;
+
+  // Apply token configurations
+  @include token.default-configuration;
+  @include token.navigation-bar-theme-by-primary-color-reverse;
+  @include token.footer-theme-by-primary-color;
+
+  // Text colors
+  --text-color-on-primary-bg: var(--neutral-color-0);
+  --button-text-color: var(--neutral-color-0);
+}

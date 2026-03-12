@@ -1,0 +1,205 @@
+@if (loading()) {
+  <div class="loading-container">
+    <lib-spinner type="screen" [diameter]="32" label="Loading enrollments..." />
+  </div>
+} @else {
+<div class="enrollment-management" role="region" aria-label="Enrollment management">
+  <!-- Search -->
+  <div class="table-filters">
+    <input
+      class="filter-input"
+      type="text"
+      placeholder="Search by name or email..."
+      [value]="search()"
+      (input)="onSearchChange($event)"
+    />
+  </div>
+
+  <!-- Status Filter Chips -->
+  <div class="status-chips" role="listbox" aria-label="Filter by status">
+    <lib-chip
+      label="All"
+      value="All"
+      [selected]="statusFilter() === 'All'"
+      (chipClick)="onChipFilter($event)"
+    />
+    <lib-chip
+      label="Active"
+      value="ACTIVE"
+      variant="success"
+      [selected]="statusFilter() === 'ACTIVE'"
+      (chipClick)="onChipFilter($event)"
+    />
+    <lib-chip
+      label="Pending"
+      value="PENDING"
+      variant="warning"
+      [selected]="statusFilter() === 'PENDING'"
+      [count]="pendingRequestCount()"
+      (chipClick)="onChipFilter($event)"
+    />
+    <lib-chip
+      label="Rejected"
+      value="REJECTED"
+      variant="error"
+      [selected]="statusFilter() === 'REJECTED'"
+      (chipClick)="onChipFilter($event)"
+    />
+    <lib-chip
+      label="Inactive"
+      value="INACTIVE"
+      variant="neutral"
+      [selected]="statusFilter() === 'INACTIVE'"
+      (chipClick)="onChipFilter($event)"
+    />
+  </div>
+
+  @if (filteredEnrollments().length === 0) {
+    <div class="empty-state">
+      <span class="material-icons empty-icon">group</span>
+      @if (search() || statusFilter() !== 'All') {
+        <p class="text-body-large text-secondary">No enrollments match your search/filter criteria.</p>
+      } @else {
+        <p class="text-body-large text-secondary">No students enrolled yet. Share your course to get started.</p>
+      }
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col" class="col-index">#</th>
+            <th scope="col">Name</th>
+            <th scope="col" class="col-email">Email</th>
+            <th scope="col">Role</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="col-date">Joined</th>
+            <th scope="col" class="col-actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (enrollment of paginatedEnrollments(); track enrollment.id; let i = $index) {
+            <tr>
+              <td class="col-index">{{ (page() - 1) * pageSize + i + 1 }}</td>
+              <td>{{ enrollment.user.name }}</td>
+              <td class="col-email">{{ enrollment.user.email }}</td>
+              <td>
+                <lib-badge [variant]="getRoleBadgeVariant(enrollment.role)">
+                  {{ enrollment.role }}
+                </lib-badge>
+              </td>
+              <td>
+                <lib-badge [variant]="getStatusBadgeVariant(enrollment.status)" [ariaLabel]="enrollment.status">
+                  {{ enrollment.status }}
+                </lib-badge>
+              </td>
+              <td class="col-date">
+                @if (enrollment.joinedAt) {
+                  {{ enrollment.joinedAt | date:'mediumDate' }}
+                } @else {
+                  —
+                }
+              </td>
+              <td class="col-actions">
+                <div class="row-actions">
+                  @if (enrollment.status === EnrollmentStatus.PENDING) {
+                    <lib-button
+                      variant="primary"
+                      size="sm"
+                      [ariaLabel]="'Approve ' + enrollment.user.name"
+                      (buttonClick)="approveEnrollment(enrollment)"
+                    >
+                      Approve
+                    </lib-button>
+                    <lib-button
+                      variant="destructive"
+                      size="sm"
+                      [ariaLabel]="'Reject ' + enrollment.user.name"
+                      (buttonClick)="rejectEnrollment(enrollment)"
+                    >
+                      Reject
+                    </lib-button>
+                  } @else {
+                    <button
+                      class="icon-btn"
+                      (click)="confirmRoleChange(enrollment)"
+                      [attr.aria-label]="'Change role for ' + enrollment.user.name"
+                      title="Toggle Role"
+                    >
+                      <span class="material-icons">swap_horiz</span>
+                    </button>
+                    <button
+                      class="icon-btn icon-btn--danger"
+                      (click)="confirmRemove(enrollment.id, enrollment.user.name)"
+                      [attr.aria-label]="'Remove ' + enrollment.user.name"
+                      title="Remove"
+                    >
+                      <span class="material-icons">person_remove</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <span class="text-body-small text-secondary">
+        Showing {{ (page() - 1) * pageSize + 1 }}–{{ Math.min(page() * pageSize, filteredEnrollments().length) }}
+        of {{ filteredEnrollments().length }}
+      </span>
+      <div class="pagination__controls">
+        <button
+          class="pagination-btn"
+          [disabled]="page() <= 1"
+          (click)="page.set(page() - 1)"
+        >&lt;</button>
+        <span class="text-body-small">{{ page() }} / {{ totalPages() }}</span>
+        <button
+          class="pagination-btn"
+          [disabled]="page() >= totalPages()"
+          (click)="page.set(page() + 1)"
+        >&gt;</button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Role Change Confirmation Dialog -->
+<lib-dialog
+  [open]="roleDialogOpen()"
+  title="Change Role"
+  icon="swap_horiz"
+  iconClass="primary"
+  confirmLabel="Change Role"
+  confirmVariant="primary"
+  [loading]="changingRole()"
+  (confirm)="executeRoleChange()"
+  (cancel)="cancelRoleChange()"
+>
+  @if (roleChangeEnrollment(); as enrollment) {
+    <p>Change <strong>{{ enrollment.user.name }}</strong>'s role to
+      <lib-badge [variant]="getRoleBadgeVariant(roleChangeTarget())">{{ roleChangeTarget() }}</lib-badge>?
+    </p>
+  }
+</lib-dialog>
+
+<!-- Remove Enrollment Confirmation Dialog -->
+<lib-dialog
+  [open]="deleteDialogOpen()"
+  title="Remove Enrollment"
+  icon="warning"
+  iconClass="warning"
+  confirmLabel="Remove"
+  confirmVariant="destructive"
+  [loading]="deleting()"
+  (confirm)="executeDelete()"
+  (cancel)="cancelDelete()"
+>
+  <p>Are you sure you want to remove <strong>{{ deleteEnrollmentName() }}</strong>?</p>
+  <p class="text-body-small warning-text">This will remove the student from the course.</p>
+</lib-dialog>
+}

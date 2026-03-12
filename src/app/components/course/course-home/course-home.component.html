@@ -1,0 +1,37 @@
+@if (enrollmentLoading()) {
+  <div class="home-container">
+    <lib-spinner type="screen" [diameter]="32" label="Loading..." />
+  </div>
+} @else if (isContentLocked() && !isEnrolled()) {
+  <div class="enroll-cta">
+    <span class="material-icons enroll-icon">lock</span>
+    <h2 class="text-title-large text-primary">Enroll to access course content</h2>
+    <p class="text-body-large text-secondary">
+      Join this course to view lessons, summaries, and exercises.
+    </p>
+    <lib-button
+      variant="primary"
+      size="lg"
+      [isLoading]="enrolling()"
+      (buttonClick)="enrollInCourse()"
+    >
+      Enroll Now
+    </lib-button>
+  </div>
+} @else if (isContentLocked() && isEnrolled()) {
+  <div class="enroll-cta">
+    <span class="material-icons enroll-icon">hourglass_empty</span>
+    <h2 class="text-title-large text-primary">Access Restricted</h2>
+    <p class="text-body-large text-secondary">
+      Your enrollment is {{ enrollmentBadgeLabel().toLowerCase() }}.
+      Content will be available once your enrollment is approved.
+    </p>
+  </div>
+} @else {
+  <div class="home-container">
+    <span class="material-icons placeholder-icon">menu_book</span>
+    <p class="text-body-large text-secondary">
+      Select a lesson from the sidebar to view its content.
+    </p>
+  </div>
+}

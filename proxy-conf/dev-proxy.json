@@ -1,0 +1,19 @@
+{
+  "/mercury": {
+    "target": "https://dev.api.salonfriday.com",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  },
+  "/chronos": {
+    "target": "https://dev.api.salonfriday.com",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  },
+  "/identity": {
+    "target": "https://dev.api.salonfriday.com",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

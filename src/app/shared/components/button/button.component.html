@@ -1,0 +1,26 @@
+<button
+  [type]="type()"
+  [disabled]="isDisabled()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-busy]="isLoading()"
+  [class.primary]="variant() === 'primary'"
+  [class.secondary]="variant() === 'secondary'"
+  [class.destructive]="variant() === 'destructive'"
+  [class.sm]="size() === 'sm'"
+  [class.md]="size() === 'md'"
+  [class.lg]="size() === 'lg'"
+  [class.loading]="isLoading()"
+  (click)="handleClick($event)"
+>
+  @if (isLoading()) {
+    <lib-spinner
+      [diameter]="spinnerDiameter()"
+      type="inline"
+      color="inherit"
+      class="button-spinner"
+    />
+  }
+  <span class="button-content" [class.hidden]="isLoading()">
+    <ng-content />
+  </span>
+</button>

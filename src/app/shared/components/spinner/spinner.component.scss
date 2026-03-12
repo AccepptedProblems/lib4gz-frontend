@@ -1,0 +1,29 @@
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.inline {
+    width: auto;
+    height: auto;
+  }
+
+  &.screen {
+    width: 100%;
+    height: calc(100vh - 70px);
+    min-height: 200px;
+  }
+
+  &.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: var(--z-index-modal);
+  }
+
+  &.inherit-color {
+    ::ng-deep .mdc-circular-progress__indeterminate-circle-graphic {
+      stroke: var(--spinner-color, currentColor);
+    }
+  }
+}

@@ -1,0 +1,192 @@
+<!-- Loading State -->
+@if (screenState() === 'loading') {
+  <div class="loading-container">
+    <lib-spinner type="screen" [diameter]="48" label="Loading exercises..." />
+  </div>
+}
+
+<!-- Error State -->
+@if (screenState() === 'error') {
+  <div class="error-container">
+    <span class="material-icons error-icon">error_outline</span>
+    <p class="text-body-large text-secondary">{{ errorMessage() }}</p>
+    <lib-button variant="secondary" size="md" (buttonClick)="goBack()">
+      Go Back
+    </lib-button>
+  </div>
+}
+
+<!-- No Exercises State -->
+@if (screenState() === 'no-exercises') {
+  <div class="error-container">
+    <span class="material-icons placeholder-icon">assignment</span>
+    <p class="text-body-large text-secondary">No exercises available for this lesson.</p>
+    <lib-button variant="secondary" size="md" (buttonClick)="goBack()">
+      Go Back
+    </lib-button>
+  </div>
+}
+
+<!-- Loaded State -->
+@if (screenState() === 'loaded') {
+  <div class="page-container">
+    <!-- Header Bar -->
+    <div class="header-bar">
+      <h1 class="text-headline-small header-title">{{ headerTitle() }}</h1>
+      <div class="header-actions">
+        <lib-button variant="secondary" size="md" (buttonClick)="handleCancel()">
+          Cancel
+        </lib-button>
+        <lib-button variant="primary" size="md" (buttonClick)="handleSubmit()">
+          Submit
+        </lib-button>
+      </div>
+    </div>
+
+    <!-- Exercise Tab Bar (sticky under header) -->
+    <div class="exercise-tabs-bar">
+      <div class="exercise-tabs" role="tablist">
+        @for (exercise of exercises(); track exercise.id; let i = $index) {
+          <button
+            class="exercise-tab"
+            [class.exercise-tab--active]="activeExerciseIndex() === i"
+            role="tab"
+            [attr.aria-selected]="activeExerciseIndex() === i"
+            (click)="switchExerciseTab(i)"
+          >
+            Exercise {{ i + 1 }}
+          </button>
+        }
+      </div>
+      <button class="fast-fill-btn" (click)="openFastFill()">
+        ⚡ Fast Fill Answer
+      </button>
+    </div>
+
+    <!-- Exercise Content -->
+    @if (activeExercise(); as exercise) {
+      <div class="exercise-content" role="tabpanel" [attr.aria-labelledby]="'tab-' + activeExerciseIndex()">
+        <h2 class="text-title-large exercise-title">{{ exercise.title }}</h2>
+
+        @for (question of activeQuestions(); track question.id; let qi = $index) {
+          <div class="question-card" [class.question-card--last]="qi === activeQuestions().length - 1">
+            <div class="question-header">
+              <span class="text-body-medium question-number">{{ qi + 1 }}.</span>
+              <span class="text-body-large question-content">{{ question.content }}</span>
+            </div>
+
+            <!-- Multiple Choice -->
+            @if (exercise.type === ExerciseType.MULTIPLE_CHOICE) {
+              <div class="mc-options" role="radiogroup" [attr.aria-label]="'Question ' + (qi + 1)">
+                @for (option of getOptions(question); track option) {
+                  <label
+                    class="mc-option"
+                    [class.mc-option--selected]="getAnswer(question.id) === option"
+                  >
+                    <input
+                      type="radio"
+                      [name]="'question-' + question.id"
+                      [value]="option"
+                      [checked]="getAnswer(question.id) === option"
+                      (change)="onRadioSelect(question.id, option)"
+                      class="mc-radio"
+                    />
+                    <span class="mc-option-text text-body-large">{{ option }}</span>
+                  </label>
+                }
+              </div>
+            }
+
+            <!-- Text Answer -->
+            @if (exercise.type === ExerciseType.TEXT_ANSWER) {
+              <lib-textarea
+                [value]="getAnswer(question.id)"
+                (valueChange)="onTextChange(question.id, $event)"
+                placeholder="Type your answer here..."
+                [ariaLabel]="'Answer for question ' + (qi + 1)"
+                [minRows]="4"
+              />
+            }
+          </div>
+        }
+
+        @if (activeQuestions().length === 0) {
+          <p class="text-body-medium text-secondary">No questions available for this exercise.</p>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Submit Confirmation Dialog -->
+  <lib-dialog
+    [open]="showSubmitDialog()"
+    title="Submit Exercises"
+    confirmLabel="Submit"
+    cancelLabel="Cancel"
+    confirmVariant="primary"
+    [loading]="isSubmitting()"
+    (confirm)="confirmSubmit()"
+    (cancel)="dismissSubmitDialog()"
+  >
+    @if (unansweredCount() > 0) {
+      <p>
+        You have answered {{ answeredCount() }} out of {{ totalQuestions() }} questions.
+      </p>
+      <ul class="unanswered-list">
+        @for (item of unansweredByExercise(); track item.exerciseIndex) {
+          <li class="unanswered-item">
+            <span class="material-icons unanswered-icon">warning_amber</span>
+            <span class="text-body-medium">
+              Exercise {{ item.exerciseIndex }} &mdash; {{ item.unansweredCount }}
+              {{ item.unansweredCount === 1 ? 'question' : 'questions' }} not answered
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p>
+        You have answered all {{ totalQuestions() }} questions. Ready to submit!
+      </p>
+    }
+    <p>Are you sure you want to submit your answers?</p>
+  </lib-dialog>
+
+  <!-- Cancel Confirmation Dialog -->
+  <lib-dialog
+    [open]="showCancelDialog()"
+    title="Leave Exercise?"
+    confirmLabel="Leave"
+    cancelLabel="Stay"
+    confirmVariant="destructive"
+    (confirm)="confirmCancel()"
+    (cancel)="dismissCancelDialog()"
+  >
+    <p>Your progress has been saved as a draft.</p>
+    <p>You can continue this attempt later.</p>
+  </lib-dialog>
+
+  <!-- Fast Fill Answer Dialog -->
+  <lib-dialog
+    [open]="showFastFillDialog()"
+    title="⚡ Fast Fill Answer"
+    [confirmLabel]="'Fill ' + parsedAnswers().length + ' Answers'"
+    cancelLabel="Cancel"
+    confirmVariant="primary"
+    width="600px"
+    (confirm)="confirmFastFill()"
+    (cancel)="cancelFastFill()"
+  >
+    <div class="fast-fill-content">
+      <lib-textarea
+        label="Paste your numbered answers below"
+        [placeholder]="'1. Answer for first question\n2. Answer for second question\n3. Answer for third question'"
+        [minRows]="6"
+        [value]="fastFillText()"
+        (valueChange)="onFastFillInput($event)"
+      />
+      <p class="text-body-medium text-secondary fast-fill-counter">
+        {{ parsedAnswers().length }} answers detected ({{ activeQuestions().length }} questions total)
+      </p>
+    </div>
+  </lib-dialog>
+}

@@ -1,0 +1,1554 @@
+openspec: "1.0"
+kind: Screen
+info:
+  title: Course Dashboard
+  version: "2.0.0"
+  description: >
+    Main course view for enrolled students. Two-column layout inspired by
+    Coursera: a persistent left sidebar with course identity and module
+    navigation, and a centered main content area for lesson/module content.
+
+screen:
+  id: course-dashboard
+  name: Course Dashboard
+  route: /course/:id
+  route_note: >
+    Child route of "course/:id" parent. This component renders at the
+    default child path (empty string). The parent applies authGuard.
+    Route definition: { path: '', loadComponent: () => import(...CourseDashboardComponent) }
+  component:
+    selector: app-course-dashboard
+    file: src/app/components/course/course-dashboard/course-dashboard.component.ts
+    template: src/app/components/course/course-dashboard/course-dashboard.component.html
+    styles: src/app/components/course/course-dashboard/course-dashboard.component.scss
+    standalone: true
+  guard: authGuard
+  guard_note: >
+    authGuard is applied on the parent route "course/:id", not directly
+    on this child route. The parent canActivate: [authGuard] protects
+    all child routes.
+  target_users: [student]
+  status: scaffold
+
+  purpose: >
+    Main course view for students. Provides a two-column layout where the
+    left sidebar contains course identity (name, description, instructor)
+    and module navigation, while the right column displays lesson content
+    centered on screen for optimal readability.
+
+  # ────────────────────────────────────────────────────────────────────
+  # LAYOUT
+  # ────────────────────────────────────────────────────────────────────
+  layout:
+    desktop:
+      description: >
+        Two-column layout. Left sidebar (280px fixed) holds course info
+        heading and module navigation. Right column takes remaining width
+        with content left-aligned (max-width: 900px) for readability.
+        No standalone course header section — all course identity lives
+        in the sidebar. Breakpoint: >768px.
+      ascii: |
+        +----------------------------------------------------------+
+        |  Navbar                                                  |
+        +----------------------------------------------------------+
+        |              |                                           |
+        |  SIDEBAR     |   CONTENT (left-aligned, max-width 900px)|
+        |  (280px)     |                                           |
+        |              |   Lesson Title                            |
+        |  Course Name |                                           |
+        |  Description |   [Summary] [Exercises] [Submissions*]   |
+        |  Instructor  |   ─────────────────────────────────────   |
+        |  [Manage]    |                                           |
+        |              |   (Active tab content here...)            |
+        |  ──────────  |                                           |
+        |              |   Summary: lesson summary HTML            |
+        |  Course      |   Exercises: exercise cards + status      |
+        |  Material    |   Submissions*: grouped submissions       |
+        |  ▸ 1. Mod 1  |                                           |
+        |  ▸ 2. Mod 2  |   * Teacher role only                    |
+        |  ▸ 3. Mod 3  |                                           |
+        |  ▸ 4. Mod 4  |                                           |
+        |              |                                           |
+        +----------------------------------------------------------+
+    mobile:
+      description: "Single column. Sidebar becomes a drawer overlay. <768px."
+      ascii: |
+        +----------------------+
+        |  Navbar              |
+        +----------------------+
+        | [☰]                  |
+        |                      |
+        |  Content (full width)|
+        |  centered            |
+        |                      |
+        |  Module sections...  |
+        |                      |
+        +----------------------+
+      toggle_button: >
+        Compact hamburger icon button (not full-width bar). Uses Material
+        Icons "menu" glyph. No background/border — icon-only button with
+        40×40px tap target, border-radius 8px, hover: --surface-hover.
+        Positioned at top-left of content flow.
+
+  # ────────────────────────────────────────────────────────────────────
+  # COMPONENTS
+  # ────────────────────────────────────────────────────────────────────
+  components:
+    - id: sidebar
+      name: Sidebar — Course Identity & Module Navigation
+      type: inline
+      width: 280px
+      description: >
+        Persistent left column containing two sections:
+        (1) Course heading — course name, description, instructor name.
+        (2) Module navigation — collapsible accordion of course modules.
+        The sidebar replaces the previous standalone course-header section;
+        all course identity information now lives here.
+      layout: |
+        +------------------------+
+        |                        |
+        |  Course Name           |
+        |  Description (2-3 ln)  |
+        |  Instructor Name       |
+        |                        |
+        |  [Manage Course]       |
+        |                        |
+        |  ────────────────────  |
+        |                        |
+        |  Course Material          |
+        |  ▾ 1. Module 1            |
+        |    ● 1.1 Lesson 1 (active)|
+        |    ○ 1.2 Lesson 2         |
+        |  ▸ 2. Module 2            |
+        |  ▸ 3. Module 3            |
+        |  ▸ 4. Module 4            |
+        |                        |
+        +------------------------+
+      elements:
+        - name: Course Name
+          typography: text-title-large
+          data_binding: "course().title"
+          description: >
+            Course title displayed at the top of the sidebar.
+            Uses text-title-large (22px/28px, weight-medium).
+
+        - name: Course Description
+          typography: text-body-medium
+          data_binding: "course().description"
+          description: >
+            2-3 line excerpt of the course description.
+            Truncated with -webkit-line-clamp: 3.
+
+        - name: Instructor Name
+          typography: text-body-medium
+          color: "var(--primary-color) -> #00897b (Mint theme)"
+          css_class: sidebar__instructor
+          data_binding: "course().createdBy.name"
+          description: >
+            Plain text showing the course creator's name.
+            Uses primary color to visually separate it from the
+            course description and other text-secondary elements.
+            Styled via .sidebar__instructor with explicit
+            color: var(--primary-color).
+
+        - name: Manage Course Button
+          component: "lib-button [variant]=\"'primary'\" [size]=\"'sm'\""
+          label: "Manage Course"
+          description: >
+            Visible only when the current user has a TEACHER role enrollment
+            for this course (myEnrollment()?.role === EnrollmentRole.TEACHER).
+            Hidden for students and unenrolled users.
+            Placed below the instructor name, above the divider.
+          visibility: "myEnrollment()?.role === 'TEACHER'"
+          action: "Navigate to /course/:id/manage"
+
+        - name: Course Material Section Header
+          typography: text-title-medium
+          description: >
+            Static label "Course Material" displayed above the module
+            accordion list, separated from course heading by a divider.
+
+        - name: Module Accordion List
+          description: >
+            Collapsible module list. Each module header shows a numbered
+            prefix followed by the module title with a chevron icon.
+            Clicking expands to show lessons. Lessons are listed with a
+            numbered prefix (moduleIndex.lessonIndex) and a left accent
+            border on the active item.
+            IMPORTANT: Module header buttons and lesson item buttons MUST
+            have explicit color: var(--text-primary-color, #1a1a1a) because
+            native button elements do not inherit text color reliably across
+            browsers, causing invisible text.
+          numbering:
+            description: >
+              Modules and lessons display hierarchical number prefixes
+              based on their position (1-indexed) in the sorted list.
+              The numbering is purely presentational — derived from the
+              @for loop $index, not stored in the data model.
+            module_format: "{modulePosition}. {module.title}"
+            module_example: "1. Getting Started"
+            lesson_format: "{modulePosition}.{lessonPosition} {lesson.title}"
+            lesson_example: "1.1 Introduction to Angular"
+            content_area: >
+              The selected lesson title in the content area also displays
+              the hierarchical prefix. A selectedLessonPrefix signal stores
+              the prefix string (e.g. "1.1") set when a lesson is selected.
+          features:
+            - Collapsible modules (accordion pattern — expanding one does NOT collapse others)
+            - Click lesson to load its summary in the main content area
+            - Active/selected lesson highlighted with left accent border
+            - First module expanded by default, others collapsed
+            - Lessons lazy-loaded per module on first expand
+            - Module header text color must be explicit (not inherited) to avoid invisible text
+            - Module headers display numbered prefix (1. 2. 3. ...)
+            - Lesson items display hierarchical numbered prefix (1.1 1.2 2.1 ...)
+          data_binding:
+            modules: "modules() — ModuleResponse[]"
+            lessons_per_module: "Fetched per module via LessonService.listByModule(moduleId)"
+            selected_lesson: "selectedLesson signal — tracks currently viewed lesson"
+            selected_lesson_prefix: "selectedLessonPrefix signal — stores prefix string for content area title"
+
+    - id: lesson-content
+      name: Lesson Content Area (Tabbed)
+      type: inline
+      description: >
+        Main content column occupying the remaining width after the sidebar.
+        Content is left-aligned with max-width: 900px for optimal
+        reading experience on wide screens. Do NOT use margin: 0 auto —
+        content must stay left-aligned to avoid floating text when short.
+        Displays the currently selected lesson content using a tab interface
+        with three tabs: Summary, Exercises, and Submissions (teacher-only).
+      layout: |
+        +---------------------------------------------+
+        |         (left-aligned, max-width: 900px)     |
+        |                                             |
+        |  Lesson Title          (text-title-large)   |
+        |                                             |
+        |  [Summary]  [Exercises]  [Submissions*]     |
+        |  ─────────────────────────────────────────   |
+        |                                             |
+        |  (Active tab content here...)               |
+        |                                             |
+        +---------------------------------------------+
+        * Submissions tab visible only for teacher role
+      elements:
+        - name: Lesson Title
+          typography: text-title-large
+          data_binding: "selectedLessonPrefix() + ' ' + selectedLesson().title"
+          description: >
+            Displays the hierarchical number prefix followed by the lesson
+            title. Example: "1.1 Introduction to Angular". The prefix is
+            stored in the selectedLessonPrefix signal, set when a lesson
+            is selected from the sidebar.
+
+        - name: Tab Bar
+          type: inline-tabs
+          description: >
+            Horizontal tab bar below the lesson title. Tabs are rendered
+            as button elements with an active state indicator (bottom border
+            accent using --primary-color). Tabs:
+            (1) "Summary" — always visible, default active tab.
+            (2) "Exercises" — always visible, shows exercise count badge
+                if exercises exist (e.g. "Exercises (3)").
+            (3) "Submissions" — visible only for TEACHER role enrollment.
+          data_binding: "activeTab signal — 'summary' | 'exercises' | 'submissions'"
+          tabs:
+            - id: summary
+              label: "Summary"
+              visibility: always
+              default: true
+            - id: exercises
+              label: "Exercises"
+              label_format: "'Exercises' + (exercises().length > 0 ? ' (' + exercises().length + ')' : '')"
+              visibility: always
+            - id: submissions
+              label: "Submissions"
+              visibility: "isTeacher()"
+          styling:
+            container: >
+              display flex, gap 0, border-bottom 1px solid var(--neutral-color-3).
+            tab_button: >
+              padding 8px 16px, background none, border none, cursor pointer,
+              color var(--text-secondary-color), font-weight 500,
+              border-bottom 2px solid transparent, transition all 200ms ease.
+              IMPORTANT: Must have explicit color (button elements do not inherit).
+            tab_active: >
+              color var(--primary-color-600), border-bottom-color var(--primary-color-600).
+            tab_hover: >
+              color var(--text-primary-color), background var(--surface-hover).
+
+        - name: Summary Tab Content
+          description: >
+            Displays the lesson summary content. Same behavior as the
+            previous flat layout: fetched via SummaryService.get(lessonId).
+            Shows skeleton during loading, rendered HTML when loaded,
+            "No summary available" placeholder if no summary exists.
+          data_binding: "summary().content"
+          visibility: "activeTab() === 'summary'"
+          states:
+            - name: loading
+              description: Skeleton placeholder while summary is being fetched
+            - name: loaded
+              description: Summary HTML content rendered via [innerHTML]
+            - name: no-summary
+              description: "'No summary available for this lesson.' placeholder text"
+            - name: error
+              description: "'Failed to load summary.' error placeholder"
+
+        - name: Exercises Tab Content
+          description: >
+            Lists all exercises for the selected lesson. Each exercise is
+            shown as a card with the exercise title, type, question count,
+            and the student's current attempt status (no-submission, draft,
+            submitted, approved, needs-revision). A "Do Exercise" button
+            navigates to the exercise attempt screen for the lesson.
+          visibility: "activeTab() === 'exercises'"
+          layout: |
+            +----------------------------------------------------+
+            |                                                    |
+            |  Exercise 1: Introduction Quiz                     |
+            |  Multiple Choice · 5 Questions                     |
+            |  Status: Not attempted                             |
+            |                                                    |
+            |  Exercise 2: Practice Problems                     |
+            |  Text Answer · 3 Questions                         |
+            |  Status: Submitted ✓                               |
+            |                                                    |
+            |  [Do Exercise]                                     |
+            +----------------------------------------------------+
+          elements:
+            - name: Exercise Card
+              description: >
+                One card per exercise. Displays:
+                (1) Exercise title with index prefix: "Exercise {index}: {title}"
+                (2) Exercise type label + question count (e.g. "Multiple Choice · 5 Questions")
+                (3) Student's submission status for this exercise:
+                    - "Not attempted" (neutral, when no submission)
+                    - "Draft" (neutral chip)
+                    - "Submitted" (primary chip)
+                    - "Approved" (success chip)
+                    - "Needs Revision" (warning chip)
+                Status is fetched via SubmissionService.getMySubmission(exerciseId)
+                for each exercise. 404 responses indicate no submission.
+              data_binding: "exercises() with per-exercise submission status"
+              styling: >
+                padding 16px, border-radius var(--radius-md),
+                border 1px solid var(--neutral-color-3), margin-bottom 12px.
+
+            - name: Do Exercise Button
+              component: "lib-button [variant]=\"'primary'\" [size]=\"'md'\""
+              label: "Do Exercise"
+              description: >
+                Navigates to the exercise attempt screen for the lesson.
+                Route: /course/:id/lesson/:lessonId/attempt
+                Visible only when the lesson has exercises (exercises().length > 0).
+                All exercises for the lesson will be available as tabs on the
+                exercise attempt screen.
+              visibility: "exercises().length > 0"
+              action: "Navigate to /course/:id/lesson/:lessonId/attempt"
+
+            - name: No Exercises Placeholder
+              description: "'No exercises available for this lesson.' placeholder"
+              visibility: "exercises().length === 0"
+
+        - name: Submissions Tab Content (Teacher Only)
+          description: >
+            Visible only for users with TEACHER role. Lists exercises as
+            expandable cards. Clicking a card toggles its expansion to
+            reveal the exercise's questions inline. Clicking a question
+            opens a right-side drawer showing all students' answers for
+            that specific question. This two-level drill-down (exercise →
+            question → per-question student answers) replaces the previous
+            per-exercise submission drawer.
+          visibility: "activeTab() === 'submissions' && isTeacher()"
+          layout: |
+            Collapsed state (default):
+            +----------------------------------------------------+
+            |                                                    |
+            |  ▸ Exercise 1: Introduction Quiz         3 sub.    |
+            |    Multiple Choice · 5 Questions                   |
+            |                                                    |
+            |  ▸ Exercise 2: Practice Problems         1 sub.    |
+            |    Text Answer · 3 Questions                       |
+            |                                                    |
+            +----------------------------------------------------+
+
+            Expanded state (Exercise 1 selected):
+            +----------------------------------------------------+
+            |                                                    |
+            |  ▾ Exercise 1: Introduction Quiz         3 sub.    |
+            |    Multiple Choice · 5 Questions                   |
+            |                                                    |
+            |    ┌────────────────────────────────────────────┐   |
+            |    │  1. What is Angular?                       │   |
+            |    │  2. Explain components                     │   |
+            |    │  3. What is dependency injection?          │   |
+            |    │  4. Describe routing                       │   |
+            |    │  5. What are signals?                      │   |
+            |    └────────────────────────────────────────────┘   |
+            |                                                    |
+            |  ▸ Exercise 2: Practice Problems         1 sub.    |
+            |    Text Answer · 3 Questions                       |
+            |                                                    |
+            +----------------------------------------------------+
+
+            Clicking a question opens the Question Answers Drawer:
+
+            +----------------------------------------------------+--------+
+            |                                                    |        |
+            |  (main content shrinks)                            | DRAWER |
+            |                                                    |  (520) |
+            |                                                    |        |
+            |                                                    |    [X] |
+            |                                                    |        |
+            |                                                    | Q: ... |
+            |                                                    |        |
+            |                                                    | Alice  |
+            |                                                    | A: ... |
+            |                                                    |        |
+            |                                                    | Bob    |
+            |                                                    | A: ... |
+            |                                                    |        |
+            |                                                    | Carol  |
+            |                                                    | (none) |
+            |                                                    |        |
+            +----------------------------------------------------+--------+
+          elements:
+            - name: Exercise Submission Card (Expandable)
+              description: >
+                Reuses the same visual card style as the Exercises tab
+                (.exercise-card). Clicking the card toggles expansion.
+                Each card displays:
+                (1) Chevron icon (chevron_right / expand_more) — left
+                    side, indicates expand/collapse state
+                (2) Exercise title (text-title-medium) — center
+                (3) Submission count chip — right side, showing
+                    "{count} Submissions" using lib-chip neutral variant
+                (4) Exercise type label + question count (text-body-medium,
+                    text-secondary, e.g. "Multiple Choice · 5 Questions")
+                When expanded, a question list appears below the card
+                meta line. Questions are fetched from QuestionService
+                .listByExercise(exerciseId) on first expand.
+              data_binding: >
+                exercises() for card list,
+                expandedExerciseId() for expand state,
+                exerciseSubmissions().get(exercise.id)?.length for count,
+                exerciseQuestions().get(exercise.id) for question list
+              styling: >
+                Same as .exercise-card: padding 16px 20px,
+                border 1px solid var(--neutral-color-3),
+                border-radius var(--radius-md), gap 4px.
+                Added: cursor pointer, hover transition
+                (border-color var(--primary-color-300)).
+                When expanded (--selected): primary border + primary-50 bg.
+
+            - name: Question List (Expanded)
+              description: >
+                Shown inside the expanded exercise card, below the meta
+                line. Lists all questions for the exercise, sorted by
+                orderIndex. Each question item is clickable and opens
+                the drawer to show all students' answers for that question.
+              elements:
+                - name: Question Item
+                  description: >
+                    A single question row inside the expanded card.
+                    Displays: question orderIndex + question content
+                    (text-body-medium). Clickable — opens the drawer.
+                    Hover: background var(--surface-hover). Active question
+                    (whose answers are shown in drawer) gets primary color
+                    text and left-border highlight.
+                  styling: >
+                    padding 8px 12px, border-radius 4px, cursor pointer,
+                    transition background 200ms. Hover: bg surface-hover.
+                    Active: color primary-600, font-weight 500.
+                  data_binding: "question.orderIndex, question.content"
+
+                - name: Questions Loading State
+                  description: >
+                    Skeleton placeholders shown while questions are
+                    being fetched for the first time.
+                  visibility: "exerciseQuestionsLoading() has exerciseId"
+
+            - name: No Exercises Placeholder
+              description: "'No exercises available for this lesson.' placeholder"
+              visibility: "sortedExercises().length === 0"
+
+            - name: Question Answers Drawer
+              component: "mat-drawer (Angular Material @angular/material/sidenav)"
+              description: >
+                A right-side side drawer (520px wide on desktop,
+                full-width on mobile) using Angular Material MatDrawer
+                with position="end" and mode="side". The content area
+                shrinks to accommodate the drawer — no overlay, no
+                shifting. Content width = 100% minus drawer width.
+                Displays all students' answers for a single selected
+                question. Grouped by student: each student's answer for
+                this question is shown as a card with student name,
+                submission status chip, and their answer text.
+              implementation_note: >
+                The lesson content area is wrapped in mat-drawer-container.
+                The mat-drawer sits inside the container alongside
+                mat-drawer-content which holds the main lesson content.
+                Uses viewChild<MatDrawer>('submissionDrawer') for
+                programmatic open/close via .open() and .close().
+              behavior:
+                - Side mode: content shrinks, drawer sits alongside
+                - No backdrop (side mode)
+                - Closes on close (X) button or programmatic .close()
+                - (closed) event triggers onDrawerClosed() to clear state
+              layout: |
+                +----------------------------------+
+                |                              [X] |
+                |                                  |
+                |  Q: What is Angular?             |
+                |                                  |
+                |  ┌─ Alice ──────── Submitted ─┐  |
+                |  │  A web framework for...    │  |
+                |  └────────────────────────────┘  |
+                |                                  |
+                |  ┌─ Bob ────────── Draft ─────┐  |
+                |  │  (no answer)               │  |
+                |  └────────────────────────────┘  |
+                |                                  |
+                |  ┌─ Carol ──────── Approved ──┐  |
+                |  │  Angular is a platform...  │  |
+                |  └────────────────────────────┘  |
+                |                                  |
+                +----------------------------------+
+              elements:
+                - name: Drawer Top Bar
+                  description: >
+                    Top row with only a close button (material-icons "close")
+                    aligned to the right. No title in the top bar.
+                  styling: >
+                    display flex, justify-content flex-end,
+                    padding 12px 12px 0.
+
+                - name: Question Content Header
+                  description: >
+                    Below the top bar, displays the full question content
+                    as a header (text-title-small, text-primary). Prefixed
+                    with "Q:" label. Provides context for which question
+                    the answers below belong to.
+                  styling: >
+                    padding 0 20px, margin-bottom 8px.
+                  data_binding: "drawerQuestionContent()"
+
+                - name: Drawer Body
+                  description: >
+                    Scrollable area containing student answer cards.
+                    Each card represents one student's answer to the
+                    selected question.
+                  styling: >
+                    padding 16px 20px, overflow-y auto,
+                    flex 1, display flex, flex-direction column, gap 16px.
+
+                - name: Student Answer Card
+                  description: >
+                    A card-style container for one student's answer to
+                    the selected question. Header row shows student name
+                    (text-title-small, left) and submission status chip
+                    (right). Below: the student's answer text
+                    (text-body-medium) or "(no answer)" italic placeholder.
+                  elements:
+                    - name: Student Header
+                      description: >
+                        Flex row with student name (text-title-small) and
+                        submission status chip (lib-chip). The name comes
+                        from submission.user.name, status from
+                        submission.status mapped to chip variant.
+                      data_binding: "sub.user.name, sub.status"
+
+                    - name: Answer Text
+                      description: >
+                        The student's answer for this specific question.
+                        Extracted by matching drawerQuestionId against
+                        submission.answers[].questionId. Shows answer text
+                        (text-body-medium) or "(no answer)" em italic.
+                      data_binding: "matched answer.answer"
+
+                - name: No Submissions Message
+                  description: >
+                    "No submissions yet." placeholder shown when no
+                    students have submitted for this exercise.
+                  visibility: "drawerSubmissions().length === 0"
+
+                - name: Loading State
+                  description: >
+                    Skeleton placeholders shown while individual
+                    submission details (with answers) are being fetched.
+                  visibility: "drawerLoading()"
+
+              data_flow:
+                signals:
+                  - name: submissionDrawer
+                    type: "viewChild<MatDrawer>('submissionDrawer')"
+                    description: >
+                      Reference to the Angular Material MatDrawer instance.
+                      Used for programmatic open/close via .open() / .close().
+                  - name: expandedExerciseId
+                    type: "string | null"
+                    default: null
+                    description: >
+                      ID of the currently expanded exercise card in the
+                      Submissions tab. Only one exercise can be expanded
+                      at a time.
+                  - name: exerciseQuestions
+                    type: "Map<string, QuestionResponse[]>"
+                    default: "new Map()"
+                    description: >
+                      Cached questions per exercise. Fetched on first
+                      expand via QuestionService.listByExercise().
+                      Sorted by orderIndex.
+                  - name: exerciseQuestionsLoading
+                    type: "Set<string>"
+                    default: "new Set()"
+                    description: >
+                      Set of exercise IDs whose questions are currently
+                      being fetched. Used to show skeleton loaders.
+                  - name: drawerQuestionId
+                    type: "string | null"
+                    default: null
+                    description: >
+                      ID of the question whose student answers are
+                      displayed in the drawer.
+                  - name: drawerQuestionContent
+                    type: string
+                    default: "''"
+                    description: >
+                      Content text of the selected question, displayed
+                      as header inside the drawer.
+                  - name: drawerExerciseId
+                    type: "string | null"
+                    default: null
+                    description: >
+                      ID of the exercise that owns the selected question.
+                      Used to look up submissions from exerciseSubmissions
+                      map.
+                  - name: drawerSubmissions
+                    type: "SubmissionResponse[]"
+                    default: "[]"
+                    description: >
+                      Full submission data (with answers) for the exercise
+                      that owns the selected question. Populated by
+                      fetching each submission via
+                      SubmissionService.get(submissionId) to ensure
+                      answers[] is included (list endpoint may omit them).
+                  - name: drawerLoading
+                    type: boolean
+                    default: false
+                    description: True while fetching individual submissions
+
+                methods:
+                  - name: toggleExerciseExpand
+                    signature: "toggleExerciseExpand(exercise: ExerciseResponse): void"
+                    description: >
+                      Toggles the expanded state of an exercise card.
+                      If the exercise is already expanded, collapses it
+                      (sets expandedExerciseId to null). If not expanded,
+                      sets expandedExerciseId to exercise.id and fetches
+                      questions via QuestionService.listByExercise() if
+                      not already cached. Also closes the drawer if open.
+                  - name: openQuestionDrawer
+                    signature: "openQuestionDrawer(question: QuestionResponse, exercise: ExerciseResponse): void"
+                    description: >
+                      Opens the drawer to show all students' answers for
+                      the given question. Sets drawerQuestionId,
+                      drawerQuestionContent, drawerExerciseId. Fetches
+                      full submission details via
+                      SubmissionService.get(submissionId) for each
+                      submission of the exercise using forkJoin.
+                  - name: closeSubmissionDrawer
+                    signature: "closeSubmissionDrawer(): void"
+                    description: >
+                      Calls submissionDrawer().close() to close the
+                      MatDrawer programmatically.
+                  - name: onDrawerClosed
+                    signature: "onDrawerClosed(): void"
+                    description: >
+                      Bound to MatDrawer (closed) event. Clears
+                      drawerQuestionId, drawerExerciseId, and
+                      drawerSubmissions signals when the drawer closes.
+                  - name: getAnswerForQuestion
+                    signature: "getAnswerForQuestion(sub: SubmissionResponse): StudentAnswerResponse | null"
+                    description: >
+                      Utility method used in the drawer template. Finds
+                      the answer in sub.answers[] whose questionId matches
+                      drawerQuestionId(). Returns the matched answer or
+                      null.
+
+      states:
+        - name: no-lesson-selected
+          description: "Prompt text: 'Select a lesson from the sidebar to view its content.'"
+        - name: lesson-loading
+          description: Skeleton placeholder while lesson content is being fetched
+        - name: lesson-loaded
+          description: Tabbed content area displayed with Summary as default active tab
+        - name: no-summary
+          description: "'No summary available for this lesson.' shown in Summary tab"
+
+    - id: mobile-sidebar-drawer
+      name: Mobile Sidebar Drawer
+      type: inline
+      description: >
+        On mobile (<768px), sidebar is hidden and becomes a slide-in drawer
+        from the left with an explicit white background (--surface-page / #ffffff).
+        Contains the same content as the desktop sidebar (course heading +
+        module navigation). Overlay backdrop behind.
+      behavior:
+        - Close on backdrop click or X button
+        - Toggle via compact hamburger icon button (not full-width bar)
+
+  # ────────────────────────────────────────────────────────────────────
+  # STATES
+  # ────────────────────────────────────────────────────────────────────
+  states:
+    - name: loading
+      description: Sidebar and content area skeleton placeholders
+    - name: loaded
+      description: >
+        Sidebar displays course identity and module navigation,
+        first lesson auto-selected with summary loaded in content area.
+    - name: error
+      description: Error message with retry button
+    - name: not-enrolled
+      description: >
+        Course info visible in sidebar, lesson content locked/blurred,
+        "Enroll Now" CTA button displayed in content area.
+        Uses EnrollmentService.enroll(courseId) on click.
+
+  # ────────────────────────────────────────────────────────────────────
+  # DATA FLOW
+  # ────────────────────────────────────────────────────────────────────
+  data_flow:
+    route_params:
+      - name: id
+        type: string
+        description: Course UUID from parent route "course/:id"
+        extraction: "inject(ActivatedRoute).parent?.paramMap or route.paramMap"
+    service_calls:
+      - service: CourseService
+        method: get
+        signature: "get(id: string): Observable<CourseResponse>"
+        params: id
+        description: Fetch course details including createdBy, moduleCount, enrollmentCount
+        api_ref: "courses.get — GET /v1/courses/{id}"
+
+      - service: ModuleService
+        method: listByCourse
+        signature: "listByCourse(courseId: string): Observable<ModuleResponse[]>"
+        params: id
+        description: Fetch all modules for the course, sorted by orderIndex
+        api_ref: "modules.list-by-course — GET /v1/courses/{courseId}/modules"
+
+      - service: EnrollmentService
+        method: getMyEnrollment
+        signature: "getMyEnrollment(courseId: string): Observable<EnrollmentResponse>"
+        params: id
+        description: >
+          Fetch current user's enrollment for this course.
+          May return 404 if user is not enrolled — handle as not-enrolled state.
+        api_ref: "enrollments.my-enrollment — GET /v1/courses/{courseId}/my-enrollment"
+
+      - service: LessonService
+        method: listByModule
+        signature: "listByModule(moduleId: string): Observable<LessonResponse[]>"
+        params: moduleId (per module)
+        description: >
+          Fetch lessons for each module. Called per module for sidebar
+          navigation. Sorted by orderIndex.
+        api_ref: "lessons.list-by-module — GET /v1/modules/{moduleId}/lessons"
+
+      - service: SummaryService
+        method: get
+        signature: "get(lessonId: string): Observable<SummaryResponse>"
+        params: lessonId (selected lesson)
+        description: >
+          Fetch summary content for the currently selected lesson.
+          Called when user clicks a lesson in the sidebar.
+          Returns 404 if no summary exists — handle as no-summary state.
+        api_ref: "summaries.get — GET /v1/lessons/{lessonId}/summary"
+
+      - service: ExerciseService
+        method: listByLesson
+        signature: "listByLesson(lessonId: string): Observable<ExerciseResponse[]>"
+        params: lessonId (selected lesson)
+        description: >
+          Fetch exercises for the selected lesson. Used to populate the
+          Exercises tab content. Sorted by orderIndex.
+        api_ref: "exercises.list-by-lesson — GET /v1/lessons/{lessonId}/exercises"
+
+      - service: SubmissionService
+        method: getMySubmission
+        signature: "getMySubmission(exerciseId: string): Observable<SubmissionResponse>"
+        params: exerciseId (per exercise in Exercises tab)
+        description: >
+          Fetch current user's submission for each exercise in the lesson.
+          Called per exercise when the Exercises tab is active. A 404
+          response means no submission exists — display as "Not attempted".
+        api_ref: "submissions.my-submission — GET /v1/exercises/{exerciseId}/my-submission"
+
+      - service: SubmissionService
+        method: listByExercise
+        signature: "listByExercise(exerciseId: string): Observable<SubmissionResponse[]>"
+        params: exerciseId (per exercise in Submissions tab)
+        description: >
+          Fetch all learner submissions for each exercise. Called per
+          exercise when the Submissions tab is active (teacher role only).
+          Used to populate exercise cards with submission counts and to
+          provide the submission list for the drawer.
+        api_ref: "submissions.list-by-exercise — GET /v1/exercises/{exerciseId}/submissions"
+
+      - service: SubmissionService
+        method: get
+        signature: "get(submissionId: string): Observable<SubmissionResponse>"
+        params: submissionId (per submission in drawer)
+        description: >
+          Fetch full submission details including answers[]. Called per
+          submission when the submission drawer is opened. The list endpoint
+          may omit answers — this endpoint guarantees full answer data.
+          Called in parallel via forkJoin for all submissions of the selected
+          exercise.
+        api_ref: "submissions.get — GET /v1/submissions/{submissionId}"
+
+  # ────────────────────────────────────────────────────────────────────
+  # MODELS
+  # ────────────────────────────────────────────────────────────────────
+  models:
+    primary:
+      - name: CourseResponse
+        file: src/app/shared/models/course.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/course"
+        fields:
+          - { name: id, type: string }
+          - { name: title, type: string }
+          - { name: description, type: "string | null" }
+          - { name: visibility, type: Visibility }
+          - { name: createdBy, type: UserSummary }
+          - { name: settings, type: "Record<string, any>" }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+          - { name: moduleCount, type: "number | null", optional: true }
+          - { name: enrollmentCount, type: "number | null", optional: true }
+
+      - name: ModuleResponse
+        file: src/app/shared/models/module.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/module"
+        fields:
+          - { name: id, type: string }
+          - { name: courseId, type: string }
+          - { name: title, type: string }
+          - { name: orderIndex, type: number }
+          - { name: lessonCount, type: "number | null", optional: true }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+      - name: EnrollmentResponse
+        file: src/app/shared/models/enrollment.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/enrollment"
+        fields:
+          - { name: id, type: string }
+          - { name: courseId, type: string }
+          - { name: courseName, type: string }
+          - { name: user, type: UserSummary }
+          - { name: role, type: EnrollmentRole }
+          - { name: status, type: EnrollmentStatus }
+          - { name: joinedAt, type: "number | null" }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+      - name: SummaryResponse
+        file: src/app/shared/models/summary.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/summary"
+        fields:
+          - { name: id, type: string }
+          - { name: lessonId, type: string }
+          - { name: content, type: string }
+          - { name: editedBy, type: UserSummary }
+          - { name: version, type: number }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+    secondary:
+      - name: LessonResponse
+        file: src/app/shared/models/lesson.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/lesson"
+        fields:
+          - { name: id, type: string }
+          - { name: moduleId, type: string }
+          - { name: title, type: string }
+          - { name: orderIndex, type: number }
+          - { name: hasSummary, type: boolean }
+          - { name: exerciseCount, type: "number | null", optional: true }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+      - name: ExerciseResponse
+        file: src/app/shared/models/exercise.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/exercise"
+        fields:
+          - { name: id, type: string }
+          - { name: lessonId, type: string }
+          - { name: title, type: string }
+          - { name: type, type: ExerciseType }
+          - { name: settings, type: "Record<string, any>" }
+          - { name: orderIndex, type: number }
+          - { name: questionCount, type: "number | null", optional: true }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+      - name: SubmissionResponse
+        file: src/app/shared/models/submission.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/submission"
+        fields:
+          - { name: id, type: string }
+          - { name: exerciseId, type: string }
+          - { name: userId, type: string }
+          - { name: status, type: SubmissionStatus }
+          - { name: answers, type: "StudentAnswerResponse[]" }
+          - { name: submittedAt, type: "number | null" }
+          - { name: approvedAt, type: "number | null" }
+          - { name: createdAt, type: number }
+          - { name: updatedAt, type: number }
+
+    embedded:
+      - name: UserSummary
+        file: src/app/shared/models/common.model.ts
+        ref: "$ref: ../../network/models.yaml#/models/common"
+        fields:
+          - { name: id, type: string }
+          - { name: name, type: string }
+          - { name: email, type: string }
+          - { name: avatarUrl, type: "string | null" }
+
+    enums:
+      - name: Visibility
+        file: src/app/shared/models/enums.ts
+        values: [PUBLIC, PRIVATE, UNLISTED]
+      - name: EnrollmentRole
+        file: src/app/shared/models/enums.ts
+        values: [LEARNER, TEACHER]
+      - name: EnrollmentStatus
+        file: src/app/shared/models/enums.ts
+        values: [PENDING, ACTIVE, REJECTED, INACTIVE]
+      - name: ExerciseType
+        file: src/app/shared/models/enums.ts
+        values: [TEXT_ANSWER, CODE, FILE_UPLOAD, MULTIPLE_CHOICE, PROJECT_LINK]
+      - name: SubmissionStatus
+        file: src/app/shared/models/enums.ts
+        values: [DRAFT, SUBMITTED, APPROVED, NEEDS_REVISION]
+
+  # ────────────────────────────────────────────────────────────────────
+  # API ENDPOINTS
+  # ────────────────────────────────────────────────────────────────────
+  api:
+    read_endpoints:
+      - id: courses.get
+        method: GET
+        path: /v1/courses/{id}
+        auth: true
+        response: CourseResponse
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/courses/endpoints/2"
+
+      - id: modules.list-by-course
+        method: GET
+        path: /v1/courses/{courseId}/modules
+        auth: true
+        response: ModuleResponse[]
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/modules/endpoints/1"
+
+      - id: enrollments.my-enrollment
+        method: GET
+        path: /v1/courses/{courseId}/my-enrollment
+        auth: true
+        response: EnrollmentResponse
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/enrollments/endpoints/2"
+
+      - id: lessons.list-by-module
+        method: GET
+        path: /v1/modules/{moduleId}/lessons
+        auth: true
+        response: LessonResponse[]
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/lessons/endpoints/1"
+
+      - id: summaries.get
+        method: GET
+        path: /v1/lessons/{lessonId}/summary
+        auth: true
+        response: SummaryResponse
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/summaries/endpoints/0"
+
+      - id: exercises.list-by-lesson
+        method: GET
+        path: /v1/lessons/{lessonId}/exercises
+        auth: true
+        response: ExerciseResponse[]
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/exercises/endpoints/1"
+
+      - id: submissions.my-submission
+        method: GET
+        path: /v1/exercises/{exerciseId}/my-submission
+        auth: true
+        response: SubmissionResponse
+        description: "Fetch current user's submission per exercise (Exercises tab). 404 = not attempted."
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/submissions/endpoints/1"
+
+      - id: submissions.list-by-exercise
+        method: GET
+        path: /v1/exercises/{exerciseId}/submissions
+        auth: true
+        response: SubmissionResponse[]
+        description: "List all submissions for an exercise (Submissions tab, teacher only)."
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/submissions/endpoints/0"
+
+      - id: submissions.get
+        method: GET
+        path: /v1/submissions/{submissionId}
+        auth: true
+        response: SubmissionResponse
+        description: "Get full submission with answers[] (used by submission drawer)."
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/submissions/endpoints/2"
+
+    write_endpoints:
+      - id: enrollments.enroll
+        method: POST
+        path: /v1/courses/{courseId}/enroll
+        auth: true
+        request: "EnrollmentRequest (optional)"
+        response: EnrollmentResponse
+        description: Used by "Enroll Now" CTA in not-enrolled state
+        ref: "$ref: ../../network/api-endpoints.yaml#/resources/enrollments/endpoints/0"
+
+  # ────────────────────────────────────────────────────────────────────
+  # INTERACTIONS
+  # ────────────────────────────────────────────────────────────────────
+  interactions:
+    - action: Expand module
+      trigger: Click module header in sidebar
+      result: Toggle lesson list visibility (accordion)
+    - action: Select lesson
+      trigger: Click lesson item in sidebar
+      result: >
+        Set selectedLesson signal. Reset activeTab to 'summary'.
+        Fetch lesson summary via SummaryService.get(lessonId) and exercises
+        via ExerciseService.listByLesson(lessonId). Display in main content
+        area with tabbed interface.
+    - action: Switch tab
+      trigger: Click tab button (Summary, Exercises, or Submissions)
+      result: >
+        Set activeTab signal to the selected tab id.
+        If switching to 'exercises' tab: fetch submission status per exercise
+        via SubmissionService.getMySubmission(exerciseId) for each exercise.
+        If switching to 'submissions' tab (teacher only): fetch all submissions
+        per exercise via SubmissionService.listByExercise(exerciseId).
+    - action: Expand exercise card
+      trigger: Click exercise card in Submissions tab
+      result: >
+        Toggle the expanded state of the exercise card via
+        toggleExerciseExpand(exercise). If expanding, sets
+        expandedExerciseId to the exercise ID and fetches questions
+        via QuestionService.listByExercise() (cached after first fetch).
+        If collapsing, sets expandedExerciseId to null. Also closes
+        the drawer if it was open. Only one exercise can be expanded
+        at a time.
+    - action: Open question answers drawer
+      trigger: Click a question item inside an expanded exercise card
+      result: >
+        Open right-side side drawer via submissionDrawer().open().
+        Set drawerQuestionId, drawerQuestionContent, and
+        drawerExerciseId. Fetch full submission details (with answers)
+        for each submission via SubmissionService.get(submissionId)
+        using forkJoin. Drawer shows all students' answers for the
+        selected question. Content pushes left to make room for the
+        520px drawer panel.
+    - action: Close submission drawer
+      trigger: Click drawer close button
+      result: >
+        Close the drawer via submissionDrawer().close(). The (closed)
+        event triggers onDrawerClosed() which clears drawerQuestionId,
+        drawerExerciseId, and drawerSubmissions signals. Content
+        expands back.
+    - action: Do Exercise
+      trigger: Click "Do Exercise" button in Exercises tab
+      result: "Navigate to /course/:id/lesson/:lessonId/attempt (all exercises for the lesson)"
+    - action: Toggle sidebar
+      trigger: Click hamburger button (mobile only)
+      result: Open/close sidebar drawer overlay
+    - action: Manage Course
+      trigger: Click "Manage Course" button in sidebar
+      result: "Navigate to /course/:id/manage"
+      visibility: "Only visible for users with TEACHER role enrollment"
+    - action: Enroll
+      trigger: Click "Enroll Now" CTA (not-enrolled state, content area)
+      result: >
+        Call EnrollmentService.enroll(courseId).
+        On success: refresh enrollment status, unlock content.
+        On error: show error message.
+
+  # ────────────────────────────────────────────────────────────────────
+  # BUSINESS LOGIC
+  # ────────────────────────────────────────────────────────────────────
+  business_logic:
+    sidebar_structure:
+      description: >
+        The sidebar is divided into two sections separated by a divider:
+        (1) Course heading — course name, description, instructor name,
+            and optional "Manage Course" button (teacher-only).
+        (2) "Course Material" label followed by collapsible module list.
+      course_heading:
+        - Course name (text-title-large)
+        - Course description (text-body-medium, 3-line clamp)
+        - Instructor name as plain text (text-body-medium, primary color)
+        - "Manage Course" button (teacher-only, below instructor name)
+      module_navigation:
+        - "Course Material" section header (text-title-medium, bold)
+        - Collapsible module accordion list with numbered prefixes
+        - Module format: "{position}. {title}" (e.g. "1. Getting Started")
+        - Lesson format: "{modulePosition}.{lessonPosition} {title}" (e.g. "1.1 Intro")
+    sidebar_state:
+      - First module expanded by default, others collapsed
+      - Accordion behavior: expanding one module does not collapse others
+      - Persist expand/collapse state in component signal
+    lesson_selection:
+      - Clicking a lesson in sidebar sets selectedLesson signal
+      - Resets activeTab to 'summary' (default tab)
+      - Triggers fetch of SummaryService.get(lessonId) for Summary tab
+      - Triggers fetch of ExerciseService.listByLesson(lessonId) for Exercises tab
+      - First lesson of first module is auto-selected on initial load
+    tab_behavior:
+      description: >
+        Lesson content area uses a tabbed interface with three tabs.
+        The activeTab signal tracks the currently visible tab.
+      tabs:
+        - id: summary
+          label: "Summary"
+          default: true
+          visibility: always
+          description: >
+            Shows lesson summary content. Fetched on lesson selection.
+            Same behavior as the previous flat layout.
+        - id: exercises
+          label: "Exercises (N)"
+          visibility: always
+          description: >
+            Lists all exercises for the lesson with per-exercise submission
+            status. On tab activation, fetches SubmissionService.getMySubmission
+            for each exercise to show attempt status. Each exercise card shows
+            title, type, question count, and submission status chip.
+            "Do Exercise" button at bottom navigates to exercise attempt screen.
+        - id: submissions
+          label: "Submissions"
+          visibility: "isTeacher() — only for TEACHER role enrollment"
+          description: >
+            Lists exercises as expandable cards (same style as Exercises
+            tab) with submission count. On tab activation, fetches
+            SubmissionService.listByExercise for each exercise. Clicking
+            a card expands it to show all its questions. Clicking a
+            question opens a right-side drawer showing all students'
+            answers for that specific question.
+      data_loading: >
+        Tab content is loaded lazily. Summary is fetched on lesson selection.
+        Exercise submission statuses and teacher submission lists are fetched
+        only when their respective tabs are activated for the first time for
+        the current lesson selection.
+    content_centering:
+      description: >
+        The content area (right column) uses max-width: 900px with
+        max-width constraint for readability on wide screens.
+        Content is left-aligned (no margin: 0 auto) to avoid
+        floating text when content is short.
+    navigation:
+      exercise_attempt: "/course/:id/lesson/:lessonId/attempt"
+      manage_course: "/course/:id/manage"
+    manage_course_button:
+      description: >
+        "Manage Course" button in sidebar below instructor name.
+        Only visible when the current user's enrollment role is TEACHER.
+        Uses myEnrollment()?.role check.
+      visibility_condition: "myEnrollment()?.role === EnrollmentRole.TEACHER"
+      target_route: "/course/:id/manage"
+    content_locking:
+      description: >
+        When enrollment status is null (not enrolled) or PENDING,
+        some content is restricted.
+      not_enrolled:
+        lesson_content: Locked/blurred, prompt to enroll
+        sidebar: Visible but lessons not clickable
+    enrollment_status_display:
+      ACTIVE:
+        badge: "lib-badge variant='success' -> bg: #e8f5e9, text: #2e7d32"
+        label: "Enrolled"
+        access: Full access to all content
+      PENDING:
+        badge: "lib-badge variant='warning' -> bg: #fff8e1, text: #e86722"
+        label: "Pending Approval"
+        access: Content locked (opacity: --opacity-disabled)
+      REJECTED:
+        badge: "lib-badge variant='error' -> bg: #ffebee, text: #c62828"
+        label: "Rejected"
+        access: Content locked
+      null:
+        badge: "lib-badge variant='neutral' -> bg: #f2f2f2, text: #646464"
+        label: "Not Enrolled"
+        access: "Content locked, show Enroll Now CTA (lib-button variant='primary' size='lg')"
+
+  # ────────────────────────────────────────────────────────────────────
+  # ACCESSIBILITY
+  # ────────────────────────────────────────────────────────────────────
+  accessibility:
+    - Sidebar navigation is keyboard accessible (Tab, Enter, Space)
+    - Module accordion uses aria-expanded and aria-controls attributes
+    - Selected lesson in sidebar uses aria-current="true"
+    - Lesson content area has aria-live="polite" for dynamic updates
+    - Focus management on mobile drawer open/close
+    - Manage Course button is hidden from accessibility tree for non-teachers
+
+  # ────────────────────────────────────────────────────────────────────
+  # RESPONSIVE
+  # ────────────────────────────────────────────────────────────────────
+  responsive:
+    design_principle_ref: "../../design-system/design-principles.yaml#/principles/responsive-sidebar-layout"
+    breakpoints:
+      - range: "> 768px"
+        sidebar: Fixed 280px, always visible
+        layout: Two-column (sidebar + content)
+        content_padding: "24px 32px on lesson-content"
+      - range: "<= 768px"
+        sidebar: Hidden, accessible via drawer overlay (white background)
+        layout: Single column, compact hamburger icon button shown at top-left
+        toggle_button: >
+          Compact hamburger icon button (40×40px, icon-only, no background/border).
+          Positioned at top-left of content flow. Hover state: --surface-hover.
+        sidebar_drawer_background: "var(--surface-page, #ffffff)"
+        content_padding: "16px on lesson-content"
+
+  # ────────────────────────────────────────────────────────────────────
+  # DESIGN SYSTEM
+  # ────────────────────────────────────────────────────────────────────
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/0"
+        token: text-title-large
+        resolved: "22px / 28px / weight-medium"
+        usage: Course name in sidebar heading, selected lesson title in content area
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/1"
+        token: text-title-medium
+        resolved: "16px / 24px / weight-medium / tracking 0.15px"
+        usage: "\"Course Material\" section header, module titles in sidebar accordion"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/0"
+        token: text-body-large
+        resolved: "16px / 24px / weight-regular / tracking 0.5px"
+        usage: Enroll CTA description text, access restricted text
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        token: text-body-medium
+        resolved: "14px / 20px / weight-regular / tracking 0.25px"
+        usage: Course description in sidebar, instructor name, lesson titles, summary body text
+      - $ref: "../../design-system/typography.yaml#/scale/label/levels/0"
+        token: text-label-large
+        resolved: "14px / 20px / weight-medium / tracking 0.1px"
+        usage: Label typography (not used by sidebar toggle — toggle is icon-only)
+    text_colors:
+      - token: .text-primary (--text-primary-color -> --neutral-color-9)
+        usage: Course name, module titles, lesson titles
+      - token: .text-secondary (--text-secondary-color -> --neutral-color-7)
+        usage: Course description in sidebar
+      - token: "var(--primary-color) -> var(--primary-color-600) -> #00897b"
+        usage: Instructor name in sidebar (.sidebar__instructor)
+
+    colors:
+      sidebar:
+        $ref: "../../design-system/theme.yaml#/token_mixins/sidebar_mixins/0"
+        mixin: sidebar-theme-default
+        tokens_used:
+          - { token: --sidebar-bg-color, value: "var(--surface-sunken) -> #f8f8f8", usage: "Sidebar background" }
+          - { token: --sidebar-border-color, value: "var(--neutral-color-2) -> #f2f2f2", usage: "Right edge border (1px solid)" }
+          - { token: --sidebar-item-hover-bg, value: "var(--surface-hover) -> #f8f8f8", usage: "Lesson item hover state" }
+          - { token: --sidebar-item-active-bg, value: "var(--primary-color-50) -> #f1f8f6", usage: "Selected lesson background" }
+          - { token: --sidebar-item-active-text, value: "var(--primary-color-600) -> #00897b", usage: "Selected lesson text color" }
+          - { token: --sidebar-item-active-border, value: "var(--primary-color-600) -> #00897b", usage: "Left 3px accent border on selected lesson" }
+      content_area:
+        $ref: "../../design-system/theme.yaml#/token_mixins/default_configuration"
+        tokens_used:
+          - { token: --page-bg-color, value: "var(--surface-page) -> #ffffff", usage: "Content area background" }
+      enrollment_badges:
+        $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        mapping:
+          - status: ACTIVE
+            badge_variant: success
+            tokens: "bg: var(--surface-success-subtle) -> #e8f5e9, text: var(--success-color-8) -> #2e7d32"
+          - status: PENDING
+            badge_variant: warning
+            tokens: "bg: var(--surface-warning-subtle) -> #fff8e1, text: var(--warning-color-8) -> #e86722"
+          - status: REJECTED
+            badge_variant: error
+            tokens: "bg: var(--surface-error-subtle) -> #ffebee, text: var(--error-color-8) -> #c62828"
+          - status: null
+            badge_variant: neutral
+            tokens: "bg: var(--neutral-color-2) -> #f2f2f2, text: var(--neutral-color-7) -> #646464"
+
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        selector: lib-button
+        instances:
+          - name: Manage Course
+            variant: primary
+            size: sm
+            usage: "Sidebar, below instructor name, visible for TEACHER role only"
+          - name: Enroll Now
+            variant: primary
+            size: lg
+            usage: "Content area, not-enrolled state CTA"
+          - name: Do Exercise
+            variant: primary
+            size: md
+            usage: "Exercises tab, navigates to exercise attempt"
+      - $ref: "../../design-system/shared-components.yaml#/badge"
+        selector: lib-badge
+        instances:
+          - name: Enrollment Badge
+            variant: "success | warning | error | neutral (mapped by enrollment status)"
+            size: md
+            usage: "Sidebar, below instructor name, shows enrollment status"
+      - $ref: "../../design-system/shared-components.yaml#/skeleton"
+        selector: lib-skeleton
+        instances:
+          - name: Sidebar skeleton
+            variant: text
+            lines: 6
+            usage: "Loading state for sidebar (course heading + module list)"
+          - name: Content skeleton
+            variant: rect
+            height: 300px
+            usage: "Loading state for lesson summary content"
+      - $ref: "../../design-system/shared-components.yaml#/spinner"
+        selector: lib-spinner
+        instances:
+          - name: Page spinner
+            type: screen
+            usage: "Initial full-page loading state"
+      - name: MatDrawer (Angular Material)
+        module: "@angular/material/sidenav"
+        selectors: [mat-drawer, mat-drawer-container, mat-drawer-content]
+        instances:
+          - name: Submission Drawer
+            position: end
+            mode: side
+            usage: >
+              Right-side side drawer for viewing student submissions
+              per exercise. Wraps the lesson content area.
+              Opens via viewChild<MatDrawer>('submissionDrawer').open().
+
+    component_styles:
+      - $ref: "../../design-system/components.yaml#/button"
+        usage: >
+          Global button element styles applied to lib-button.
+          Variants: primary (.primary), secondary (.secondary).
+          Sizes: sm (.sm, 30px), md (.md, 36px), lg (.lg, 44px).
+          Hover: translateY(-2px) lift effect.
+
+    tokens:
+      spacing:
+        $ref: "../../design-system/tokens.yaml#/spacing"
+        tokens_used:
+          - { token: --spacing-xs, value: 4px, usage: "Sidebar lesson item vertical gap" }
+          - { token: --spacing-sm, value: 8px, usage: "Sidebar item padding, sidebar heading gaps" }
+          - { token: --spacing-md, value: 16px, usage: "Sidebar section padding, content area margins" }
+          - { token: --spacing-lg, value: 24px, usage: "Sidebar heading padding, content area padding" }
+          - { token: --spacing-xl, value: 32px, usage: "Content area horizontal padding" }
+      border_radius:
+        $ref: "../../design-system/tokens.yaml#/border_radius"
+        tokens_used:
+          - { token: --radius-sm, value: 4px, usage: "Sidebar lesson item border-radius" }
+          - { token: --radius-md, value: 8px, usage: "Content area card border-radius" }
+          - { token: --radius-full, value: 9999px, usage: "Avatar, badge pill shape" }
+      elevation:
+        $ref: "../../design-system/tokens.yaml#/elevation"
+        tokens_used:
+          - { token: --shadow-lg, value: "0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.03)", usage: "Mobile sidebar drawer shadow" }
+      border:
+        $ref: "../../design-system/tokens.yaml#/border"
+        tokens_used:
+          - { token: --border-subtle, value: "1px solid var(--neutral-color-2)", usage: "Sidebar right edge, module dividers, sidebar heading divider" }
+      z_index:
+        $ref: "../../design-system/tokens.yaml#/z_index"
+        tokens_used:
+          - { token: --z-index-drawer, value: "400", usage: "Mobile sidebar drawer overlay" }
+          - { token: --z-index-modal-backdrop, value: "500", usage: "Mobile sidebar backdrop" }
+      motion:
+        $ref: "../../design-system/tokens.yaml#/motion"
+        tokens_used:
+          - { token: --duration-normal, value: 200ms, usage: "Sidebar hover transitions" }
+          - { token: --duration-slow, value: 300ms, usage: "Mobile drawer slide animation, accordion expand" }
+          - { token: --easing-ease-in-out, value: "cubic-bezier(0.4, 0, 0.2, 1)", usage: "Drawer and accordion transitions" }
+      opacity:
+        $ref: "../../design-system/tokens.yaml#/opacity"
+        tokens_used:
+          - { token: --opacity-backdrop, value: "0.5", usage: "Mobile sidebar drawer backdrop" }
+          - { token: --opacity-disabled, value: "0.5", usage: "Locked content in not-enrolled state" }
+
+    breakpoints:
+      $ref: "../../design-system/breakpoints.yaml"
+      breakpoints_used:
+        - { token: "$mobile-large-breakpoint", value: 768px, usage: "Sidebar switches from fixed to drawer overlay" }
+      scss_import: "@use 'assets/design-system/breakpoint' as bp;"
+      media_query: "@media (min-width: bp.$mobile-large-breakpoint)"
+
+  # ────────────────────────────────────────────────────────────────────
+  # RELATED SERVICES
+  # ────────────────────────────────────────────────────────────────────
+  related_services:
+    - $ref: "../../network/api-endpoints.yaml#/resources/courses"
+    - $ref: "../../network/api-endpoints.yaml#/resources/modules"
+    - $ref: "../../network/api-endpoints.yaml#/resources/enrollments"
+    - $ref: "../../network/api-endpoints.yaml#/resources/lessons"
+    - $ref: "../../network/api-endpoints.yaml#/resources/summaries"
+    - $ref: "../../network/api-endpoints.yaml#/resources/exercises"
+    - $ref: "../../network/api-endpoints.yaml#/resources/submissions"
+
+  # ────────────────────────────────────────────────────────────────────
+  # CURRENT IMPLEMENTATION (source of truth for code generation)
+  # ────────────────────────────────────────────────────────────────────
+  # NOTE: current_implementation reflects the code as it exists on disk.
+  # The spec above (layout, components, business_logic) describes the
+  # target design. Code generation should produce code matching the spec,
+  # not the current scaffold below.
+
+  current_implementation: |
+    // See src/app/components/course/course-dashboard/course-dashboard.component.ts
+    // Full implementation — signal-based state, forkJoin data loading,
+    // sidebar accordion, lesson selection, summary fetching, enrollment flow,
+    // tabbed content area (Summary / Exercises / Submissions).
+    //
+    // Imports: MatDrawer, MatDrawerContainer, MatDrawerContent from
+    // @angular/material/sidenav (standalone imports array).
+    // Also imports QuestionService and QuestionResponse for question fetching.
+    //
+    // Tab signals: activeTab, perExerciseSubmission, exerciseSubmissions,
+    // exerciseStatusesLoading, submissionsLoading, exerciseStatusesLoaded,
+    // submissionsLoaded.
+    //
+    // Exercise expand signals (Submissions tab):
+    //   - expandedExerciseId: string | null — which exercise card is expanded
+    //   - exerciseQuestions: Map<string, QuestionResponse[]> — cached questions
+    //   - exerciseQuestionsLoading: signal wrapping Set<string> — loading state
+    //
+    // Question answers drawer:
+    //   - submissionDrawer = viewChild<MatDrawer>('submissionDrawer')
+    //   - drawerQuestionId: string | null — selected question ID
+    //   - drawerQuestionContent: string — question content for drawer header
+    //   - drawerExerciseId: string | null — exercise owning the question
+    //   - drawerSubmissions: SubmissionResponse[] — full submissions with answers
+    //   - drawerLoading: boolean — loading state while fetching answers
+    //
+    // Methods:
+    //   - toggleExerciseExpand(exercise) — toggle expand, fetch questions if needed
+    //   - openQuestionDrawer(question, exercise) — opens drawer, fetches submissions
+    //   - closeSubmissionDrawer() — calls submissionDrawer().close()
+    //   - onDrawerClosed() — clears drawerQuestionId, drawerExerciseId, drawerSubmissions
+    //   - getAnswerForQuestion(sub) — finds answer matching drawerQuestionId in sub.answers[]
+
+  current_template: |
+    // See src/app/components/course/course-dashboard/course-dashboard.component.html
+    // Full template — loading/error/loaded states, sidebar with modules,
+    // tabbed lesson content area.
+    //
+    // Lesson content area wrapped in mat-drawer-container:
+    //   <mat-drawer-container class="drawer-container">
+    //     <mat-drawer #submissionDrawer position="end" mode="side"
+    //       (closed)="onDrawerClosed()">
+    //       ...drawer inner content...
+    //     </mat-drawer>
+    //     <mat-drawer-content>
+    //       <main class="lesson-content">...tabs...</main>
+    //     </mat-drawer-content>
+    //   </mat-drawer-container>
+    //
+    // Submissions tab: exercise cards with chevron icon, expandable.
+    //   - Click card → toggleExerciseExpand(exercise)
+    //   - Expanded card shows question list below meta line
+    //   - Each question item: clickable → openQuestionDrawer(question, exercise)
+    //   - Question loading: skeleton placeholders while fetching
+    //
+    // Drawer inner content (question answers view):
+    //   - Top bar: close button only
+    //   - Question header: "Q: {content}" (text-title-small)
+    //   - Body: scrollable list of student answer cards
+    //   - Each card: student name + status chip header, answer text below
+    //   - Answer text: student's answer or "(no answer)" italic
+
+  current_styles: |
+    // See src/app/components/course/course-dashboard/course-dashboard.component.scss
+    // Full styles — sidebar 280px, mobile sidebar drawer, lesson content, tabs.
+    // CRITICAL: .module-header and .lesson-item must have explicit
+    // color: var(--text-primary-color, #1a1a1a).
+    //
+    // Mat drawer container & panel:
+    //   - .drawer-container: flex 1, min-width 0 (fills remaining space)
+    //   - ::ng-deep .mat-drawer.mat-drawer-end: width 520px, bg neutral-color-1,
+    //     border-radius 16px, box-shadow, margin 12px, floating card style
+    //   - Mobile (<768px): ::ng-deep .mat-drawer.mat-drawer-end: width 100vw
+    //
+    // Expandable exercise cards (Submissions tab):
+    //   - .exercise-card--clickable: cursor pointer, hover border-color
+    //   - .exercise-card--selected: primary border + primary-50 bg highlight
+    //   - .exercise-card__chevron: 20px icon, transition rotate, color #808080
+    //   - .exercise-card__chevron--expanded: rotate(90deg)
+    //   - .exercise-card__questions: question list container, padding-top 12px
+    //   - .question-item: padding 8px 12px, border-radius 4px, cursor pointer,
+    //     hover bg surface-hover, transition background 200ms
+    //   - .question-item--active: color primary-600, font-weight 500
+    //   - .question-skeletons: flex column, gap 8px
+    //
+    // Question answers drawer inner styles:
+    //   - .submission-drawer: flex column, height 100%
+    //   - .submission-drawer__top-bar: flex, justify-content flex-end, close btn only
+    //   - .submission-drawer__close: 36px icon button, hover bg
+    //   - .submission-drawer__question-header: question content display, padding 0 20px
+    //   - .submission-drawer__body: flex column, gap 16px, overflow-y auto
+    //   - .submission-message: white bg, border-radius, padding, subtle shadow
+    //   - .submission-message__header: flex, space-between, student name + chip
+    //   - .submission-message__answer: text-body-medium, student's answer text
+
+  # ────────────────────────────────────────────────────────────────────
+  # ACCEPTANCE CRITERIA
+  # ────────────────────────────────────────────────────────────────────
+  acceptance_criteria:
+    - Two-column layout: sidebar (280px) on left, content area on right
+    - Sidebar heading displays course name, description (3-line clamp), and instructor name
+    - "Manage Course" button visible in sidebar only for users with TEACHER role enrollment
+    - "Manage Course" button navigates to /course/:id/manage
+    - Sidebar "Course Material" section shows module accordion list sorted by orderIndex
+    - Module headers display numbered prefix (e.g. "1. Getting Started", "2. Advanced Topics")
+    - Lesson items display hierarchical numbered prefix (e.g. "1.1 Introduction", "1.2 Setup")
+    - Selected lesson title in content area includes the hierarchical prefix
+    - Modules are collapsible (accordion), first module expanded by default
+    - Clicking a lesson in sidebar loads content and shows tabbed interface
+    - Content area is left-aligned with max-width 900px (no margin: 0 auto)
+    - Lesson content area shows three tabs: Summary, Exercises, Submissions (teacher-only)
+    - Summary tab is the default active tab when a lesson is selected
+    - Summary tab displays lesson summary from SummaryService.get(lessonId)
+    - Exercises tab lists all exercises with per-exercise submission status
+    - Exercises tab shows exercise title, type, question count, and attempt status chip
+    - "Do Exercise" button in Exercises tab navigates to /course/:id/lesson/:lessonId/attempt
+    - Submissions tab is visible only for TEACHER role enrollment
+    - Submissions tab lists exercises as expandable cards with submission count chip
+    - Clicking an exercise card in Submissions tab expands it to show all its questions
+    - Only one exercise card can be expanded at a time
+    - Questions are fetched from QuestionService.listByExercise on first expand (cached)
+    - Expanded card shows questions sorted by orderIndex with numbered prefix
+    - Clicking a question opens a right-side side drawer (Angular Material MatDrawer)
+    - Side drawer (mode="side") shrinks content to fit alongside drawer
+    - Drawer shows question content as header, then all students' answers for that question
+    - Each student answer card displays student name, status chip, and their answer text
+    - Answer text shows the student's answer or "(no answer)" placeholder
+    - Drawer closes on close button click
+    - Tab data is lazy-loaded (submission statuses fetched on tab activation)
+    - First lesson of first module is auto-selected on page load
+    - Mobile: sidebar becomes drawer overlay (white background) with a compact hamburger icon button at the top-left of content
+    - Content area MUST have padding at all viewport widths — content never touches the viewport edge
+    - Loading state shows skeleton placeholders
+    - Not-enrolled state shows "Enroll Now" CTA in content area and locks lesson content
+    - Enrollment status badge reflects ACTIVE/PENDING/REJECTED/null states
+    - Error state shows message with retry action
+    - No standalone course header section — all course identity lives in sidebar
+    - Tab buttons must have explicit text color (button elements do not inherit)

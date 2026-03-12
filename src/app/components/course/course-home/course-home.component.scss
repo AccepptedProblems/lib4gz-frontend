@@ -1,0 +1,15 @@
+:host { display: block }
+
+.home-container, .enroll-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 300px;
+  text-align: center;
+  padding: 24px 32px;
+}
+
+.placeholder-icon { font-size: 48px; color: #c0c0c0 }
+.enroll-icon { font-size: 48px; color: var(--primary-color-400, #26a69a) }

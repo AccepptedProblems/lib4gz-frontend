@@ -1,0 +1,133 @@
+@mixin default-configuration {
+  --primary-color: var(--primary-color-600);
+
+  //Border
+  --border-color: var(--neutral-color-4);
+  --border-color-hover: var(--neutral-color-9);
+
+  //Typography
+  --text-primary-color: var(--neutral-color-9);
+  --text-secondary-color: var(--neutral-color-7);
+
+  //Button
+  --button-bg-color: var(--primary-color-600);
+  --button-bg-color-hover: var(--primary-color-700);
+  --button-text-color: var(--neutral-color-0);
+
+  --button-secondary-bg-color: var(--neutral-color-0);
+  --button-secondary-bg-color-hover: var(--neutral-color-1);
+  --button-secondary-text-color: var(--text-primary-color);
+  --button-secondary-border-color: var(--border-color);
+  --button-secondary-border-color-hover: var(--border-color-hover);
+
+  --button-destructive-bg-color: var(--error-color);
+
+  --button-disabled-bg-color: var(--neutral-color-4);
+  --button-disabled-text-color: var(--neutral-color-8);
+
+  //Input
+  --input-bg-color: var(--neutral-color-0);
+  --input-border-color: var(--neutral-color-5);
+  --input-border-color-focus: var(--neutral-color-9);
+  --input-border-color-error: var(--error-color);
+}
+
+@mixin navigation-bar-theme-by-primary-color {
+  --nav-bar-bg-color: var(--neutral-color-0);
+  --nav-bar-text-color: var(--text-primary-color);
+  --nav-bar-text-color-active: var(--primary-color);
+  --nav-bar-border-color-active: var(--primary-color);
+  --nav-bar-button-bg-color: var(--primary-color-600);
+  --nav-bar-button-bg-color-hover: var(--primary-color-700);
+  --nav-bar-button-text-color: var(--text-color-on-primary-bg);
+}
+@mixin navigation-bar-theme-by-light-primary-color {
+  --nav-bar-bg-color: var(--neutral-color-0);
+  --nav-bar-text-color: var(--text-primary-color);
+  --nav-bar-text-color-active: var(--primary-color);
+  --nav-bar-border-color-active: var(--primary-color);
+  --nav-bar-button-bg-color: var(--primary-color-900);
+  --nav-bar-button-bg-color-hover: var(--primary-color-700);
+  --nav-bar-button-text-color: var(--text-color-on-primary-bg);
+}
+
+@mixin navigation-bar-theme-by-primary-color-reverse {
+  --nav-bar-bg-color: var(--primary-color);
+  --nav-bar-text-color: var(--text-color-on-primary-bg);
+  --nav-bar-text-color-active: var(--neutral-color-0);
+  --nav-bar-border-color-active: var(--neutral-color-0);
+  --nav-bar-button-bg-color: var(--neutral-color-0);
+  --nav-bar-button-bg-color-hover: var(--neutral-color-1);
+  --nav-bar-button-text-color: var(--primary-color);
+}
+@mixin navigation-bar-theme-by-light-primary-color-reverse {
+  --nav-bar-bg-color: var(--primary-color);
+  --nav-bar-text-color: var(--primary-color-800);
+  --nav-bar-text-color-active: var(--neutral-color-0);
+  --nav-bar-border-color-active: var(--primary-color-100);
+  --nav-bar-button-bg-color: var(--neutral-color-0);
+  --nav-bar-button-bg-color-hover: var(--neutral-color-1);
+  --nav-bar-button-text-color: var(--primary-color);
+}
+@mixin footer-theme-by-primary-color-reverse {
+  --footer-bg-color: var(--primary-color);
+  --footer-text-color: var(--text-color-on-primary-bg);
+  --footer-border-color: var(--neutral-color-0);
+  --footer-button-bg-color: var(--neutral-color-0);
+  --footer-button-bg-color-hover: var(--neutral-color-1);
+  --footer-button-text-color: var(--primary-color);
+}
+@mixin footer-theme-by-light-primary-color {
+  --footer-bg-color: var(--primary-color);
+  --footer-text-color: var(--primary-color-800);
+  --footer-border-color: var(--neutral-color-0);
+  --footer-button-bg-color: var(--neutral-color-0);
+  --footer-button-bg-color-hover: var(--neutral-color-1);
+  --footer-button-text-color: var(--primary-color);
+}
+
+@mixin navigation-bar-theme-by-neutral-color {
+  --nav-bar-bg-color: var(--neutral-color-0);
+  --nav-bar-text-color: var(--text-primary-color);
+  --nav-bar-text-color-active: var(--neutral-color-9);
+  --nav-bar-border-color-active: var(--neutral-color-9);
+  --nav-bar-button-bg-color: var(--primary-color-600);
+  --nav-bar-button-bg-color-hover: var(--primary-color-700);
+  --nav-bar-button-text-color: var(--neutral-color-0);
+}
+
+@mixin navigation-bar-theme-by-neutral-color-reverse {
+  --nav-bar-bg-color: var(--neutral-color-0);
+  --nav-bar-text-color: var(--text-primary-color);
+  --nav-bar-text-color-active: var(--primary-color);
+  --nav-bar-border-color-active: var(--primary-color);
+  --nav-bar-button-bg-color: var(--neutral-color-9);
+  --nav-bar-button-bg-color-hover: var(--neutral-color-8);
+  --nav-bar-button-text-color: var(--primary-color);
+}
+
+@mixin footer-theme-by-primary-color {
+  --footer-bg-color: var(--primary-color);
+  --footer-text-color: var(--text-color-on-primary-bg);
+  --footer-border-color: var(--neutral-color-0);
+  --footer-button-bg-color: var(--neutral-color-0);
+  --footer-button-bg-color-hover: var(--neutral-color-1);
+  --footer-button-text-color: var(--primary-color);
+}
+
+@mixin footer-theme-by-neutral-color {
+  --footer-bg-color: var(--neutral-color-2);
+  --footer-text-color: var(--text-primary-color);
+  --footer-border-color: var(--neutral-color-9);
+  --footer-button-bg-color: var(--primary-color-600);
+  --footer-button-bg-color-hover: var(--primary-color-700);
+  --footer-button-text-color: var(--neutral-color-0);
+}
+@mixin footer-theme-by-neutral-color-reverse {
+  --footer-bg-color: var(--neutral-color-0);
+  --footer-text-color: var(--text-primary-color);
+  --footer-border-color: var(--neutral-color-2);
+  --footer-button-bg-color: var(--primary-color-50);
+  --footer-button-bg-color-hover: var(--primary-color-100);
+  --footer-button-text-color: var(--neutral-color-0);
+}

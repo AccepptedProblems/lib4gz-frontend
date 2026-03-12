@@ -1,0 +1,154 @@
+openspec: "1.0"
+kind: DesignPrinciples
+info:
+  title: Design Principles
+  version: "1.0.0"
+  description: >
+    Core visual design principles for Lib4GZ. These override default
+    component-level styling choices when there is a conflict. Every screen
+    and layout spec must conform to these principles.
+
+principles:
+
+  # ──────────────────────────────────────────────────────────────────
+  # 1. UNIFIED SURFACE
+  # ──────────────────────────────────────────────────────────────────
+  - id: unified-surface
+    name: Unified Surface
+    priority: high
+    description: >
+      Multi-column layouts (sidebar + content, two-pane views) share the
+      same background color. Columns are never visually separated by
+      borders, dividers, or differing background colors. Separation is
+      achieved exclusively through **negative space** (padding, margin,
+      gap) and content density contrast.
+    rationale: >
+      Premium applications (Linear, Notion, Vercel, Stripe Dashboard)
+      avoid hard visual dividers between primary layout regions. A single
+      unified surface creates a calm, spacious feel and lets content
+      hierarchy do the work. Borders and color splits add visual noise
+      and make the UI feel segmented rather than cohesive.
+    rules:
+      - Sidebar and main content area MUST use the same background color (--surface-page / white).
+      - Do NOT use border-right, border-left, or any visible border between layout columns.
+      - Do NOT use different background colors to distinguish columns.
+      - Use generous padding/margin between columns to create breathing room (minimum 24px gap).
+      - Internal dividers within a single column (e.g., between sidebar sections) are allowed but should be subtle (--border-subtle or spacing-only).
+    applies_to:
+      - Two-column layouts (sidebar + content)
+      - Three-column layouts
+      - Split-pane views
+    exceptions:
+      - Mobile drawer overlays may use a shadow (--shadow-lg) since they float above content.
+      - Modal/dialog surfaces may differ from the page background.
+
+  # ──────────────────────────────────────────────────────────────────
+  # 2. BREATHING ROOM
+  # ──────────────────────────────────────────────────────────────────
+  - id: breathing-room
+    name: Breathing Room
+    priority: high
+    description: >
+      Generous whitespace is a feature, not wasted space. Every layout
+      region should have comfortable internal padding and external margins
+      so that content never feels cramped.
+    rules:
+      - Content areas should use at least --spacing-lg (24px) padding.
+      - Sidebar internal padding should be at least --spacing-md (16px).
+      - Between major sections within a column, use --spacing-lg (24px) or more.
+      - Centered content areas (e.g., lesson detail) should use max-width with auto margins for optimal line length.
+
+  # ──────────────────────────────────────────────────────────────────
+  # 3. ELEVATION OVER BORDERS
+  # ──────────────────────────────────────────────────────────────────
+  - id: elevation-over-borders
+    name: Elevation Over Borders
+    priority: medium
+    description: >
+      When visual distinction between elements is needed, prefer subtle
+      elevation (box-shadow) over hard borders. Cards and floating elements
+      use low-opacity multi-layer shadows for a refined, premium feel.
+    rules:
+      - Cards at rest use --shadow-xs; on hover use --shadow-md with a slight translateY lift.
+      - Avoid 1px solid borders as the primary visual separator between layout regions.
+      - Borders are acceptable for form inputs (--border-strong), table rows (--border-subtle), and internal section dividers within a column.
+
+  # ──────────────────────────────────────────────────────────────────
+  # 4. CONTENT HIERARCHY THROUGH TYPOGRAPHY
+  # ──────────────────────────────────────────────────────────────────
+  - id: content-hierarchy
+    name: Content Hierarchy Through Typography
+    priority: medium
+    description: >
+      Use the typography scale and text color tokens to establish hierarchy
+      rather than relying on background color changes or heavy borders.
+    rules:
+      - Primary content uses text-primary color; secondary/supporting content uses text-secondary.
+      - Section headings use the title scale (text-title-large, text-title-medium).
+      - Body content uses text-body-medium for readability.
+      - Avoid using background color alone to signal importance — pair with typography weight/size.
+
+  # ──────────────────────────────────────────────────────────────────
+  # 5. SUBTLE INTERACTION STATES
+  # ──────────────────────────────────────────────────────────────────
+  - id: subtle-interactions
+    name: Subtle Interaction States
+    priority: medium
+    description: >
+      Hover, active, and focus states should be understated and refined.
+      Use soft background tints and gentle transitions rather than bold
+      color changes.
+    rules:
+      - Hover states use --surface-hover (a barely perceptible tint), not strong color changes.
+      - Active/selected items use --primary-color-50 background with a small left accent border (3px --primary-color-600).
+      - Transitions use --duration-normal (200ms) for hover, --duration-slow (300ms) for expand/collapse.
+
+  # ──────────────────────────────────────────────────────────────────
+  # 6. GLOBAL BOX MODEL
+  # ──────────────────────────────────────────────────────────────────
+  - id: global-box-model
+    name: Global Box Model
+    priority: high
+    description: >
+      The entire application uses border-box sizing globally. This
+      prevents layout overflow bugs where padding extends an element
+      beyond its declared width, especially in flex and grid layouts.
+    rules:
+      - All elements MUST use box-sizing: border-box via the global reset (*, *::before, *::after).
+      - Do NOT rely on content-box sizing for any layout calculation.
+      - When setting width: 100% on a padded element, the padding is included inside the width — this is the expected behavior.
+    implementation: >
+      Applied in _typography.scss as a global CSS reset alongside
+      other global rules (body font, heading resets).
+
+  # ──────────────────────────────────────────────────────────────────
+  # 7. RESPONSIVE TWO-COLUMN SIDEBAR LAYOUT
+  # ──────────────────────────────────────────────────────────────────
+  - id: responsive-sidebar-layout
+    name: Responsive Two-Column Sidebar Layout
+    priority: high
+    description: >
+      All screens using a two-column sidebar + content layout must
+      follow a consistent responsive pattern. On desktop the sidebar
+      is visible alongside the content. On mobile (<=768px) the sidebar
+      collapses into a fixed off-screen drawer, and a clearly visible
+      toggle bar must appear at the top of the layout for users to
+      open/close the sidebar.
+    rules:
+      - On mobile (max-width: $mobile-large-breakpoint / 768px), the sidebar MUST collapse to a fixed drawer.
+      - A compact hamburger icon button MUST be visible on mobile to open the sidebar drawer. The button uses the Material Icons "menu" icon and is NOT full-width — it is a small icon-only button positioned at the top-left of the content area with padding matching the content padding (16px).
+      - The hamburger button has no background color or border — it sits inline at the start of the content flow, styled as an icon button (40×40px tap target, border-radius 8px, transparent background with --surface-hover on hover).
+      - The sidebar drawer MUST have an explicit background color (--surface-page / #ffffff) so its content is readable when overlaid on the page. Without this, the drawer is transparent and content behind bleeds through.
+      - Content areas MUST maintain proper padding (minimum --spacing-md / 16px) at all viewport widths so content never touches the viewport edge.
+      - On mobile, the content area padding reduces to 16px but MUST NOT be zero.
+      - The sidebar drawer uses z-index: --z-index-drawer (400) with a backdrop overlay at z-index 399.
+    applies_to:
+      - course-management (teacher view)
+      - course-dashboard (student view)
+      - Any future screen with a sidebar + content layout
+    hard_check: >
+      NEVER allow a two-column layout screen to have an invisible or
+      missing sidebar toggle on mobile. If the sidebar is collapsed but
+      no hamburger button is visible, this is a bug — add a visible
+      hamburger icon button immediately. The sidebar drawer MUST have
+      a background color — if the drawer is transparent, it is a bug.

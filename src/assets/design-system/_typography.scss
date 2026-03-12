@@ -1,0 +1,477 @@
+:root {
+  /* ============================================
+   * SPACING TOKENS
+   * 4px base unit scale
+   * ============================================ */
+  --spacing-none: 0;
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-4xl: 96px;
+  --spacing-5xl: 128px;
+
+  /* ============================================
+   * BORDER RADIUS TOKENS
+   * ============================================ */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* ============================================
+   * MOTION / ANIMATION TOKENS
+   * ============================================ */
+  /* Durations */
+  --duration-instant: 0ms;
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 400ms;
+  --duration-slowest: 500ms;
+
+  /* Easing Functions */
+  --easing-linear: linear;
+  --easing-ease: ease;
+  --easing-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --easing-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --easing-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* ============================================
+   * Z-INDEX SCALE
+   * ============================================ */
+  --z-index-below: -1;
+  --z-index-base: 0;
+  --z-index-dropdown: 100;
+  --z-index-sticky: 200;
+  --z-index-fixed: 300;
+  --z-index-drawer: 400;
+  --z-index-modal-backdrop: 500;
+  --z-index-modal: 600;
+  --z-index-popover: 700;
+  --z-index-tooltip: 800;
+  --z-index-toast: 900;
+  --z-index-max: 9999;
+
+  /* ============================================
+   * FONT SIZE TOKENS
+   * ============================================ */
+  --font-size-xxs: 12px;
+  --font-size-xs: 14px;
+  --font-size-s: 16px;
+  --font-size-m: 20px;
+  --font-size-l: 24px;
+  --font-size-xl: 28px;
+  --font-size-xxl: 32px;
+  --font-size-xxxl: 40px;
+  --font-size-xxxxl: 48px;
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Display Typography */
+  --display-large-size: 57px;
+  --display-large-height: 64px;
+  --display-large-weight: var(--font-weight-regular);
+  --display-large-tracking: -0.25px;
+
+  --display-medium-size: 45px;
+  --display-medium-height: 52px;
+  --display-medium-weight: var(--font-weight-regular);
+  --display-medium-tracking: 0px;
+
+  --display-small-size: 36px;
+  --display-small-height: 44px;
+  --display-small-weight: var(--font-weight-regular);
+  --display-small-tracking: 0px;
+
+  /* Headline Typography */
+  --headline-large-size: var(--font-size-xxl);
+  --headline-large-height: 40px;
+  --headline-large-weight: var(--font-weight-regular);
+  --headline-large-tracking: 0px;
+
+  --headline-medium-size: var(--font-size-xl);
+  --headline-medium-height: 36px;
+  --headline-medium-weight: var(--font-weight-regular);
+  --headline-medium-tracking: 0px;
+
+  --headline-small-size: var(--font-size-l);
+  --headline-small-height: 32px;
+  --headline-small-weight: var(--font-weight-regular);
+  --headline-small-tracking: 0px;
+
+  /* Title Typography */
+  --title-large-size: 22px;
+  --title-large-height: 28px;
+  --title-large-weight: var(--font-weight-medium);
+  --title-large-tracking: 0px;
+
+  --title-medium-size: var(--font-size-s);
+  --title-medium-height: 24px;
+  --title-medium-weight: var(--font-weight-medium);
+  --title-medium-tracking: 0.15px;
+
+  --title-small-size: var(--font-size-xs);
+  --title-small-height: 20px;
+  --title-small-weight: var(--font-weight-medium);
+  --title-small-tracking: 0.1px;
+
+  /* Body Typography */
+  --body-large-size: var(--font-size-s);
+  --body-large-height: 24px;
+  --body-large-weight: var(--font-weight-regular);
+  --body-large-tracking: 0.5px;
+
+  --body-medium-size: var(--font-size-xs);
+  --body-medium-height: 20px;
+  --body-medium-weight: var(--font-weight-regular);
+  --body-medium-tracking: 0.25px;
+
+  --body-small-size: var(--font-size-xxs);
+  --body-small-height: 16px;
+  --body-small-weight: var(--font-weight-bold);
+  --body-small-tracking: 0.4px;
+
+  /* Label Typography */
+  --label-large-size: 14px;
+  --label-large-height: 20px;
+  --label-large-weight: var(--font-weight-medium);
+  --label-large-tracking: 0.1px;
+
+  --label-medium-size: 12px;
+  --label-medium-height: 16px;
+  --label-medium-weight: var(--font-weight-medium);
+  --label-medium-tracking: 0.5px;
+
+  --label-small-size: 11px;
+  --label-small-height: 16px;
+  --label-small-weight: var(--font-weight-medium);
+  --label-small-tracking: 0.5px;
+}
+
+/* Global box-model reset — border-box prevents overflow when padding
+   is combined with width: 100% in flex/grid layouts.
+   See design principle: global-box-model. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Global font inheritance - ensures consistent font across the entire app */
+body {
+  font-family: var(--font-family);
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Typography Mixins - Use these for extending typography styles */
+
+@mixin text-display-large {
+  font-family: var(--font-family);
+  font-size: var(--display-large-size);
+  line-height: var(--display-large-height);
+  font-weight: var(--display-large-weight);
+  letter-spacing: var(--display-large-tracking);
+}
+
+@mixin text-display-medium {
+  font-family: var(--font-family);
+  font-size: var(--display-medium-size);
+  line-height: var(--display-medium-height);
+  font-weight: var(--display-medium-weight);
+  letter-spacing: var(--display-medium-tracking);
+}
+
+@mixin text-display-small {
+  font-family: var(--font-family);
+  font-size: var(--display-small-size);
+  line-height: var(--display-small-height);
+  font-weight: var(--display-small-weight);
+  letter-spacing: var(--display-small-tracking);
+}
+
+@mixin text-headline-large {
+  font-family: var(--font-family);
+  font-size: var(--headline-large-size);
+  line-height: var(--headline-large-height);
+  font-weight: var(--headline-large-weight);
+  letter-spacing: var(--headline-large-tracking);
+}
+
+@mixin text-headline-medium {
+  font-family: var(--font-family);
+  font-size: var(--headline-medium-size);
+  line-height: var(--headline-medium-height);
+  font-weight: var(--headline-medium-weight);
+  letter-spacing: var(--headline-medium-tracking);
+}
+
+@mixin text-headline-small {
+  font-family: var(--font-family);
+  font-size: var(--headline-small-size);
+  line-height: var(--headline-small-height);
+  font-weight: var(--headline-small-weight);
+  letter-spacing: var(--headline-small-tracking);
+}
+
+@mixin text-title-large {
+  font-family: var(--font-family);
+  font-size: var(--title-large-size);
+  line-height: var(--title-large-height);
+  font-weight: var(--title-large-weight);
+  letter-spacing: var(--title-large-tracking);
+}
+
+@mixin text-title-medium {
+  font-family: var(--font-family);
+  font-size: var(--title-medium-size);
+  line-height: var(--title-medium-height);
+  font-weight: var(--title-medium-weight);
+  letter-spacing: var(--title-medium-tracking);
+}
+
+@mixin text-title-small {
+  font-family: var(--font-family);
+  font-size: var(--title-small-size);
+  line-height: var(--title-small-height);
+  font-weight: var(--title-small-weight);
+  letter-spacing: var(--title-small-tracking);
+}
+
+@mixin text-body-large {
+  font-family: var(--font-family);
+  font-size: var(--body-large-size);
+  line-height: var(--body-large-height);
+  font-weight: var(--body-large-weight);
+  letter-spacing: var(--body-large-tracking);
+}
+
+@mixin text-body-medium {
+  font-family: var(--font-family);
+  font-size: var(--body-medium-size);
+  line-height: var(--body-medium-height);
+  font-weight: var(--body-medium-weight);
+  letter-spacing: var(--body-medium-tracking);
+}
+
+@mixin text-body-small {
+  font-family: var(--font-family);
+  font-size: var(--body-small-size);
+  line-height: var(--body-small-height);
+  font-weight: var(--body-small-weight);
+  letter-spacing: var(--body-small-tracking);
+}
+
+@mixin text-label-large {
+  font-family: var(--font-family);
+  font-size: var(--label-large-size);
+  line-height: var(--label-large-height);
+  font-weight: var(--label-large-weight);
+  letter-spacing: var(--label-large-tracking);
+}
+
+@mixin text-label-medium {
+  font-family: var(--font-family);
+  font-size: var(--label-medium-size);
+  line-height: var(--label-medium-height);
+  font-weight: var(--label-medium-weight);
+  letter-spacing: var(--label-medium-tracking);
+}
+
+@mixin text-label-small {
+  font-family: var(--font-family);
+  font-size: var(--label-small-size);
+  line-height: var(--label-small-height);
+  font-weight: var(--label-small-weight);
+  letter-spacing: var(--label-small-tracking);
+}
+
+/* Typography Classes - For direct use in HTML */
+
+/* Display large
+    * Hero sections, landing page titles, marketing messages
+    * Font size: 57px
+    * Line height: 64px
+    * Font weight: Regular (400)
+    * Letter spacing: -0.25px
+ */
+.text-display-large {
+  @include text-display-large;
+}
+
+/* Display medium */
+.text-display-medium {
+  @include text-display-medium;
+}
+
+/* Display small */
+.text-display-small {
+  @include text-display-small;
+}
+
+/* Headline large */
+.text-headline-large {
+  @include text-headline-large;
+}
+
+/* Headline medium */
+.text-headline-medium {
+  @include text-headline-medium;
+}
+
+/* Headline small */
+.text-headline-small {
+  @include text-headline-small;
+}
+
+/* Title large */
+.text-title-large {
+  @include text-title-large;
+}
+
+/* Title medium */
+.text-title-medium {
+  @include text-title-medium;
+}
+
+/* Title small */
+.text-title-small {
+  @include text-title-small;
+}
+
+/* Body large */
+.text-body-large {
+  @include text-body-large;
+}
+
+/* Body medium */
+.text-body-medium {
+  @include text-body-medium;
+}
+
+/* Body small */
+.text-body-small {
+  @include text-body-small;
+}
+
+/* Label large */
+.text-label-large {
+  @include text-label-large;
+}
+
+/* Label medium */
+.text-label-medium {
+  @include text-label-medium;
+}
+
+/* Label small */
+.text-label-small {
+  @include text-label-small;
+}
+
+/* HTML element mapping - using @include for better performance */
+h1 {
+  @include text-headline-large;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+h2 {
+  @include text-headline-medium;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+h3 {
+  @include text-headline-small;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+h4 {
+  @include text-title-large;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+h5 {
+  @include text-title-medium;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+h6 {
+  @include text-title-small;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+p {
+  @include text-body-medium;
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+/* NOTE: Global div styling removed - apply typography classes explicitly */
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  :root {
+    --display-large-size: 45px;
+    --display-large-height: 52px;
+
+    --display-medium-size: 36px;
+    --display-medium-height: 44px;
+
+    --display-small-size: 32px;
+    --display-small-height: 40px;
+  }
+}
+
+.page-title {
+  margin: 28px 0 20px 0;
+  font-size: 2.8rem;
+  font-weight: 400;
+}
+
+.page-description {
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--text-secondary-color);
+  font-weight: 400;
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .page-description {
+    font-size: 1rem;
+  }
+}
+
+.screen-title {
+  font-weight: 600;
+  font-size: 2.8rem;
+}
+
+.group-title {
+  font-weight: 600;
+  font-size: 19px;
+}

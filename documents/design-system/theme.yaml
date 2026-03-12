@@ -1,0 +1,210 @@
+openspec: "1.0"
+kind: ThemeConfig
+info:
+  title: LMS Platform - Theme Configuration
+  version: "1.0.0"
+  description: >
+    Theme system with semantic token mixins for default configuration,
+    navigation bar, and footer. Currently active theme: Mint/Teal.
+
+# ──────────────────────────────────────────────────────────────
+# THEME INDEX
+# ──────────────────────────────────────────────────────────────
+theme_index:
+  file: src/assets/design-system/theme/_theme_index.scss
+  content: |
+    // Single theme - Mint
+    @use "./theme-mint" as theme;
+
+# ──────────────────────────────────────────────────────────────
+# ACTIVE THEME: MINT
+# ──────────────────────────────────────────────────────────────
+active_theme:
+  name: Mint
+  file: src/assets/design-system/theme/theme-mint.scss
+  description: >
+    Mint/Teal theme. Overrides primary palette from base blue to teal.
+    Applies token configuration mixins for default, navigation, and footer.
+  applied_mixins:
+    - name: default-configuration
+      description: Base UI tokens (button, input, text, border)
+    - name: navigation-bar-theme-by-primary-color-reverse
+      description: Colored navbar with white text
+    - name: footer-theme-by-primary-color
+      description: Primary-colored footer with white text
+
+# ──────────────────────────────────────────────────────────────
+# TOKEN MIXINS
+# ──────────────────────────────────────────────────────────────
+token_mixins:
+  file: src/assets/design-system/tokens/_token.scss
+  description: >
+    SCSS mixins that set semantic CSS custom properties.
+    Each mixin configures a group of related tokens.
+
+  default_configuration:
+    name: default-configuration
+    description: Core UI token defaults
+    tokens:
+      - { name: --primary-color, value: "var(--primary-color-600)" }
+      - { name: --border-color, value: "var(--neutral-color-4)" }
+      - { name: --border-color-hover, value: "var(--neutral-color-9)" }
+      - { name: --text-primary-color, value: "var(--neutral-color-9)" }
+      - { name: --text-secondary-color, value: "var(--neutral-color-7)" }
+      - { name: --button-bg-color, value: "var(--primary-color-600)" }
+      - { name: --button-bg-color-hover, value: "var(--primary-color-700)" }
+      - { name: --button-text-color, value: "var(--neutral-color-0)" }
+      - { name: --button-secondary-bg-color, value: "var(--neutral-color-0)" }
+      - { name: --button-secondary-bg-color-hover, value: "var(--neutral-color-1)" }
+      - { name: --button-secondary-text-color, value: "var(--text-primary-color)" }
+      - { name: --button-secondary-border-color, value: "var(--border-color)" }
+      - { name: --button-secondary-border-color-hover, value: "var(--border-color-hover)" }
+      - { name: --button-destructive-bg-color, value: "var(--error-color)" }
+      - { name: --button-disabled-bg-color, value: "var(--neutral-color-4)" }
+      - { name: --button-disabled-text-color, value: "var(--neutral-color-8)" }
+      - { name: --input-bg-color, value: "var(--neutral-color-0)" }
+      - { name: --input-border-color, value: "var(--neutral-color-5)" }
+      - { name: --input-border-color-focus, value: "var(--neutral-color-9)" }
+      - { name: --input-border-color-error, value: "var(--error-color)" }
+      # Content area tokens (premium white-background design)
+      - { name: --page-bg-color, value: "var(--surface-page)", note: "White page background" }
+      - { name: --card-bg-color, value: "var(--surface-raised)", note: "White card background" }
+      - { name: --card-border-color, value: "var(--neutral-color-3)", note: "Subtle card border" }
+      - { name: --card-shadow, value: "var(--shadow-xs)", note: "Card rest elevation" }
+      - { name: --card-shadow-hover, value: "var(--shadow-md)", note: "Card hover elevation" }
+      - { name: --sidebar-bg-color, value: "var(--surface-sunken)", note: "Off-white sidebar" }
+      - { name: --sidebar-border-color, value: "var(--neutral-color-2)", note: "Sidebar edge border" }
+
+  navigation_bar_mixins:
+    - name: navigation-bar-theme-by-primary-color
+      description: White navbar, primary-colored active/button states
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-text-color, value: "var(--text-primary-color)" }
+        - { name: --nav-bar-text-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-border-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--primary-color-600)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--primary-color-700)" }
+        - { name: --nav-bar-button-text-color, value: "var(--text-color-on-primary-bg)" }
+
+    - name: navigation-bar-theme-by-light-primary-color
+      description: White navbar, light primary button variant
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-text-color, value: "var(--text-primary-color)" }
+        - { name: --nav-bar-text-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-border-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--primary-color-900)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--primary-color-700)" }
+        - { name: --nav-bar-button-text-color, value: "var(--text-color-on-primary-bg)" }
+
+    - name: navigation-bar-theme-by-primary-color-reverse
+      active: true
+      description: "Primary-colored navbar with white text (ACTIVE)"
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--primary-color)" }
+        - { name: --nav-bar-text-color, value: "var(--text-color-on-primary-bg)" }
+        - { name: --nav-bar-text-color-active, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-border-color-active, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--neutral-color-1)" }
+        - { name: --nav-bar-button-text-color, value: "var(--primary-color)" }
+
+    - name: navigation-bar-theme-by-light-primary-color-reverse
+      description: Primary-colored navbar, light inverted variant
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--primary-color)" }
+        - { name: --nav-bar-text-color, value: "var(--primary-color-800)" }
+        - { name: --nav-bar-text-color-active, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-border-color-active, value: "var(--primary-color-100)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--neutral-color-1)" }
+        - { name: --nav-bar-button-text-color, value: "var(--primary-color)" }
+
+    - name: navigation-bar-theme-by-neutral-color
+      description: White navbar, neutral active states
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-text-color, value: "var(--text-primary-color)" }
+        - { name: --nav-bar-text-color-active, value: "var(--neutral-color-9)" }
+        - { name: --nav-bar-border-color-active, value: "var(--neutral-color-9)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--primary-color-600)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--primary-color-700)" }
+        - { name: --nav-bar-button-text-color, value: "var(--neutral-color-0)" }
+
+    - name: navigation-bar-theme-by-neutral-color-reverse
+      description: White navbar, neutral inverted with primary accents
+      tokens:
+        - { name: --nav-bar-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --nav-bar-text-color, value: "var(--text-primary-color)" }
+        - { name: --nav-bar-text-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-border-color-active, value: "var(--primary-color)" }
+        - { name: --nav-bar-button-bg-color, value: "var(--neutral-color-9)" }
+        - { name: --nav-bar-button-bg-color-hover, value: "var(--neutral-color-8)" }
+        - { name: --nav-bar-button-text-color, value: "var(--primary-color)" }
+
+  footer_mixins:
+    - name: footer-theme-by-primary-color
+      active: true
+      description: "Primary-colored footer with white text (ACTIVE)"
+      tokens:
+        - { name: --footer-bg-color, value: "var(--primary-color)" }
+        - { name: --footer-text-color, value: "var(--text-color-on-primary-bg)" }
+        - { name: --footer-border-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color-hover, value: "var(--neutral-color-1)" }
+        - { name: --footer-button-text-color, value: "var(--primary-color)" }
+
+    - name: footer-theme-by-primary-color-reverse
+      description: Primary-colored footer, inverted
+      tokens:
+        - { name: --footer-bg-color, value: "var(--primary-color)" }
+        - { name: --footer-text-color, value: "var(--text-color-on-primary-bg)" }
+        - { name: --footer-border-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color-hover, value: "var(--neutral-color-1)" }
+        - { name: --footer-button-text-color, value: "var(--primary-color)" }
+
+    - name: footer-theme-by-light-primary-color
+      description: Primary-colored footer, light variant
+      tokens:
+        - { name: --footer-bg-color, value: "var(--primary-color)" }
+        - { name: --footer-text-color, value: "var(--primary-color-800)" }
+        - { name: --footer-border-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-button-bg-color-hover, value: "var(--neutral-color-1)" }
+        - { name: --footer-button-text-color, value: "var(--primary-color)" }
+
+    - name: footer-theme-by-neutral-color
+      description: Neutral gray footer
+      tokens:
+        - { name: --footer-bg-color, value: "var(--neutral-color-2)" }
+        - { name: --footer-text-color, value: "var(--text-primary-color)" }
+        - { name: --footer-border-color, value: "var(--neutral-color-9)" }
+        - { name: --footer-button-bg-color, value: "var(--primary-color-600)" }
+        - { name: --footer-button-bg-color-hover, value: "var(--primary-color-700)" }
+        - { name: --footer-button-text-color, value: "var(--neutral-color-0)" }
+
+    - name: footer-theme-by-neutral-color-reverse
+      description: White footer, neutral inverted
+      tokens:
+        - { name: --footer-bg-color, value: "var(--neutral-color-0)" }
+        - { name: --footer-text-color, value: "var(--text-primary-color)" }
+        - { name: --footer-border-color, value: "var(--neutral-color-2)" }
+        - { name: --footer-button-bg-color, value: "var(--primary-color-50)" }
+        - { name: --footer-button-bg-color-hover, value: "var(--primary-color-100)" }
+        - { name: --footer-button-text-color, value: "var(--neutral-color-0)" }
+
+  sidebar_mixins:
+    - name: sidebar-theme-default
+      active: true
+      description: "Off-white sidebar with primary-tinted active state"
+      tokens:
+        - { name: --sidebar-bg-color, value: "var(--surface-sunken)", note: "Off-white background" }
+        - { name: --sidebar-text-color, value: "var(--text-primary-color)" }
+        - { name: --sidebar-text-color-secondary, value: "var(--text-secondary-color)" }
+        - { name: --sidebar-border-color, value: "var(--neutral-color-2)", note: "Right edge border" }
+        - { name: --sidebar-item-hover-bg, value: "var(--surface-hover)" }
+        - { name: --sidebar-item-active-bg, value: "var(--primary-color-50)" }
+        - { name: --sidebar-item-active-text, value: "var(--primary-color-600)" }
+        - { name: --sidebar-item-active-border, value: "var(--primary-color-600)", note: "Left 3px accent border" }

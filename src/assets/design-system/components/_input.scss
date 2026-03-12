@@ -1,0 +1,147 @@
+// Input
+.medium-input {
+  height: 45px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border-color);
+  border-radius: 8px;
+
+  &:focus {
+    outline: none;
+    border: 1px solid var(--input-border-color-focus);
+  }
+  @media (max-width: 768px) {
+    font-size: 16px;
+    font-weight: 400;
+
+    &::placeholder {
+      font-size: 16px;
+      font-weight: 300;
+    }
+  }
+}
+
+.small-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border-color);
+  border-radius: 10px;
+
+  &:focus {
+    outline: none;
+    border: 1px solid var(--input-border-color-focus);
+  }
+}
+
+::placeholder {
+  color: var(--neutral-color-5);
+}
+
+/* Select Box. How to use
+  <div class="select-box-container">
+    <select class="select-box">
+      @for (data of dataList; track index) {
+        <option [ngValue]="data">
+          {{ data }}
+        </option>
+      }
+    </select>
+    <span class="material-symbols-outlined select-box-icon">
+        keyboard_arrow_down
+      </span>
+  </div>
+  */
+.select-box-container {
+  height: 45px;
+  min-width: fit-content;
+  display: flex;
+  align-items: center;
+  background-color: var(--neutral-color-1);
+  border: 1px solid var(--neutral-color-4);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+
+  .select-box {
+    background-color: unset;
+    flex: 1 1 0;
+    border: none;
+    appearance: none;
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+    z-index: 100;
+
+    &:hover {
+      cursor: pointer;
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .select-box-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--neutral-color-6);
+    z-index: 99;
+  }
+}
+
+.checkbox-primary {
+  display: inline-block;
+  position: relative;
+  height: 15px;
+  width: 15px;
+  cursor: pointer;
+  border: none;
+  margin-right: 10px;
+}
+
+.checkbox-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  input[type='checkbox'] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    background-color: var(--neutral-color-0);
+    margin: 0;
+    position: relative;
+
+    &:checked {
+      background-color: var(--primary-color-600);
+      border-color: var(--primary-color-600);
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 1px;
+        left: 5px;
+        width: 4px;
+        height: 9px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+
+    &:hover {
+      border-color: var(--primary-color-600);
+    }
+  }
+}

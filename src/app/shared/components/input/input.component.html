@@ -1,0 +1,33 @@
+<div
+  class="input-wrapper"
+  [class.normal]="size() === 'normal'"
+  [class.small]="size() === 'small'"
+  [class.focused]="focused()"
+  [class.floating]="isFloating()"
+  [class.has-error]="error()"
+  [class.disabled]="isDisabled()"
+>
+  <div class="input-field">
+    <input
+      [id]="inputId"
+      [type]="type()"
+      [disabled]="isDisabled()"
+      [required]="required()"
+      [value]="value()"
+      [attr.aria-label]="label()"
+      [attr.aria-invalid]="!!error()"
+      [attr.aria-describedby]="error() ? inputId + '-error' : null"
+      (input)="onInput($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+    />
+    <label [for]="inputId" [class.required]="required()">
+      {{ label() }}
+    </label>
+  </div>
+  @if (error()) {
+    <span class="error-text" [id]="inputId + '-error'" role="alert">
+      {{ error() }}
+    </span>
+  }
+</div>

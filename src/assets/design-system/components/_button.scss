@@ -1,0 +1,88 @@
+$medium-button-height: 36px;
+
+button {
+  min-height: $medium-button-height;
+  color: var(--button-text-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border: none;
+  user-select: none;
+  transition: transform var(--duration-normal) var(--easing-ease-in-out),
+    background-color var(--duration-normal) var(--easing-ease-in-out);
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  &.primary {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    --spinner-color: var(--button-text-color);
+
+    &:hover:not(:disabled) {
+      background-color: var(--button-bg-color-hover);
+    }
+  }
+
+  &.secondary {
+    border: 1px solid var(--button-secondary-border-color);
+    background-color: var(--button-secondary-bg-color);
+    color: var(--button-secondary-text-color);
+    --spinner-color: var(--button-secondary-text-color);
+
+    &:hover:not(:disabled) {
+      background-color: var(--button-secondary-bg-color-hover);
+    }
+  }
+
+  &.destructive {
+    background-color: var(--button-destructive-bg-color);
+    color: var(--button-text-color);
+    --spinner-color: var(--button-text-color);
+
+    &:hover:not(:disabled) {
+      filter: brightness(0.9);
+    }
+  }
+
+  &:disabled {
+    background-color: var(--button-disabled-bg-color);
+    color: var(--button-disabled-text-color);
+    cursor: not-allowed;
+    transform: none;
+    --spinner-color: var(--button-disabled-text-color);
+  }
+
+  &.sm {
+    min-height: 30px;
+    padding: 0 var(--spacing-md);
+    font-size: 0.875rem;
+    border-radius: var(--radius-sm);
+  }
+
+  &.md {
+    min-height: 36px;
+    padding: 0 var(--spacing-lg);
+    border-radius: var(--radius-md);
+  }
+
+  &.lg {
+    min-height: 44px;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 1rem;
+    border-radius: var(--radius-lg);
+  }
+
+  &.loading {
+    pointer-events: none;
+  }
+}

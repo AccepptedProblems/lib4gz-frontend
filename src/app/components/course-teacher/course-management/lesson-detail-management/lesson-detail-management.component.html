@@ -1,0 +1,147 @@
+@if (loading()) {
+  <div class="loading-placeholder">
+    <lib-skeleton width="200px" height="24px" />
+    <lib-skeleton width="100%" height="80px" variant="rect" />
+  </div>
+} @else if (lesson()) {
+<div class="lesson-detail" role="region" aria-label="Lesson detail">
+  <!-- Lesson Header -->
+  <div class="lesson-detail__header">
+    <button class="icon-btn" (click)="onBack()" aria-label="Back to modules" title="Back to modules">
+      <span class="material-icons">arrow_back</span>
+    </button>
+
+    @if (editingTitle()) {
+      <div class="inline-form inline-form--row">
+        <input
+          class="inline-input inline-input--large"
+          [value]="editTitleValue()"
+          (input)="editTitleValue.set($any($event.target).value)"
+          (keydown.enter)="saveTitle()"
+          (keydown.escape)="cancelEditTitle()"
+        />
+        <lib-button variant="primary" size="sm" [isLoading]="savingTitle()" (buttonClick)="saveTitle()">
+          Save
+        </lib-button>
+        <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditTitle()">
+          Cancel
+        </lib-button>
+      </div>
+    } @else {
+      <h2 class="text-title-large text-primary lesson-detail__title">
+        {{ lesson()!.title }}
+      </h2>
+      <button
+        class="icon-btn"
+        (click)="startEditTitle()"
+        aria-label="Edit lesson title"
+        title="Edit lesson title"
+      >
+        <span class="material-icons">edit</span>
+      </button>
+      @if (moduleTitle()) {
+        <span class="text-body-small text-secondary lesson-detail__module-badge">
+          {{ moduleTitle() }}
+        </span>
+      }
+    }
+  </div>
+
+  <!-- Summary Section -->
+  <div class="lesson-detail__section">
+    <div class="lesson-detail__section-header">
+      <h3 class="text-title-small text-primary">Summary</h3>
+      @if (editingSummary()) {
+        <lib-button variant="primary" size="sm" [isLoading]="savingSummary()" (buttonClick)="saveSummary()">
+          Save
+        </lib-button>
+      } @else if (!summaryLoading()) {
+        <lib-button variant="primary" size="sm" (buttonClick)="startEditSummary()">
+          Edit
+        </lib-button>
+      }
+    </div>
+    <div class="summary-card">
+      @if (summaryLoading()) {
+        <lib-skeleton width="100%" height="80px" variant="rect" />
+      } @else if (editingSummary()) {
+        <lib-textarea
+          [value]="editSummaryValue()"
+          (valueChange)="editSummaryValue.set($event)"
+          placeholder="Enter the lesson summary..."
+          [minRows]="3"
+          ariaLabel="Lesson summary"
+        />
+      } @else if (summary()?.content) {
+        <p class="text-body-medium text-secondary summary-preview">{{ summary()!.content }}</p>
+      } @else {
+        <p class="text-body-medium text-secondary">No summary yet.</p>
+      }
+    </div>
+  </div>
+
+  <!-- Exercises Section -->
+  <div class="lesson-detail__section">
+    <div class="lesson-detail__section-header">
+      <h3 class="text-title-small text-primary">Exercises</h3>
+      <lib-button variant="primary" size="sm" (buttonClick)="navigateToExerciseEditor()">
+        + Add Exercise
+      </lib-button>
+    </div>
+
+    @if (!exercisesLoaded()) {
+      <div class="skeleton-table">
+        @for (_ of [1,2,3]; track $index) {
+          <lib-skeleton width="100%" height="40px" variant="rect" />
+        }
+      </div>
+    } @else if (exercises().length === 0) {
+      <p class="text-body-medium text-secondary empty-text">No exercises yet for this lesson.</p>
+    } @else {
+      <div class="exercise-list">
+        @for (exercise of exercises(); track exercise.id) {
+          <div class="exercise-item">
+            <span class="exercise-item__title text-body-medium">{{ exercise.title }}</span>
+            <lib-badge variant="neutral">{{ getExerciseTypeLabel(exercise.type) }}</lib-badge>
+            <span class="exercise-item__meta text-body-small text-secondary">{{ exercise.questionCount ?? '—' }} questions</span>
+            <div class="exercise-item__actions">
+              <button
+                class="icon-btn"
+                (click)="navigateToExerciseEditor(exercise.id)"
+                [attr.aria-label]="'Edit Exercise: ' + exercise.title"
+                title="Edit"
+              >
+                <span class="material-icons">edit</span>
+              </button>
+              <button
+                class="icon-btn icon-btn--danger"
+                (click)="confirmDeleteExercise(exercise.id, exercise.title)"
+                [attr.aria-label]="'Delete Exercise: ' + exercise.title"
+                title="Delete"
+              >
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Delete Exercise Confirmation Dialog -->
+<lib-dialog
+  [open]="deleteDialogOpen()"
+  title="Delete Exercise"
+  icon="warning"
+  iconClass="warning"
+  confirmLabel="Delete"
+  confirmVariant="destructive"
+  [loading]="deleting()"
+  (confirm)="executeDelete()"
+  (cancel)="cancelDelete()"
+>
+  <p>Are you sure you want to delete <strong>{{ deleteExerciseName() }}</strong>?</p>
+  <p class="text-body-small warning-text">This will also delete all student submissions for this exercise.</p>
+</lib-dialog>
+}

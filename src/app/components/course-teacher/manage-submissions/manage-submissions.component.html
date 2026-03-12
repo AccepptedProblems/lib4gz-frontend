@@ -1,0 +1,95 @@
+<div class="content-view" role="region" aria-label="Submissions review">
+  @if (submissionsLoading()) {
+    <div class="skeleton-table">
+      @for (_ of [1,2,3,4,5]; track $index) {
+        <lib-skeleton width="100%" height="40px" variant="rect" />
+      }
+    </div>
+  } @else {
+    <!-- Filters -->
+    <div class="table-filters">
+      <select class="filter-select" (change)="setSubmissionExerciseFilter($event)">
+        <option value="All">All Exercises</option>
+        @for (ex of allExercises(); track ex.id) {
+          <option [value]="ex.id" [selected]="submissionExerciseFilter() === ex.id">{{ ex.title }}</option>
+        }
+      </select>
+      <select class="filter-select" (change)="setSubmissionStatusFilter($event)">
+        <option value="All">All Statuses</option>
+        <option [value]="SubmissionStatus.DRAFT">Draft</option>
+        <option [value]="SubmissionStatus.SUBMITTED">Submitted</option>
+        <option [value]="SubmissionStatus.APPROVED">Approved</option>
+        <option [value]="SubmissionStatus.NEEDS_REVISION">Needs Revision</option>
+      </select>
+    </div>
+
+    @if (filteredSubmissions().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons empty-icon">assignment</span>
+        @if (submissionExerciseFilter() !== 'All' || submissionStatusFilter() !== 'All') {
+          <p class="text-body-large text-secondary">No submissions match your filter criteria.</p>
+        } @else {
+          <p class="text-body-large text-secondary">No submissions to review yet.</p>
+        }
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Student</th>
+              <th scope="col">Exercise</th>
+              <th scope="col" class="col-date">Submitted</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="col-view"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (sub of paginatedSubmissions(); track sub.id) {
+              <tr class="clickable-row">
+                <td>{{ sub.user.name }}</td>
+                <td>{{ sub.exerciseTitle }}</td>
+                <td class="col-date">
+                  @if (sub.submittedAt) {
+                    {{ sub.submittedAt | date:'mediumDate' }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td>
+                  <lib-badge [variant]="getSubmissionBadgeVariant(sub.status)" [ariaLabel]="sub.status">
+                    {{ sub.status === SubmissionStatus.NEEDS_REVISION ? 'Needs Revision' : sub.status }}
+                  </lib-badge>
+                </td>
+                <td class="col-view">
+                  <span class="material-icons view-arrow">chevron_right</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <span class="text-body-small text-secondary">
+          Showing {{ (submissionPage() - 1) * submissionPageSize + 1 }}–{{ Math.min(submissionPage() * submissionPageSize, filteredSubmissions().length) }}
+          of {{ filteredSubmissions().length }}
+        </span>
+        <div class="pagination__controls">
+          <button
+            class="pagination-btn"
+            [disabled]="submissionPage() <= 1"
+            (click)="submissionPage.set(submissionPage() - 1)"
+          >&lt;</button>
+          <span class="text-body-small">{{ submissionPage() }} / {{ submissionTotalPages() }}</span>
+          <button
+            class="pagination-btn"
+            [disabled]="submissionPage() >= submissionTotalPages()"
+            (click)="submissionPage.set(submissionPage() + 1)"
+          >&gt;</button>
+        </div>
+      </div>
+    }
+  }
+</div>

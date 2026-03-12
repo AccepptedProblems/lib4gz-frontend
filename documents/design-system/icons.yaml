@@ -1,0 +1,38 @@
+openspec: "1.0"
+kind: IconSystem
+info:
+  title: Icon System
+  version: "1.0.0"
+  description: >
+    Icon system for the LMS platform. Uses Google Material Icons (filled)
+    and Material Symbols Outlined, loaded via Google Fonts CDN.
+
+fonts:
+  - id: material-icons
+    name: Material Icons
+    provider: Google Fonts CDN
+    css_class: material-icons
+    usage: >
+      Primary icon font used across the application for UI elements such as
+      navigation toggles, status indicators, action buttons, and placeholders.
+    link: "https://fonts.googleapis.com/icon?family=Material+Icons"
+
+  - id: material-symbols-outlined
+    name: Material Symbols Outlined
+    provider: Google Fonts CDN
+    css_class: material-symbols-outlined
+    usage: >
+      Used for navbar icons and select input chevrons. Provides outlined
+      style icons as an alternative to the filled Material Icons.
+    link: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+
+loading:
+  method: CDN link tags in index.html <head>
+  file: src/index.html
+  current_implementation: |
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+markup_pattern:
+  material_icons: '<span class="material-icons">icon_name</span>'
+  material_symbols: '<span class="material-symbols-outlined">icon_name</span>'

@@ -1,0 +1,816 @@
+openspec: "1.0"
+kind: ChildComponent
+info:
+  title: Lesson Detail Management
+  version: "1.0.0"
+  description: >
+    Child component of Course Management. Displays lesson detail sub-view
+    with editable title, summary preview, and exercises table. Handles
+    exercise deletion, navigation to summary editor and exercise editor.
+    Self-contained data loading for summary and exercises.
+
+component:
+  id: lesson-detail-management
+  name: Lesson Detail Management
+  parent_screen: course-management
+  selector: app-lesson-detail-management
+  file: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.ts
+  template: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.html
+  styles: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.scss
+  standalone: true
+  status: scaffold
+
+  purpose: >
+    Extracted from the Course Management component's lesson detail sub-view.
+    Renders when a teacher clicks a lesson in the module list. Shows the
+    lesson title (editable inline), an inline-editable summary section,
+    and an exercises data table. Each lesson has at most one summary.
+    The summary is edited inline via a textarea (no separate editor screen).
+    Handles its own data loading (summary + exercises) via effect() on
+    lesson input changes. Communicates with parent via signal-based outputs
+    for back navigation, lesson updates, exercise deletion, and submission
+    view switching.
+
+  # ────────────────────────────────────────────────────────────────────
+  # INPUTS & OUTPUTS
+  # ────────────────────────────────────────────────────────────────────
+  inputs:
+    - name: courseId
+      type: string
+      required: true
+      description: Course UUID for navigation (exercise editor, summary editor)
+
+    - name: lesson
+      type: LessonResponse
+      required: true
+      description: >
+        The selected lesson to display. When this input changes, the
+        component reloads summary and exercises via effect().
+
+    - name: moduleTitle
+      type: string
+      required: true
+      description: >
+        Parent module title displayed as a context badge next to the
+        lesson title.
+
+  outputs:
+    - name: back
+      type: void
+      description: >
+        Emitted when user clicks the back arrow. Parent sets
+        materialSubView='module-list' and clears selection.
+
+    - name: lessonUpdated
+      type: LessonResponse
+      description: >
+        Emitted after a successful inline title edit. Parent updates
+        the lesson in its modulesWithLessons signal.
+
+    - name: exerciseDeleted
+      type: string
+      description: >
+        Emitted with exerciseId after a successful exercise deletion.
+        Parent removes the exercise from _allLoadedExercises.
+
+  # ────────────────────────────────────────────────────────────────────
+  # LAYOUT
+  # ────────────────────────────────────────────────────────────────────
+  layout: |
+    View mode:
+    +----------------------------------------------------+
+    |  [<-]  Lesson Title [edit]            [Module Name] |
+    +----------------------------------------------------+
+    |  Summary                              [Edit]       |
+    |  +------------------------------------------------+|
+    |  |  Summary content displayed inline               ||
+    |  |  (full text, no truncation)                     ||
+    |  +------------------------------------------------+|
+    +----------------------------------------------------+
+    |  Exercises                          [+ Add Exercise]|
+    |  +------------------------------------------------+|
+    |  | Quiz 1        MCQ    5 questions   [edit] [D]  ||
+    |  | Project 1     Project 3 questions  [edit] [D]  ||
+    |  +------------------------------------------------+|
+    +----------------------------------------------------+
+
+    Edit mode (summary):
+    +----------------------------------------------------+
+    |  Summary                              [Save]       |
+    |  +------------------------------------------------+|
+    |  |  [textarea — auto-resizes to fit content____]   ||
+    |  |  [height grows/shrinks as user types________]   ||
+    |  +------------------------------------------------+|
+    +----------------------------------------------------+
+
+  # ────────────────────────────────────────────────────────────────────
+  # ELEMENTS
+  # ────────────────────────────────────────────────────────────────────
+  elements:
+    - name: Back Button
+      element: button
+      class: icon-btn
+      icon: "arrow_back"
+      action: "back.emit()"
+      description: >
+        Icon-only back button aligned left in the lesson header row.
+        Uses the .icon-btn style. Clicking emits back output.
+
+    - name: Lesson Title
+      typography: text-title-large
+      data_binding: "lesson().title"
+      editable: true
+      description: >
+        Lesson title displayed in header. Adjacent edit icon button
+        triggers inline editing mode. Editing calls LessonService.update()
+        and emits lessonUpdated output on success.
+
+    - name: Edit Title Button
+      element: button
+      class: icon-btn
+      icon: "edit"
+      action: "startEditTitle()"
+
+    - name: Module Badge
+      typography: text-body-small
+      data_binding: "moduleTitle()"
+      description: Shows the parent module name for context.
+
+    - name: Summary Section
+      description: >
+        Inline-editable summary section. Each lesson has at most one summary.
+        The section header row contains the "Summary" heading (text-title-small)
+        on the left and an Edit/Save button (primary, sm) on the right — same
+        row, using lesson-detail__section-header layout. When not editing,
+        the full summary content is displayed (no truncation). When editing,
+        a textarea replaces the preview text and the Edit button becomes Save.
+      elements:
+        - name: Summary Header Row
+          description: >
+            Flex row with "Summary" heading left, action button right. Uses
+            the same .lesson-detail__section-header class as Exercises.
+            Button label: "Edit" (view mode) or "Save" (edit mode).
+            Button variant: primary. Size: sm.
+        - name: Summary Content (view mode)
+          description: >
+            Full summary text displayed in a summary-card container.
+            Uses text-body-medium text-secondary. If no summary exists,
+            shows "No summary yet." placeholder.
+        - name: Summary Textarea (edit mode)
+          component: lib-textarea
+          description: >
+            Uses the shared lib-textarea component with auto-expanding
+            height. Bound via [value]="editSummaryValue()" and
+            (valueChange)="editSummaryValue.set($event)". minRows=3,
+            no floating label, placeholder "Enter the lesson summary...",
+            ariaLabel "Lesson summary". Shown only when editingSummary
+            is true. Auto-resize is handled internally by lib-textarea.
+      states:
+        - name: summary-loading
+          description: Skeleton placeholder while summary is being fetched
+        - name: summary-view
+          description: >
+            Summary content displayed with Edit button in header row.
+            Shows full content (no truncation). If no summary exists,
+            shows "No summary yet." placeholder.
+        - name: summary-editing
+          description: >
+            Textarea shown with current content. Save button replaces
+            Edit in the header row. Save calls SummaryService.createOrUpdate()
+            and updates the local summary signal on success.
+
+    - name: Exercises List
+      element: div.exercise-list
+      description: >
+        Vertical list of exercise items for this lesson. Each item is a
+        .exercise-item row showing: exercise title (text-body-medium, bold),
+        type badge (lib-badge neutral), question count label, then an
+        actions group at the far right containing the edit icon-btn and
+        delete icon-btn side by side. The delete button uses a persistent
+        red color (icon-btn--danger) to signal destructive intent.
+        Uses flexbox layout with gap, not a <table>.
+      item_layout: |
+        +------------------------------------------------------------+
+        | Exercise Title    [Badge: Type]  N questions   [edit] [D]  |
+        +------------------------------------------------------------+
+      item_elements:
+        - name: Title
+          element: span.exercise-item__title
+          typography: text-body-medium
+          style: "font-weight: 500"
+        - name: Type Badge
+          component: "lib-badge variant='neutral'"
+          data: "getExerciseTypeLabel(exercise.type)"
+        - name: Question Count
+          element: span.exercise-item__meta.text-body-small.text-secondary
+          data: "exercise.questionCount ?? '---' + ' questions'"
+        - name: Actions Group
+          element: div.exercise-item__actions
+          description: >
+            Flex row at the far right of the exercise item containing
+            edit and delete icon buttons grouped together.
+          children:
+            - name: Edit Button
+              element: button.icon-btn
+              icon: edit
+              action: "navigateToExerciseEditor(exercise.id)"
+            - name: Delete Button
+              element: button.icon-btn.icon-btn--danger
+              icon: delete
+              style: "color: #c62828 (persistent, not hover-only)"
+              action: "confirmDeleteExercise(exercise.id, exercise.title)"
+      empty_state: "No exercises yet for this lesson."
+
+    - name: Add Exercise Button
+      component: "lib-button [variant]=\"'primary'\" [size]=\"'sm'\""
+      label: "+ Add Exercise"
+      action: "navigateToExerciseEditor() — navigates to exercise editor with lessonId context"
+
+    - name: Delete Exercise Dialog
+      component: lib-dialog
+      description: >
+        Confirmation dialog for exercise deletion. Warns about cascading
+        deletion of student submissions.
+
+  # ────────────────────────────────────────────────────────────────────
+  # STATES
+  # ────────────────────────────────────────────────────────────────────
+  states:
+    - name: loading
+      description: Skeleton placeholders for summary and exercises table
+    - name: loaded
+      description: Summary content and exercises table displayed
+    - name: editing-title
+      description: Title replaced with inline edit form
+    - name: editing-summary
+      description: >
+        Summary textarea shown for inline editing. Save button replaces
+        Edit button in the summary section header row.
+
+  # ────────────────────────────────────────────────────────────────────
+  # DATA FLOW
+  # ────────────────────────────────────────────────────────────────────
+  data_flow:
+    service_calls:
+      - service: SummaryService
+        method: get
+        signature: "get(lessonId: string): Observable<SummaryResponse>"
+        timing: "On lesson input change (via effect())"
+
+      - service: ExerciseService
+        method: listByLesson
+        signature: "listByLesson(lessonId: string): Observable<ExerciseResponse[]>"
+        timing: "On lesson input change (via effect())"
+
+    write_operations:
+      - service: LessonService
+        method: update
+        signature: "update(lessonId: string, request: UpdateLessonRequest): Observable<LessonResponse>"
+        trigger: Save in edit title inline form
+
+      - service: SummaryService
+        method: createOrUpdate
+        signature: "createOrUpdate(lessonId: string, request: { content: string }): Observable<SummaryResponse>"
+        trigger: >
+          Save button click in summary section (inline editing).
+          Handles both creating a new summary and updating an existing one.
+
+      - service: ExerciseService
+        method: delete
+        signature: "delete(exerciseId: string): Observable<void>"
+        trigger: Confirm in delete exercise dialog
+
+  # ────────────────────────────────────────────────────────────────────
+  # DESIGN SYSTEM
+  # ────────────────────────────────────────────────────────────────────
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/0"
+        usage: "Lesson title (text-title-large)"
+      - $ref: "../../design-system/typography.yaml#/scale/title/levels/2"
+        usage: "Section headings: Summary, Exercises (text-title-small)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        usage: "Summary preview text, table cells (text-body-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/2"
+        usage: "Module badge (text-body-small)"
+    colors:
+      - $ref: "../../design-system/color.yaml#/theme_colors/neutral"
+        usage: "Module badge background, table borders, icon colors"
+      - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        usage: "Delete action (--error-color), warning text"
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        usage: "Edit Summary, Add Summary, Add Exercise, Save/Cancel buttons"
+      - $ref: "../../design-system/shared-components.yaml#/skeleton"
+        usage: "Loading placeholders for summary and exercises"
+      - $ref: "../../design-system/shared-components.yaml#/badge"
+        usage: "Exercise type badge (neutral variant)"
+      - $ref: "../../design-system/shared-components.yaml#/dialog"
+        usage: "Delete exercise confirmation"
+      - $ref: "../../design-system/shared-components.yaml#/textarea"
+        usage: "Inline summary editing with auto-expanding height"
+
+  # ────────────────────────────────────────────────────────────────────
+  # CURRENT IMPLEMENTATION
+  # ────────────────────────────────────────────────────────────────────
+  current_implementation: |
+    import { Component, inject, signal, input, output, effect } from '@angular/core';
+    import { Router } from '@angular/router';
+    import { catchError, of } from 'rxjs';
+    import {
+      LessonService,
+      ExerciseService,
+      SummaryService,
+    } from '../../../../services';
+    import {
+      LessonResponse,
+      ExerciseResponse,
+      SummaryResponse,
+      ExerciseType,
+    } from '../../../../shared/models';
+    import {
+      ButtonComponent,
+      SkeletonComponent,
+      BadgeComponent,
+      DialogComponent,
+      TextareaComponent,
+    } from '../../../../shared/components';
+    import { ToastService } from '../../../../shared/components/toast/toast.component';
+
+    @Component({
+      selector: 'app-lesson-detail-management',
+      imports: [
+        ButtonComponent,
+        SkeletonComponent,
+        BadgeComponent,
+        DialogComponent,
+        TextareaComponent,
+      ],
+      templateUrl: './lesson-detail-management.component.html',
+      styleUrl: './lesson-detail-management.component.scss',
+    })
+    export class LessonDetailManagementComponent {
+      private readonly router = inject(Router);
+      private readonly lessonService = inject(LessonService);
+      private readonly exerciseService = inject(ExerciseService);
+      private readonly summaryService = inject(SummaryService);
+      private readonly toast = inject(ToastService);
+
+      // Inputs
+      courseId = input.required<string>();
+      lesson = input.required<LessonResponse>();
+      moduleTitle = input.required<string>();
+
+      // Outputs
+      back = output<void>();
+      lessonUpdated = output<LessonResponse>();
+      exerciseDeleted = output<string>();
+
+      // Internal state
+      summary = signal<SummaryResponse | null>(null);
+      summaryLoading = signal(true);
+      exercises = signal<ExerciseResponse[]>([]);
+      exercisesLoaded = signal(false);
+
+      // Title editing
+      editingTitle = signal(false);
+      editTitleValue = signal('');
+      savingTitle = signal(false);
+
+      // Summary editing
+      editingSummary = signal(false);
+      editSummaryValue = signal('');
+      savingSummary = signal(false);
+
+      // Delete dialog
+      deleteDialogOpen = signal(false);
+      deleteExerciseId = signal('');
+      deleteExerciseName = signal('');
+      deleting = signal(false);
+
+      constructor() {
+        effect(() => {
+          const lesson = this.lesson();
+          this.loadLessonData(lesson.id);
+        });
+      }
+
+      // ── Data Loading ──────────────────────────────────────────────────
+      private loadLessonData(lessonId: string): void {
+        this.summary.set(null);
+        this.summaryLoading.set(true);
+        this.exercises.set([]);
+        this.exercisesLoaded.set(false);
+        this.editingTitle.set(false);
+        this.editingSummary.set(false);
+
+        this.summaryService.get(lessonId).pipe(
+          catchError(() => of(null))
+        ).subscribe(summary => {
+          this.summary.set(summary);
+          this.summaryLoading.set(false);
+        });
+
+        this.exerciseService.listByLesson(lessonId).pipe(
+          catchError(() => of([] as ExerciseResponse[]))
+        ).subscribe(exercises => {
+          this.exercises.set([...exercises].sort((a, b) => a.orderIndex - b.orderIndex));
+          this.exercisesLoaded.set(true);
+        });
+      }
+
+      // ── Title Editing ─────────────────────────────────────────────────
+      startEditTitle(): void {
+        this.editTitleValue.set(this.lesson().title);
+        this.editingTitle.set(true);
+      }
+
+      cancelEditTitle(): void {
+        this.editingTitle.set(false);
+      }
+
+      saveTitle(): void {
+        const title = this.editTitleValue().trim();
+        if (!title) return;
+        this.savingTitle.set(true);
+        this.lessonService.update(this.lesson().id, { title }).subscribe({
+          next: updated => {
+            this.editingTitle.set(false);
+            this.savingTitle.set(false);
+            this.lessonUpdated.emit(updated);
+            this.toast.success('Lesson updated');
+          },
+          error: () => {
+            this.savingTitle.set(false);
+            this.toast.error('Failed to update lesson');
+          },
+        });
+      }
+
+      // ── Exercise Delete ───────────────────────────────────────────────
+      confirmDeleteExercise(exerciseId: string, name: string): void {
+        this.deleteExerciseId.set(exerciseId);
+        this.deleteExerciseName.set(name);
+        this.deleteDialogOpen.set(true);
+      }
+
+      cancelDelete(): void {
+        this.deleteDialogOpen.set(false);
+      }
+
+      executeDelete(): void {
+        this.deleting.set(true);
+        const id = this.deleteExerciseId();
+        this.exerciseService.delete(id).subscribe({
+          next: () => {
+            this.exercises.update(list => list.filter(e => e.id !== id));
+            this.deleteDialogOpen.set(false);
+            this.deleting.set(false);
+            this.exerciseDeleted.emit(id);
+            this.toast.success('Exercise deleted');
+          },
+          error: () => {
+            this.deleting.set(false);
+            this.toast.error('Failed to delete exercise');
+          },
+        });
+      }
+
+      // ── Summary Editing ──────────────────────────────────────────────
+      startEditSummary(): void {
+        this.editSummaryValue.set(this.summary()?.content ?? '');
+        this.editingSummary.set(true);
+      }
+
+      saveSummary(): void {
+        const content = this.editSummaryValue().trim();
+        this.savingSummary.set(true);
+        this.summaryService.createOrUpdate(this.lesson().id, { content }).subscribe({
+          next: updated => {
+            this.summary.set(updated);
+            this.editingSummary.set(false);
+            this.savingSummary.set(false);
+            this.toast.success('Summary saved');
+          },
+          error: () => {
+            this.savingSummary.set(false);
+            this.toast.error('Failed to save summary');
+          },
+        });
+      }
+
+      // ── Navigation ────────────────────────────────────────────────────
+      navigateToExerciseEditor(exerciseId?: string): void {
+        if (exerciseId) {
+          this.router.navigate(['/course', this.courseId(), 'manage', 'exercise', exerciseId, 'edit']);
+        } else {
+          this.router.navigate(['/course', this.courseId(), 'manage', 'exercise', 'new'], {
+            state: { lessonId: this.lesson().id },
+          });
+        }
+      }
+
+      onBack(): void {
+        this.back.emit();
+      }
+
+      // ── Badge helpers ─────────────────────────────────────────────────
+      getExerciseTypeLabel(type: ExerciseType): string {
+        const map: Record<string, string> = {
+          [ExerciseType.TEXT_ANSWER]: 'Text',
+          [ExerciseType.CODE]: 'Code',
+          [ExerciseType.FILE_UPLOAD]: 'File',
+          [ExerciseType.MULTIPLE_CHOICE]: 'MCQ',
+          [ExerciseType.PROJECT_LINK]: 'Project',
+        };
+        return map[type] ?? type;
+      }
+    }
+
+  current_template: |
+    <div class="lesson-detail" role="region" aria-label="Lesson detail">
+      <!-- Lesson Header -->
+      <div class="lesson-detail__header">
+        <button class="icon-btn" (click)="onBack()" aria-label="Back to modules" title="Back to modules">
+          <span class="material-icons">arrow_back</span>
+        </button>
+
+        @if (editingTitle()) {
+          <div class="inline-form inline-form--row">
+            <input
+              class="inline-input inline-input--large"
+              [value]="editTitleValue()"
+              (input)="editTitleValue.set($any($event.target).value)"
+              (keydown.enter)="saveTitle()"
+              (keydown.escape)="cancelEditTitle()"
+            />
+            <lib-button variant="primary" size="sm" [isLoading]="savingTitle()" (buttonClick)="saveTitle()">
+              Save
+            </lib-button>
+            <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditTitle()">
+              Cancel
+            </lib-button>
+          </div>
+        } @else {
+          <h2 class="text-title-large text-primary lesson-detail__title">
+            {{ lesson().title }}
+          </h2>
+          <button
+            class="icon-btn"
+            (click)="startEditTitle()"
+            aria-label="Edit lesson title"
+            title="Edit lesson title"
+          >
+            <span class="material-icons">edit</span>
+          </button>
+          <span class="text-body-small text-secondary lesson-detail__module-badge">
+            {{ moduleTitle() }}
+          </span>
+        }
+      </div>
+
+      <!-- Summary Section -->
+      <div class="lesson-detail__section">
+        <div class="lesson-detail__section-header">
+          <h3 class="text-title-small text-primary">Summary</h3>
+          @if (editingSummary()) {
+            <lib-button variant="primary" size="sm" [isLoading]="savingSummary()" (buttonClick)="saveSummary()">
+              Save
+            </lib-button>
+          } @else if (!summaryLoading()) {
+            <lib-button variant="primary" size="sm" (buttonClick)="startEditSummary()">
+              Edit
+            </lib-button>
+          }
+        </div>
+        <div class="summary-card">
+          @if (summaryLoading()) {
+            <lib-skeleton width="100%" height="80px" variant="rect" />
+          } @else if (editingSummary()) {
+            <lib-textarea
+              [value]="editSummaryValue()"
+              (valueChange)="editSummaryValue.set($event)"
+              placeholder="Enter the lesson summary..."
+              [minRows]="3"
+              ariaLabel="Lesson summary"
+            />
+          } @else if (summary()?.content) {
+            <p class="text-body-medium text-secondary summary-preview">{{ summary()!.content }}</p>
+          } @else {
+            <p class="text-body-medium text-secondary">No summary yet.</p>
+          }
+        </div>
+      </div>
+
+      <!-- Exercises Section -->
+      <div class="lesson-detail__section">
+        <div class="lesson-detail__section-header">
+          <h3 class="text-title-small text-primary">Exercises</h3>
+          <lib-button variant="primary" size="sm" (buttonClick)="navigateToExerciseEditor()">
+            + Add Exercise
+          </lib-button>
+        </div>
+
+        @if (!exercisesLoaded()) {
+          <div class="skeleton-table">
+            @for (_ of [1,2,3]; track $index) {
+              <lib-skeleton width="100%" height="40px" variant="rect" />
+            }
+          </div>
+        } @else if (exercises().length === 0) {
+          <p class="text-body-medium text-secondary empty-text">No exercises yet for this lesson.</p>
+        } @else {
+          <div class="exercise-list">
+            @for (exercise of exercises(); track exercise.id) {
+              <div class="exercise-item">
+                <span class="exercise-item__title text-body-medium">{{ exercise.title }}</span>
+                <lib-badge variant="neutral">{{ getExerciseTypeLabel(exercise.type) }}</lib-badge>
+                <span class="exercise-item__meta text-body-small text-secondary">{{ exercise.questionCount ?? '---' }} questions</span>
+                <div class="exercise-item__actions">
+                  <button
+                    class="icon-btn"
+                    (click)="navigateToExerciseEditor(exercise.id)"
+                    [attr.aria-label]="'Edit Exercise: ' + exercise.title"
+                    title="Edit"
+                  >
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button
+                    class="icon-btn icon-btn--danger"
+                    (click)="confirmDeleteExercise(exercise.id, exercise.title)"
+                    [attr.aria-label]="'Delete Exercise: ' + exercise.title"
+                    title="Delete"
+                  >
+                    <span class="material-icons">delete</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Delete Exercise Confirmation Dialog -->
+    <lib-dialog
+      [open]="deleteDialogOpen()"
+      title="Delete Exercise"
+      icon="warning"
+      iconClass="warning"
+      confirmLabel="Delete"
+      confirmVariant="destructive"
+      [loading]="deleting()"
+      (confirm)="executeDelete()"
+      (cancel)="cancelDelete()"
+    >
+      <p>Are you sure you want to delete <strong>{{ deleteExerciseName() }}</strong>?</p>
+      <p class="text-body-small warning-text">This will also delete all student submissions for this exercise.</p>
+    </lib-dialog>
+
+  current_styles: |
+    :host { display: block }
+
+    .lesson-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .lesson-detail__header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .lesson-detail__title { margin: 0 }
+
+    .lesson-detail__module-badge {
+      padding: 2px 8px;
+      background: var(--neutral-color-2, #f2f2f2);
+      border-radius: 4px;
+    }
+
+    .lesson-detail__section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .lesson-detail__section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .summary-card {
+      padding: 16px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .summary-preview { margin: 0; line-height: 1.6; white-space: pre-wrap }
+
+    // Inline Forms
+    .inline-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    .inline-form--row {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .inline-input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid var(--neutral-color-3, #e0e0e0);
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .inline-input:focus { border-color: var(--primary-color, #00897b) }
+    .inline-input--large { font-size: 18px; padding: 8px 12px }
+
+    // Icon Buttons
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      color: #646464;
+      transition: all 200ms;
+      display: flex;
+      align-items: center;
+    }
+
+    .icon-btn .material-icons { font-size: 18px }
+    .icon-btn:hover { background: #f5f5f5; color: #1a1a1a }
+    .icon-btn--danger { color: #c62828 }
+    .icon-btn--danger:hover { background: #ffebee }
+
+    // Exercise List
+    .exercise-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .exercise-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--neutral-color-2, #f2f2f2);
+      transition: background 200ms;
+    }
+
+    .exercise-item:last-child { border-bottom: none }
+    .exercise-item:hover { background: #f8f8f8 }
+
+    .exercise-item__title { font-weight: 500; flex: 1; min-width: 0 }
+    .exercise-item__meta { white-space: nowrap }
+    .exercise-item__actions { display: flex; gap: 4px; margin-left: auto }
+
+    // Misc
+    .skeleton-table {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px 0;
+    }
+
+    .empty-text { padding: 8px 16px; text-align: center }
+    .warning-text { color: #e86722; margin-top: 4px }
+
+  acceptance_criteria:
+    - Summary and exercises load on lesson selection
+    - Summary content displays full text (no truncation) in view mode
+    - "No summary yet." shown when no summary exists
+    - Edit button (primary) in summary header row toggles inline editing
+    - Summary textarea shows current content when editing
+    - Summary textarea auto-resizes height to fit content (no fixed rows, no manual resize handle)
+    - Save button replaces Edit button during editing, calls createOrUpdate API
+    - Summary updates inline on save success without page navigation
+    - Inline title editing works with save/cancel
+    - Exercises displayed as a vertical list (not table) with type badges
+    - Edit and delete buttons grouped at the right end of each exercise item
+    - Delete button has persistent red color (not hover-only)
+    - Exercise delete confirmation dialog works
+    - Back button emits back event
+    - "Add Exercise" navigates to exercise editor
+    - Loading skeletons shown during data fetch
