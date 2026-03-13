@@ -1,19 +1,8 @@
 {
-  "/mercury": {
-    "target": "https://dev.api.salonfriday.com",
+  "/api": {
+    "target": "https://libforgzbe-7006272624.asia-southeast1.run.app",
     "secure": false,
     "changeOrigin": true,
     "ws": true
-  },
-  "/chronos": {
-    "target": "https://dev.api.salonfriday.com",
-    "secure": false,
-    "changeOrigin": true,
-    "ws": true
-  },
-  "/identity": {
-    "target": "https://dev.api.salonfriday.com",
-    "secure": false,
-    "changeOrigin": true
   }
 }
