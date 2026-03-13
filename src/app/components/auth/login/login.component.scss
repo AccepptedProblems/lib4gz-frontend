@@ -106,3 +106,19 @@
     opacity: 1;
   }
 }
+
+.login-register-link {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  color: var(--neutral-color-6);
+
+  a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
