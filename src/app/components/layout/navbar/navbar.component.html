@@ -10,12 +10,31 @@
       <span class="material-symbols-outlined">notifications</span>
     </button>
 
-    <button
-      class="navbar-avatar"
-      type="button"
-      aria-label="User menu"
-    >
-      <span class="avatar-initials">U</span>
-    </button>
+    <div class="avatar-wrapper">
+      <button
+        class="navbar-avatar"
+        type="button"
+        aria-label="User menu"
+        [attr.aria-expanded]="avatarMenuOpen()"
+        (click)="toggleAvatarMenu($event)"
+      >
+        <span class="avatar-initials">{{ userInitial }}</span>
+      </button>
+
+      @if (avatarMenuOpen()) {
+        <div class="avatar-menu" role="menu" (click)="$event.stopPropagation()">
+          <span class="avatar-menu-username">{{ userName }}</span>
+          <button
+            class="avatar-menu-item"
+            type="button"
+            role="menuitem"
+            (click)="logout()"
+          >
+            <span class="material-symbols-outlined">logout</span>
+            Log out
+          </button>
+        </div>
+      }
+    </div>
   </div>
 </nav>
