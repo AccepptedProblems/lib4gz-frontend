@@ -65,7 +65,7 @@
       <span class="tab-count">{{ createdCourses().length }}</span>
     </button>
     <div class="tab-spacer"></div>
-    @if (activeTab() === 'created') {
+    @if (activeTab() === 'created' && canCreateCourse()) {
       <lib-button variant="primary" size="sm" (buttonClick)="openCreateDialog()">
         + Create Course
       </lib-button>
@@ -205,9 +205,10 @@
 </lib-dialog>
 
 <!-- Course Preview Dialog -->
+<div class="apply-course-dialog">
 <lib-dialog
   [open]="showCoursePreview()"
-  title="Course Details"
+  title="Apply Course"
   confirmLabel="Apply"
   cancelLabel="Cancel"
   [loading]="isApplying()"
@@ -217,23 +218,33 @@
   @if (previewCourse(); as course) {
     <div class="course-preview">
       <h3 class="text-title-large course-preview-title">{{ course.title }}</h3>
-      <span class="course-code-chip text-label-medium">CODE {{ course.code }}</span>
       @if (course.description) {
         <p class="text-body-medium course-preview-desc">{{ course.description }}</p>
       }
       <div class="course-meta-grid">
-        <span class="meta-key text-label-medium">Instructor</span>
-        <span class="meta-value text-body-medium">{{ course.createdBy.name }}</span>
-        <span class="meta-key text-label-medium">Modules</span>
-        <span class="meta-value text-body-medium">{{ course.moduleCount ?? '—' }}</span>
-        <span class="meta-key text-label-medium">Students</span>
-        <span class="meta-value text-body-medium">{{ course.enrollmentCount ?? '—' }}</span>
-        <span class="meta-key text-label-medium">Visibility</span>
-        <span class="meta-value text-body-medium">{{ course.visibility }}</span>
+        <div class="meta-col">
+          <span class="meta-key text-label-medium">Instructor</span>
+          <span class="meta-value text-body-medium">{{ course.createdBy.name }}</span>
+        </div>
+        <div class="meta-col">
+          <span class="meta-key text-label-medium">Modules</span>
+          <span class="meta-value text-body-medium">{{ course.moduleCount ?? '—' }}</span>
+        </div>
+        <div class="meta-col">
+          <span class="meta-key text-label-medium">Students</span>
+          <span class="meta-value text-body-medium">{{ course.enrollmentCount ?? '—' }}</span>
+        </div>
       </div>
-      @if (applyError()) {
-        <p class="apply-error text-body-medium">{{ applyError() }}</p>
+      @if (applySuccess()) {
+        <p class="apply-feedback apply-feedback--success text-body-medium">
+          Your request has been sent successfully.
+        </p>
+      } @else if (applyError()) {
+        <p class="apply-feedback apply-feedback--error text-body-medium">
+          {{ applyError() }}
+        </p>
       }
     </div>
   }
 </lib-dialog>
+</div>

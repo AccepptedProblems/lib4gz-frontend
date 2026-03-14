@@ -1,3 +1,5 @@
+import { UserRole } from './enums';
+
 export interface UserCreationRequest {
   username: string;
   email: string;
@@ -18,6 +20,7 @@ export interface UserResponse {
   id: string;
   username: string;
   email: string;
+  role: UserRole;
 }
 
 export interface LoginResponse {

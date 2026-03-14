@@ -7,7 +7,8 @@ import {
   UserResponse,
   LoginRequest,
   LoginResponse,
-  Token
+  Token,
+  UserRole
 } from '../shared/models';
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +36,7 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('token_expiry');
     localStorage.removeItem('user_name');
+    localStorage.removeItem('user_role');
   }
 
   isAuthenticated(): boolean {
@@ -56,9 +58,18 @@ export class AuthService {
     return localStorage.getItem('user_name') ?? '';
   }
 
+  getUserRole(): UserRole {
+    return (localStorage.getItem('user_role') as UserRole) ?? UserRole.USER;
+  }
+
+  hasRole(...roles: UserRole[]): boolean {
+    return roles.includes(this.getUserRole());
+  }
+
   private storeLoginData(response: LoginResponse): void {
     this.storeToken(response.accessToken);
     localStorage.setItem('user_name', response.user.username);
+    localStorage.setItem('user_role', response.user.role);
   }
 
   private storeToken(token: Token): void {

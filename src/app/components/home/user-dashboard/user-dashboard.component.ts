@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CourseService } from '../../../services/course.service';
 import { EnrollmentService } from '../../../services/enrollment.service';
 import { AuthService } from '../../../services/auth.service';
-import { CourseResponse, Visibility } from '../../../shared/models';
+import { CourseResponse, Visibility, UserRole } from '../../../shared/models';
 import { ButtonComponent, DialogComponent, InputComponent, TextareaComponent } from '../../../shared/components';
 
 type Tab = 'enrolled' | 'created';
@@ -46,6 +46,9 @@ export class UserDashboardComponent implements OnInit {
   previewCourse = signal<CourseResponse | null>(null);
   isApplying = signal(false);
   applyError = signal('');
+  applySuccess = signal(false);
+
+  canCreateCourse = computed(() => this.authService.hasRole(UserRole.TEACHER, UserRole.ADMIN));
 
   createForm = this.fb.nonNullable.group({
     title: ['', Validators.required],
@@ -192,15 +195,19 @@ export class UserDashboardComponent implements OnInit {
     if (!course) return;
     this.isApplying.set(true);
     this.applyError.set('');
+    this.applySuccess.set(false);
     this.enrollmentService.enroll(course.id).subscribe({
       next: () => {
         this.isApplying.set(false);
-        this.showCoursePreview.set(false);
-        this.previewCourse.set(null);
-        this.searchCodeInput.set('');
-        this.searchSubject.next('');
+        this.applySuccess.set(true);
         this.loadCourses();
-        this.router.navigate(['/course', course.id]);
+        setTimeout(() => {
+          this.showCoursePreview.set(false);
+          this.previewCourse.set(null);
+          this.applySuccess.set(false);
+          this.searchCodeInput.set('');
+          this.searchSubject.next('');
+        }, 1500);
       },
       error: err => {
         this.isApplying.set(false);
@@ -213,6 +220,7 @@ export class UserDashboardComponent implements OnInit {
     this.showCoursePreview.set(false);
     this.previewCourse.set(null);
     this.applyError.set('');
+    this.applySuccess.set(false);
   }
 
   retry(): void {
