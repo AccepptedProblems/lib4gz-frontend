@@ -1,13 +1,12 @@
 import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, Observable, Subject, of } from 'rxjs';
+import { forkJoin, Subject, of } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ExerciseService, QuestionService, SubmissionService } from '../../../services';
+import { ExerciseService, SubmissionService } from '../../../services';
 import {
   ExerciseResponse,
   QuestionResponse,
-  SubmissionResponse,
   AnswerRequest,
   ExerciseType,
 } from '../../../shared/models';
@@ -15,6 +14,7 @@ import {
   ButtonComponent,
   SpinnerComponent,
   DialogComponent,
+  SideSheetComponent,
   TextareaComponent,
 } from '../../../shared/components';
 
@@ -26,6 +26,7 @@ type ScreenState = 'loading' | 'loaded' | 'error' | 'no-exercises';
     ButtonComponent,
     SpinnerComponent,
     DialogComponent,
+    SideSheetComponent,
     TextareaComponent,
   ],
   templateUrl: './exercise-attempt.component.html',
@@ -36,7 +37,6 @@ export class ExerciseAttemptComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly exerciseService = inject(ExerciseService);
-  private readonly questionService = inject(QuestionService);
   private readonly submissionService = inject(SubmissionService);
 
   // Expose enum
@@ -331,87 +331,72 @@ export class ExerciseAttemptComponent implements OnInit {
   }
 
   private navigateBack(): void {
-    this.router.navigate(['/course', this.courseId(), 'lesson', this.lessonId()], {
-      queryParams: { tab: 'exercises', prefix: this.lessonPrefix() || undefined },
+    this.router.navigate(['/course', this.courseId(), 'lesson', this.lessonId(), 'exercises'], {
+      queryParams: { prefix: this.lessonPrefix() || undefined },
     });
   }
 
+  /**
+   * Single round-trip: each exercise arrives with its questions and the caller's
+   * draft submission (if any). Replaces the previous 1 + 2N fan-out.
+   */
   private loadExercises(lessonId: string): void {
     this.screenState.set('loading');
     this.errorMessage.set('');
 
-    this.exerciseService.listByLesson(lessonId).subscribe({
-      next: exercises => {
-        const sorted = [...exercises].sort((a, b) => a.orderIndex - b.orderIndex);
-        if (sorted.length === 0) {
-          this.screenState.set('no-exercises');
-          return;
-        }
-        this.exercises.set(sorted);
-        this.activeExerciseIndex.set(0);
-        this.loadQuestionsAndSubmissions(sorted);
-      },
-      error: err => {
-        this.errorMessage.set(err.error?.message || 'Failed to load exercises. Please try again.');
-        this.screenState.set('error');
-      },
-    });
+    this.exerciseService
+      .listByLesson(lessonId, { expand: ['questions', 'mySubmission'] })
+      .subscribe({
+        next: exercises => {
+          const sorted = [...exercises].sort((a, b) => a.orderIndex - b.orderIndex);
+          if (sorted.length === 0) {
+            this.screenState.set('no-exercises');
+            return;
+          }
+          this.exercises.set(sorted);
+          this.activeExerciseIndex.set(0);
+          this.hydrateFromExpandedExercises(sorted);
+          this.screenState.set('loaded');
+        },
+        error: err => {
+          this.errorMessage.set(err.error?.message || 'Failed to load exercises. Please try again.');
+          this.screenState.set('error');
+        },
+      });
   }
 
-  private loadQuestionsAndSubmissions(exercises: ExerciseResponse[]): void {
-    const questionCalls: Record<string, ReturnType<QuestionService['listByExercise']>> = {};
-    const submissionCalls: Record<string, Observable<SubmissionResponse | null>> = {};
+  /**
+   * Splits the composite exercise payload into the three local maps the screen
+   * already uses (questionsMap, answersMap, submissionIds). Keeping the same data
+   * shapes minimises ripple through the rest of the component.
+   */
+  private hydrateFromExpandedExercises(exercises: ExerciseResponse[]): void {
+    const qMap = new Map<string, QuestionResponse[]>();
+    const aMap = new Map<string, Map<string, string>>();
+    const sIds = new Map<string, string>();
 
     exercises.forEach(ex => {
-      questionCalls[ex.id] = this.questionService.listByExercise(ex.id);
-      submissionCalls[ex.id] = this.submissionService.getMySubmission(ex.id).pipe(
-        catchError(() => of(null))
-      );
-    });
+      const questions = (ex.questions ?? []).slice().sort((a, b) => a.orderIndex - b.orderIndex);
+      qMap.set(ex.id, questions);
 
-    forkJoin({
-      questions: forkJoin(questionCalls),
-      submissions: forkJoin(submissionCalls),
-    }).subscribe({
-      next: ({ questions, submissions }) => {
-        // Populate questionsMap
-        const qMap = new Map<string, QuestionResponse[]>();
-        Object.entries(questions).forEach(([exId, qs]) => {
-          const sorted = [...(qs as QuestionResponse[])].sort((a, b) => a.orderIndex - b.orderIndex);
-          qMap.set(exId, sorted);
-        });
-        this.questionsMap.set(qMap);
-
-        // Populate answersMap and submissionIds from existing submissions
-        const aMap = new Map<string, Map<string, string>>();
-        const sIds = new Map<string, string>();
-
-        Object.entries(submissions).forEach(([exId, sub]) => {
-          const typedSub = sub as SubmissionResponse | null;
-          if (typedSub) {
-            sIds.set(exId, typedSub.id);
-            // Populate answers from any existing submission so learners
-            // always see their previous answers when re-attempting
-            if (typedSub.answers) {
-              const answerMap = new Map<string, string>();
-              typedSub.answers.forEach(a => {
-                if (a.answer !== null) {
-                  answerMap.set(a.questionId, a.answer);
-                }
-              });
-              aMap.set(exId, answerMap);
+      const sub = ex.mySubmission ?? null;
+      if (sub) {
+        sIds.set(ex.id, sub.id);
+        if (sub.answers) {
+          const answerMap = new Map<string, string>();
+          sub.answers.forEach(a => {
+            if (a.answer !== null) {
+              answerMap.set(a.questionId, a.answer);
             }
-          }
-        });
-        this.answersMap.set(aMap);
-        this.submissionIds.set(sIds);
-        this.screenState.set('loaded');
-      },
-      error: err => {
-        this.errorMessage.set(err.error?.message || 'Failed to load questions. Please try again.');
-        this.screenState.set('error');
-      },
+          });
+          aMap.set(ex.id, answerMap);
+        }
+      }
     });
+
+    this.questionsMap.set(qMap);
+    this.answersMap.set(aMap);
+    this.submissionIds.set(sIds);
   }
 
   private saveDraft(exerciseId: string) {

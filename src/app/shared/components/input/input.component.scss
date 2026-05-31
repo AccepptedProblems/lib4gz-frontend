@@ -15,10 +15,19 @@
       border: 1px solid var(--input-border-color);
       background: transparent;
       outline: none;
-      transition: border-color var(--duration-normal) var(--easing-ease-in-out);
+      transition:
+        border-color var(--duration-normal) var(--easing-ease-in-out),
+        box-shadow var(--duration-normal) var(--easing-ease-in-out);
+
+      &:focus-visible {
+        border-color: var(--input-border-color-focus);
+        box-shadow:
+          0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+          0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
+      }
 
       &:disabled {
-        opacity: 0.6;
+        opacity: var(--opacity-disabled);
         cursor: not-allowed;
       }
     }
@@ -117,7 +126,7 @@
 
   // ── Disabled state ──
   &.disabled {
-    opacity: 0.6;
+    opacity: var(--opacity-disabled);
     pointer-events: none;
   }
 

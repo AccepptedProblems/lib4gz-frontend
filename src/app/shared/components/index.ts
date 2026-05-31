@@ -9,3 +9,5 @@ export * from './dialog/dialog.component';
 export * from './toast/toast.component';
 export * from './chip/chip.component';
 export * from './textarea/textarea.component';
+export * from './empty-state/empty-state.component';
+export * from './side-sheet/side-sheet.component';

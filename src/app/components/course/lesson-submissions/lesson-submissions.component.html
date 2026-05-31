@@ -1,0 +1,103 @@
+@if (!isTeacher()) {
+  <lib-empty-state
+    icon="lock"
+    message="Submissions are only visible to teachers."
+    role="status"
+  />
+} @else if (loading()) {
+  <div class="exercise-skeletons">
+    <lib-skeleton width="100%" height="80px" variant="rect" />
+    <lib-skeleton width="100%" height="80px" variant="rect" />
+  </div>
+} @else if (sortedExercises().length === 0) {
+  <p class="text-body-medium text-secondary">No exercises available for this lesson.</p>
+} @else {
+  <div class="exercise-list">
+    @for (exercise of sortedExercises(); track exercise.id) {
+      <div
+        class="exercise-card exercise-card--clickable"
+        [class.exercise-card--selected]="expandedExerciseId() === exercise.id"
+        (click)="toggleExerciseExpand(exercise)"
+      >
+        <div class="exercise-card__header">
+          <span
+            class="material-icons exercise-card__chevron"
+            [class.exercise-card__chevron--expanded]="expandedExerciseId() === exercise.id"
+          >chevron_right</span>
+          <span class="text-title-medium exercise-card__title">{{ exercise.title }}</span>
+          <lib-chip
+            [label]="submissionsCount(exercise.id) + ' ' + (submissionsCount(exercise.id) === 1 ? 'Submission' : 'Submissions')"
+            [value]="'count'"
+            variant="neutral"
+            [selected]="true"
+          />
+        </div>
+        <p class="text-body-medium text-secondary exercise-card__meta">
+          {{ getExerciseTypeLabel(exercise.type) }} · {{ questionsFor(exercise.id).length }} {{ questionsFor(exercise.id).length === 1 ? 'Question' : 'Questions' }}
+        </p>
+
+        @if (expandedExerciseId() === exercise.id) {
+          <div class="exercise-card__questions" (click)="$event.stopPropagation()">
+            @if (questionsFor(exercise.id).length === 0) {
+              <p class="text-body-medium text-secondary">No questions in this exercise.</p>
+            } @else {
+              @for (question of questionsFor(exercise.id); track question.id; let qi = $index) {
+                <div
+                  class="question-item"
+                  [class.question-item--active]="drawerQuestionId() === question.id"
+                  (click)="openQuestionDrawer(question, exercise)"
+                >
+                  <span class="text-body-medium">{{ qi + 1 }}. {{ question.content }}</span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<lib-side-sheet
+  [open]="drawerOpen()"
+  title="Submissions"
+  size="md"
+  (close)="closeDrawer()"
+>
+  <div class="submission-drawer__body">
+    @if (drawerQuestionContent()) {
+      <div class="submission-drawer__question">
+        <span class="text-label-small text-secondary submission-drawer__question-label">Question</span>
+        <p class="text-body-medium submission-drawer__question-content">{{ drawerQuestionContent() }}</p>
+      </div>
+    }
+    @if (drawerSubmissions().length === 0) {
+      <p class="text-body-medium text-secondary">No submissions yet.</p>
+    } @else {
+      @for (sub of drawerSubmissions(); track sub.id) {
+        <div class="submission-message">
+          <div class="submission-message__header">
+            <span class="text-title-small">{{ sub.user.name }}</span>
+            <lib-chip
+              [label]="getSubmissionStatusLabel(sub)"
+              [value]="sub.status"
+              [variant]="getSubmissionChipVariant(sub)"
+              [selected]="true"
+            />
+          </div>
+          <div class="submission-message__answer">
+            @if (getAnswerForQuestion(sub); as answer) {
+              @if (answer.answer) {
+                <span class="text-body-medium">{{ answer.answer }}</span>
+              } @else {
+                <em class="text-body-medium text-secondary">(no answer)</em>
+              }
+            } @else {
+              <em class="text-body-medium text-secondary">(no answer)</em>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</lib-side-sheet>

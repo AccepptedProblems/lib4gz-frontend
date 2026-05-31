@@ -311,15 +311,12 @@
   </div>
 }
 
-<!-- Fast Create Dialog -->
-<lib-dialog
+<!-- Fast Create (side-sheet — keeps the question list visible while pasting) -->
+<lib-side-sheet
   [open]="showFastCreate()"
-  title="⚡ Fast Create"
-  [confirmLabel]="'Add ' + parsedQuestions().length + ' Questions'"
-  cancelLabel="Cancel"
-  width="600px"
-  (confirm)="confirmFastCreate()"
-  (cancel)="cancelFastCreate()"
+  title="Fast Create Questions"
+  size="md"
+  (close)="cancelFastCreate()"
 >
   <div class="fast-create-content">
     <lib-textarea
@@ -330,7 +327,14 @@
       (valueChange)="onFastCreateInput($event)"
     />
   </div>
-</lib-dialog>
+
+  <div sideSheetFooter>
+    <lib-button variant="secondary" size="md" (buttonClick)="cancelFastCreate()">Cancel</lib-button>
+    <lib-button variant="primary" size="md" (buttonClick)="confirmFastCreate()">
+      Add {{ parsedQuestions().length }} Questions
+    </lib-button>
+  </div>
+</lib-side-sheet>
 
 <!-- Unsaved Changes Dialog -->
 <lib-dialog

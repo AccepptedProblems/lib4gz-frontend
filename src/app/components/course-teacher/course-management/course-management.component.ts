@@ -29,6 +29,7 @@ import {
   SkeletonComponent,
   BadgeComponent,
   DialogComponent,
+  EmptyStateComponent,
   TextareaComponent,
 } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
@@ -72,6 +73,7 @@ interface SubmissionWithExercise extends SubmissionResponse {
     SkeletonComponent,
     BadgeComponent,
     DialogComponent,
+    EmptyStateComponent,
     TextareaComponent,
     LessonDetailManagementComponent,
     EnrollmentManagementComponent,
@@ -162,7 +164,6 @@ export class CourseManagementComponent implements OnInit {
   navItems = computed<SidebarNavItem[]>(() => [
     { id: 'course-material', label: 'Course Material', icon: 'menu_book', badge: null },
     { id: 'enrollment', label: 'Enrollment', icon: 'group', badge: this.pendingEnrollmentCount() || null },
-    { id: 'submissions', label: 'Submissions', icon: 'assignment', badge: null },
   ]);
 
   totalLessonCount = computed(() => {

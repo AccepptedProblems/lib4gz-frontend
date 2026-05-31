@@ -10,3 +10,5 @@ export * from './summary.model';
 export * from './exercise.model';
 export * from './question.model';
 export * from './submission.model';
+export * from './syllabus.model';
+export * from './lesson-submissions.model';

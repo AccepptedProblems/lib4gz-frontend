@@ -73,7 +73,7 @@
           ariaLabel="Lesson summary"
         />
       } @else if (summary()?.content) {
-        <p class="text-body-medium text-secondary summary-preview">{{ summary()!.content }}</p>
+        <p class="text-body-medium text-secondary summary-preview" [innerHTML]="summary()!.content | linkify"></p>
       } @else {
         <p class="text-body-medium text-secondary">No summary yet.</p>
       }

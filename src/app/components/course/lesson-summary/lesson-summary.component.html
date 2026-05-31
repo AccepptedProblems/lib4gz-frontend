@@ -1,0 +1,15 @@
+@if (loading()) {
+  <div class="summary-skeleton">
+    <lib-skeleton width="100%" height="16px" />
+    <lib-skeleton width="90%" height="16px" />
+    <lib-skeleton width="95%" height="16px" />
+    <lib-skeleton width="70%" height="16px" />
+    <lib-skeleton width="100%" height="200px" variant="rect" />
+  </div>
+} @else if (summary()) {
+  <div class="summary-content text-body-medium text-primary" [innerHTML]="summary()!.content | linkify"></div>
+} @else if (error()) {
+  <p class="text-body-medium text-secondary">Failed to load summary.</p>
+} @else {
+  <p class="text-body-medium text-secondary">No summary available for this lesson.</p>
+}

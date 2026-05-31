@@ -15,6 +15,7 @@ import {
   BadgeComponent,
   DialogComponent,
   ChipComponent,
+  EmptyStateComponent,
   SpinnerComponent,
 } from '../../../../shared/components';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
@@ -27,6 +28,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
     BadgeComponent,
     DialogComponent,
     ChipComponent,
+    EmptyStateComponent,
     SpinnerComponent,
   ],
   templateUrl: './enrollment-management.component.html',
@@ -84,7 +86,11 @@ export class EnrollmentManagementComponent implements OnInit {
     if (status !== 'All') {
       list = list.filter(e => e.status === status);
     }
-    return list;
+    return [...list].sort((a, b) => {
+      const aPending = a.status === EnrollmentStatus.PENDING ? 0 : 1;
+      const bPending = b.status === EnrollmentStatus.PENDING ? 0 : 1;
+      return aPending - bPending;
+    });
   });
 
   paginatedEnrollments = computed(() => {

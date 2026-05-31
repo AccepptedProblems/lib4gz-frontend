@@ -7,3 +7,4 @@ export * from './summary.service';
 export * from './exercise.service';
 export * from './question.service';
 export * from './submission.service';
+export * from './me.service';

@@ -8,10 +8,10 @@
   } @else {
     <!-- Module List -->
     @if (modulesWithLessons().length === 0 && !showAddModuleForm()) {
-      <div class="empty-state">
-        <span class="material-icons empty-icon">folder_open</span>
-        <p class="text-body-large text-secondary">No modules yet. Create your first module to start building your course.</p>
-      </div>
+      <lib-empty-state
+        icon="folder_open"
+        message="No modules yet. Create your first module to start building your course."
+      />
     }
 
     @for (mwl of modulesWithLessons(); track mwl.module.id; let mi = $index) {
@@ -73,14 +73,6 @@
         <!-- Module Body (lessons) -->
         @if (mwl.expanded) {
           <div class="module-body" [id]="'module-body-' + mwl.module.id">
-            @if (!mwl.lessonsLoaded) {
-              <div class="lesson-skeletons">
-                <lib-skeleton width="80%" height="14px" />
-                <lib-skeleton width="60%" height="14px" />
-                <lib-skeleton width="70%" height="14px" />
-              </div>
-            }
-
             @for (lesson of mwl.lessons; track lesson.id; let li = $index) {
               <div class="lesson-row">
                 <div class="lesson-row__main">
@@ -136,7 +128,7 @@
               </div>
             }
 
-            @if (mwl.lessonsLoaded && mwl.lessons.length === 0) {
+            @if (mwl.lessons.length === 0) {
               <p class="text-body-medium text-secondary empty-text">No lessons in this module yet.</p>
             }
 

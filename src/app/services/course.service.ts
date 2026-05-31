@@ -6,7 +6,8 @@ import {
   CreateCourseRequest,
   UpdateCourseRequest,
   CourseResponse,
-  CourseListType
+  CourseListType,
+  SyllabusResponse
 } from '../shared/models';
 
 @Injectable({ providedIn: 'root' })
@@ -40,5 +41,13 @@ export class CourseService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /**
+   * One-shot course shell load: course + my enrollment + modules + lessons.
+   * Replaces the 4-RTT fan-out used by `CourseLayout` / `CourseHome` / `CourseMaterial`.
+   */
+  getSyllabus(id: string): Observable<SyllabusResponse> {
+    return this.http.get<SyllabusResponse>(`${this.baseUrl}/${id}/syllabus`);
   }
 }

@@ -1,27 +1,38 @@
-import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
+import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  CourseService,
   ModuleService,
   LessonService,
 } from '../../../services';
 import {
-  ModuleResponse,
   LessonResponse,
+  ModuleResponse,
+  SyllabusModule,
 } from '../../../shared/models';
 import {
   ButtonComponent,
   SkeletonComponent,
   DialogComponent,
+  EmptyStateComponent,
 } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 
+/**
+ * Teacher screen for managing modules and lessons.
+ *
+ * Initial load uses the syllabus aggregate (`GET /v1/courses/{id}/syllabus`) so all
+ * modules and their lessons arrive in a single response — no lazy expand-time fetch.
+ * Mutations still hit the granular endpoints (module create/update/delete, lesson
+ * create/update/delete) because they need their own validation and idempotency
+ * semantics — we deliberately did not merge them.
+ */
 interface ModuleWithLessons {
   module: ModuleResponse;
   lessons: LessonResponse[];
   expanded: boolean;
-  lessonsLoaded: boolean;
 }
 
 @Component({
@@ -31,6 +42,7 @@ interface ModuleWithLessons {
     ButtonComponent,
     SkeletonComponent,
     DialogComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './course-material.component.html',
   styleUrl: './course-material.component.scss',
@@ -39,6 +51,7 @@ export class CourseMaterialComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly courseService = inject(CourseService);
   private readonly moduleService = inject(ModuleService);
   private readonly lessonService = inject(LessonService);
   private readonly toast = inject(ToastService);
@@ -47,7 +60,6 @@ export class CourseMaterialComponent implements OnInit {
   modulesWithLessons = signal<ModuleWithLessons[]>([]);
   loading = signal(true);
 
-  // Inline forms
   showAddModuleForm = signal(false);
   newModuleTitle = signal('');
   addingModule = signal(false);
@@ -64,7 +76,6 @@ export class CourseMaterialComponent implements OnInit {
   editLessonTitle = signal('');
   savingLesson = signal(false);
 
-  // Delete dialog
   deleteDialogOpen = signal(false);
   deleteType = signal<'module' | 'lesson'>('module');
   deleteEntityName = signal('');
@@ -77,22 +88,17 @@ export class CourseMaterialComponent implements OnInit {
       const id = params.get('id');
       if (id && id !== this.courseId()) {
         this.courseId.set(id);
-        this.loadModules(id);
+        this.loadSyllabus(id);
       }
     });
   }
 
   toggleModule(index: number): void {
-    const modules = [...this.modulesWithLessons()];
-    const m = modules[index];
-    modules[index] = { ...m, expanded: !m.expanded };
-
-    if (!m.expanded && !m.lessonsLoaded) {
-      this.modulesWithLessons.set(modules);
-      this.loadLessonsForModule(index, m.module.id);
-      return;
-    }
-    this.modulesWithLessons.set(modules);
+    this.modulesWithLessons.update(mods => {
+      const next = [...mods];
+      next[index] = { ...next[index], expanded: !next[index].expanded };
+      return next;
+    });
   }
 
   showAddModule(): void {
@@ -115,7 +121,6 @@ export class CourseMaterialComponent implements OnInit {
           module: newModule,
           lessons: [],
           expanded: false,
-          lessonsLoaded: true,
         }]);
         this.showAddModuleForm.set(false);
         this.newModuleTitle.set('');
@@ -144,9 +149,11 @@ export class CourseMaterialComponent implements OnInit {
     this.savingModule.set(true);
     this.moduleService.update(moduleId, { title }).subscribe({
       next: updated => {
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = { ...modules[moduleIndex], module: updated };
-        this.modulesWithLessons.set(modules);
+        this.modulesWithLessons.update(mods => {
+          const next = [...mods];
+          next[moduleIndex] = { ...next[moduleIndex], module: updated };
+          return next;
+        });
         this.editingModuleId.set(null);
         this.savingModule.set(false);
         this.toast.success('Module updated');
@@ -174,12 +181,14 @@ export class CourseMaterialComponent implements OnInit {
     this.addingLesson.set(true);
     this.lessonService.create(moduleId, { title }).subscribe({
       next: newLesson => {
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = {
-          ...modules[moduleIndex],
-          lessons: [...modules[moduleIndex].lessons, newLesson],
-        };
-        this.modulesWithLessons.set(modules);
+        this.modulesWithLessons.update(mods => {
+          const next = [...mods];
+          next[moduleIndex] = {
+            ...next[moduleIndex],
+            lessons: [...next[moduleIndex].lessons, newLesson],
+          };
+          return next;
+        });
         this.addingLessonModuleId.set(null);
         this.newLessonTitle.set('');
         this.addingLesson.set(false);
@@ -207,11 +216,13 @@ export class CourseMaterialComponent implements OnInit {
     this.savingLesson.set(true);
     this.lessonService.update(lessonId, { title }).subscribe({
       next: updated => {
-        const modules = [...this.modulesWithLessons()];
-        const lessons = [...modules[moduleIndex].lessons];
-        lessons[lessonIndex] = updated;
-        modules[moduleIndex] = { ...modules[moduleIndex], lessons };
-        this.modulesWithLessons.set(modules);
+        this.modulesWithLessons.update(mods => {
+          const next = [...mods];
+          const lessons = [...next[moduleIndex].lessons];
+          lessons[lessonIndex] = updated;
+          next[moduleIndex] = { ...next[moduleIndex], lessons };
+          return next;
+        });
         this.editingLessonId.set(null);
         this.savingLesson.set(false);
         this.toast.success('Lesson updated');
@@ -285,47 +296,36 @@ export class CourseMaterialComponent implements OnInit {
     this.toast.error(msg);
   }
 
-  private loadModules(courseId: string): void {
+  /**
+   * Single round-trip: course + all modules + all lessons.
+   * Replaces the previous `listByCourse` + per-module lazy load.
+   */
+  private loadSyllabus(courseId: string): void {
     this.loading.set(true);
-    this.moduleService.listByCourse(courseId).subscribe({
-      next: modules => {
-        const sorted = [...modules].sort((a, b) => a.orderIndex - b.orderIndex);
-        const modulesWithLessons: ModuleWithLessons[] = sorted.map((m, i) => ({
-          module: m,
-          lessons: [],
-          expanded: i === 0,
-          lessonsLoaded: false,
-        }));
-        this.modulesWithLessons.set(modulesWithLessons);
+    this.courseService.getSyllabus(courseId).subscribe({
+      next: ({ modules }) => {
+        this.modulesWithLessons.set(modules.map((m, i) => toRow(m, i === 0)));
         this.loading.set(false);
-
-        if (sorted.length > 0) {
-          this.loadLessonsForModule(0, sorted[0].id);
-        }
       },
       error: () => {
         this.loading.set(false);
       },
     });
   }
+}
 
-  private loadLessonsForModule(moduleIndex: number, moduleId: string): void {
-    this.lessonService.listByModule(moduleId).subscribe({
-      next: lessons => {
-        const sorted = [...lessons].sort((a, b) => a.orderIndex - b.orderIndex);
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = {
-          ...modules[moduleIndex],
-          lessons: sorted,
-          lessonsLoaded: true,
-        };
-        this.modulesWithLessons.set(modules);
-      },
-      error: () => {
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = { ...modules[moduleIndex], lessonsLoaded: true };
-        this.modulesWithLessons.set(modules);
-      },
-    });
-  }
+function toRow(module: SyllabusModule, expanded: boolean): ModuleWithLessons {
+  return {
+    module: {
+      id: module.id,
+      courseId: module.courseId,
+      title: module.title,
+      orderIndex: module.orderIndex,
+      lessonCount: module.lessonCount,
+      createdAt: module.createdAt,
+      updatedAt: module.updatedAt,
+    },
+    lessons: module.lessons,
+    expanded,
+  };
 }

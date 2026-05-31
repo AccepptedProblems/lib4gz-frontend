@@ -6,14 +6,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CourseService } from '../../../services/course.service';
 import { EnrollmentService } from '../../../services/enrollment.service';
 import { AuthService } from '../../../services/auth.service';
+import { MeService } from '../../../services/me.service';
 import { CourseResponse, Visibility, UserRole } from '../../../shared/models';
-import { ButtonComponent, DialogComponent, InputComponent, TextareaComponent } from '../../../shared/components';
+import { ButtonComponent, EmptyStateComponent, InputComponent, SideSheetComponent, SkeletonComponent, TextareaComponent } from '../../../shared/components';
+import { ToastService } from '../../../shared/components/toast/toast.component';
 
 type Tab = 'enrolled' | 'created';
 
 @Component({
   selector: 'app-user-dashboard',
-  imports: [ReactiveFormsModule, ButtonComponent, DialogComponent, InputComponent, TextareaComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, EmptyStateComponent, InputComponent, SideSheetComponent, SkeletonComponent, TextareaComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.scss'
 })
@@ -21,9 +23,11 @@ export class UserDashboardComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly enrollmentService = inject(EnrollmentService);
   private readonly authService = inject(AuthService);
+  private readonly meService = inject(MeService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
 
   readonly visibilityOptions = Object.values(Visibility);
 
@@ -181,11 +185,13 @@ export class UserDashboardComponent implements OnInit {
         this.isCreating.set(false);
         this.showCreateDialog.set(false);
         this.createForm.reset({ title: '', description: '', visibility: Visibility.PUBLIC });
+        this.toast.success('Course created successfully');
         this.router.navigate(['/course', course.id, 'manage']);
       },
       error: err => {
         this.isCreating.set(false);
         this.createError.set(err.error?.message || 'Failed to create course. Please try again.');
+        this.toast.error('Failed to create course');
       }
     });
   }
@@ -200,6 +206,7 @@ export class UserDashboardComponent implements OnInit {
       next: () => {
         this.isApplying.set(false);
         this.applySuccess.set(true);
+        this.toast.success('Enrollment request sent');
         this.loadCourses();
         setTimeout(() => {
           this.showCoursePreview.set(false);
@@ -212,6 +219,7 @@ export class UserDashboardComponent implements OnInit {
       error: err => {
         this.isApplying.set(false);
         this.applyError.set(err.error?.message || 'Failed to apply. Please try again.');
+        this.toast.error('Failed to send enrollment request');
       }
     });
   }
@@ -234,38 +242,19 @@ export class UserDashboardComponent implements OnInit {
     this.searchError.set('');
   }
 
+  // One round-trip: `GET /v1/me/courses` returns both lists in a single response.
   private loadCourses(): void {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    let enrolledDone = false;
-    let createdDone = false;
-    const checkDone = () => {
-      if (enrolledDone && createdDone) {
-        this.isLoading.set(false);
-        if (this.enrolledCourses().length === 0 && this.createdCourses().length > 0) {
+    this.meService.getCourses().subscribe({
+      next: ({ enrolled, created }) => {
+        this.enrolledCourses.set(enrolled);
+        this.createdCourses.set(created);
+        if (enrolled.length === 0 && created.length > 0) {
           this.activeTab.set('created');
         }
-      }
-    };
-
-    this.courseService.list('enrolled').subscribe({
-      next: courses => {
-        this.enrolledCourses.set(courses);
-        enrolledDone = true;
-        checkDone();
-      },
-      error: err => {
-        this.errorMessage.set(err.error?.message || 'Failed to load courses. Please try again.');
         this.isLoading.set(false);
-      }
-    });
-
-    this.courseService.list('created').subscribe({
-      next: courses => {
-        this.createdCourses.set(courses);
-        createdDone = true;
-        checkDone();
       },
       error: err => {
         this.errorMessage.set(err.error?.message || 'Failed to load courses. Please try again.');

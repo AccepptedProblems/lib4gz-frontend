@@ -87,14 +87,7 @@
                 [id]="'module-lessons-' + mwl.module.id"
                 role="list"
               >
-                @if (mwl.lessonsLoading) {
-                  <div class="lesson-skeletons">
-                    <lib-skeleton width="80%" height="14px" />
-                    <lib-skeleton width="60%" height="14px" />
-                    <lib-skeleton width="70%" height="14px" />
-                  </div>
-                } @else {
-                  @for (lesson of mwl.lessons; track lesson.id; let j = $index) {
+                @for (lesson of mwl.lessons; track lesson.id; let j = $index) {
                     <div
                       class="lesson-item"
                       [class.lesson-item--active]="activeLessonId() === lesson.id"
@@ -114,7 +107,6 @@
                   @if (mwl.lessons.length === 0) {
                     <p class="text-body-medium text-secondary no-lessons">No lessons yet</p>
                   }
-                }
               </div>
             }
           </div>

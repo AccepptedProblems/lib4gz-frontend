@@ -77,7 +77,6 @@ export class ManageLayoutComponent implements OnInit {
   navItems = computed<SidebarNavItem[]>(() => [
     { id: 'material', label: 'Course Material', icon: 'menu_book', badge: null, routePath: 'material' },
     { id: 'enrollment', label: 'Enrollment', icon: 'group', badge: this.pendingEnrollmentCount() || null, routePath: 'enrollment' },
-    { id: 'submissions', label: 'Submissions', icon: 'assignment', badge: null, routePath: 'submissions' },
   ]);
 
   ngOnInit(): void {

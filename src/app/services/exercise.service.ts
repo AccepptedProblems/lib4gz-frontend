@@ -1,12 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   CreateExerciseRequest,
   UpdateExerciseRequest,
-  ExerciseResponse
+  ExerciseResponse,
+  ExerciseExpand
 } from '../shared/models';
+
+export interface ExerciseListOptions {
+  expand?: ExerciseExpand[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class ExerciseService {
@@ -20,14 +25,30 @@ export class ExerciseService {
     );
   }
 
-  listByLesson(lessonId: string): Observable<ExerciseResponse[]> {
+  /**
+   * `expand` supports `questions`, `mySubmission`. Used by Exercise Attempt and Lesson
+   * Exercises tab to load everything in one round-trip.
+   */
+  listByLesson(lessonId: string, options?: ExerciseListOptions): Observable<ExerciseResponse[]> {
+    let params = new HttpParams();
+    if (options?.expand?.length) {
+      params = params.set('expand', options.expand.join(','));
+    }
     return this.http.get<ExerciseResponse[]>(
-      `${this.apiUrl}/v1/lessons/${lessonId}/exercises`
+      `${this.apiUrl}/v1/lessons/${lessonId}/exercises`,
+      { params }
     );
   }
 
-  get(exerciseId: string): Observable<ExerciseResponse> {
-    return this.http.get<ExerciseResponse>(`${this.apiUrl}/v1/exercises/${exerciseId}`);
+  get(exerciseId: string, options?: ExerciseListOptions): Observable<ExerciseResponse> {
+    let params = new HttpParams();
+    if (options?.expand?.length) {
+      params = params.set('expand', options.expand.join(','));
+    }
+    return this.http.get<ExerciseResponse>(
+      `${this.apiUrl}/v1/exercises/${exerciseId}`,
+      { params }
+    );
   }
 
   update(exerciseId: string, request: UpdateExerciseRequest): Observable<ExerciseResponse> {

@@ -31,7 +31,16 @@ export const routes: Routes = [
         loadComponent: () => import('./components/course/course-layout/course-layout.component').then(m => m.CourseLayoutComponent),
         children: [
           { path: '', pathMatch: 'full', loadComponent: () => import('./components/course/course-home/course-home.component').then(m => m.CourseHomeComponent) },
-          { path: 'lesson/:lessonId', loadComponent: () => import('./components/course/course-lesson/course-lesson.component').then(m => m.CourseLessonComponent) },
+          {
+            path: 'lesson/:lessonId',
+            loadComponent: () => import('./components/course/course-lesson/course-lesson.component').then(m => m.CourseLessonComponent),
+            children: [
+              { path: '', redirectTo: 'summary', pathMatch: 'full' },
+              { path: 'summary', loadComponent: () => import('./components/course/lesson-summary/lesson-summary.component').then(m => m.LessonSummaryComponent) },
+              { path: 'exercises', loadComponent: () => import('./components/course/lesson-exercises/lesson-exercises.component').then(m => m.LessonExercisesComponent) },
+              { path: 'submissions', loadComponent: () => import('./components/course/lesson-submissions/lesson-submissions.component').then(m => m.LessonSubmissionsComponent) },
+            ],
+          },
         ]
       },
     ]
@@ -55,7 +64,6 @@ export const routes: Routes = [
           { path: 'material', loadComponent: () => import('./components/course-teacher/course-material/course-material.component').then(m => m.CourseMaterialComponent) },
           { path: 'material/lesson/:lessonId', loadComponent: () => import('./components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component').then(m => m.LessonDetailManagementComponent) },
           { path: 'enrollment', loadComponent: () => import('./components/course-teacher/course-management/enrollment-management/enrollment-management.component').then(m => m.EnrollmentManagementComponent) },
-          { path: 'submissions', loadComponent: () => import('./components/course-teacher/manage-submissions/manage-submissions.component').then(m => m.ManageSubmissionsComponent) },
         ]
       },
     ]

@@ -21,3 +21,14 @@ export interface EnrollmentResponse {
   createdAt: number;
   updatedAt: number;
 }
+
+/**
+ * Lightweight self-enrollment view embedded in `CourseResponse` / `SyllabusResponse`.
+ * Removes the dedicated `GET /courses/{id}/my-enrollment` round-trip.
+ */
+export interface EnrollmentSummary {
+  id: string;
+  role: EnrollmentRole;
+  status: EnrollmentStatus;
+  joinedAt: number | null;
+}

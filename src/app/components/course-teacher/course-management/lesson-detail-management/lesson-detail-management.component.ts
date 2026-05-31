@@ -1,12 +1,10 @@
-import { Component, inject, signal, effect, OnInit, DestroyRef } from '@angular/core';
+import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LessonService,
   ExerciseService,
   SummaryService,
-  ModuleService,
 } from '../../../../services';
 import {
   LessonResponse,
@@ -21,8 +19,16 @@ import {
   DialogComponent,
   TextareaComponent,
 } from '../../../../shared/components';
+import { LinkifyPipe } from '../../../../shared/pipes';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 
+/**
+ * Teacher lesson detail page.
+ *
+ * Single round-trip via `GET /v1/lessons/{id}?expand=summary,exercises`. The lesson
+ * row also carries the denormalized `moduleTitle`, so no separate module fetch is
+ * needed — the previous 4-call chain becomes 1 call.
+ */
 @Component({
   selector: 'app-lesson-detail-management',
   imports: [
@@ -31,6 +37,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
     BadgeComponent,
     DialogComponent,
     TextareaComponent,
+    LinkifyPipe,
   ],
   templateUrl: './lesson-detail-management.component.html',
   styleUrl: './lesson-detail-management.component.scss',
@@ -42,14 +49,11 @@ export class LessonDetailManagementComponent implements OnInit {
   private readonly lessonService = inject(LessonService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly summaryService = inject(SummaryService);
-  private readonly moduleService = inject(ModuleService);
   private readonly toast = inject(ToastService);
 
-  // Route params
   courseId = signal('');
   lessonId = signal('');
 
-  // Data
   lesson = signal<LessonResponse | null>(null);
   moduleTitle = signal('');
   summary = signal<SummaryResponse | null>(null);
@@ -58,17 +62,14 @@ export class LessonDetailManagementComponent implements OnInit {
   exercisesLoaded = signal(false);
   loading = signal(true);
 
-  // Title editing
   editingTitle = signal(false);
   editTitleValue = signal('');
   savingTitle = signal(false);
 
-  // Summary editing
   editingSummary = signal(false);
   editSummaryValue = signal('');
   savingSummary = signal(false);
 
-  // Delete dialog
   deleteDialogOpen = signal(false);
   deleteExerciseId = signal('');
   deleteExerciseName = signal('');
@@ -86,6 +87,9 @@ export class LessonDetailManagementComponent implements OnInit {
     });
   }
 
+  /**
+   * One round-trip pulls lesson metadata, summary, and exercises together.
+   */
   private loadLessonData(lessonId: string): void {
     this.loading.set(true);
     this.summary.set(null);
@@ -95,42 +99,26 @@ export class LessonDetailManagementComponent implements OnInit {
     this.editingTitle.set(false);
     this.editingSummary.set(false);
 
-    // Load lesson
-    this.lessonService.get(lessonId).subscribe({
+    this.lessonService.get(lessonId, { expand: ['summary', 'exercises'] }).subscribe({
       next: lesson => {
         this.lesson.set(lesson);
+        this.moduleTitle.set(lesson.moduleTitle ?? lesson.module?.title ?? '');
+        this.summary.set(lesson.summary ?? null);
+        this.exercises.set(
+          [...(lesson.exercises ?? [])].sort((a, b) => a.orderIndex - b.orderIndex)
+        );
+        this.summaryLoading.set(false);
+        this.exercisesLoaded.set(true);
         this.loading.set(false);
-
-        // Load module title
-        if (lesson.moduleId) {
-          this.moduleService.get(lesson.moduleId).pipe(
-            catchError(() => of(null))
-          ).subscribe(mod => {
-            if (mod) this.moduleTitle.set(mod.title);
-          });
-        }
       },
       error: () => {
+        this.summaryLoading.set(false);
+        this.exercisesLoaded.set(true);
         this.loading.set(false);
       },
-    });
-
-    this.summaryService.get(lessonId).pipe(
-      catchError(() => of(null))
-    ).subscribe(summary => {
-      this.summary.set(summary);
-      this.summaryLoading.set(false);
-    });
-
-    this.exerciseService.listByLesson(lessonId).pipe(
-      catchError(() => of([] as ExerciseResponse[]))
-    ).subscribe(exercises => {
-      this.exercises.set([...exercises].sort((a, b) => a.orderIndex - b.orderIndex));
-      this.exercisesLoaded.set(true);
     });
   }
 
-  // ── Title Editing ─────────────────────────────────────────────────
   startEditTitle(): void {
     const lesson = this.lesson();
     if (lesson) {
@@ -161,7 +149,6 @@ export class LessonDetailManagementComponent implements OnInit {
     });
   }
 
-  // ── Exercise Delete ───────────────────────────────────────────────
   confirmDeleteExercise(exerciseId: string, name: string): void {
     this.deleteExerciseId.set(exerciseId);
     this.deleteExerciseName.set(name);
@@ -189,7 +176,6 @@ export class LessonDetailManagementComponent implements OnInit {
     });
   }
 
-  // ── Summary Editing ──────────────────────────────────────────────
   startEditSummary(): void {
     this.editSummaryValue.set(this.summary()?.content ?? '');
     this.editingSummary.set(true);
@@ -212,7 +198,6 @@ export class LessonDetailManagementComponent implements OnInit {
     });
   }
 
-  // ── Navigation ────────────────────────────────────────────────────
   navigateToExerciseEditor(exerciseId?: string): void {
     if (exerciseId) {
       this.router.navigate(['/course', this.courseId(), 'manage', 'exercise', exerciseId, 'edit'], {
@@ -229,7 +214,6 @@ export class LessonDetailManagementComponent implements OnInit {
     this.router.navigate(['/course', this.courseId(), 'manage', 'material']);
   }
 
-  // ── Badge helpers ─────────────────────────────────────────────────
   getExerciseTypeLabel(type: ExerciseType): string {
     const map: Record<string, string> = {
       [ExerciseType.TEXT_ANSWER]: 'Text',

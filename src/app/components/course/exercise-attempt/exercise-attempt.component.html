@@ -165,16 +165,12 @@
     <p>You can continue this attempt later.</p>
   </lib-dialog>
 
-  <!-- Fast Fill Answer Dialog -->
-  <lib-dialog
+  <!-- Fast Fill (side-sheet — keeps the exercise in view while pasting) -->
+  <lib-side-sheet
     [open]="showFastFillDialog()"
-    title="⚡ Fast Fill Answer"
-    [confirmLabel]="'Fill ' + parsedAnswers().length + ' Answers'"
-    cancelLabel="Cancel"
-    confirmVariant="primary"
-    width="600px"
-    (confirm)="confirmFastFill()"
-    (cancel)="cancelFastFill()"
+    title="Fast Fill Answers"
+    size="md"
+    (close)="cancelFastFill()"
   >
     <div class="fast-fill-content">
       <lib-textarea
@@ -188,5 +184,12 @@
         {{ parsedAnswers().length }} answers detected ({{ activeQuestions().length }} questions total)
       </p>
     </div>
-  </lib-dialog>
+
+    <div sideSheetFooter>
+      <lib-button variant="secondary" size="md" (buttonClick)="cancelFastFill()">Cancel</lib-button>
+      <lib-button variant="primary" size="md" (buttonClick)="confirmFastFill()">
+        Fill {{ parsedAnswers().length }} Answers
+      </lib-button>
+    </div>
+  </lib-side-sheet>
 }

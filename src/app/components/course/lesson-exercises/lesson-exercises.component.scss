@@ -1,0 +1,47 @@
+@use '../../../../assets/design-system/breakpoint' as bp;
+
+:host { display: block }
+
+.exercise-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exercise-card {
+  padding: 16px 20px;
+  border: 1px solid var(--neutral-color-3, #e4e4e4);
+  border-radius: var(--radius-md, 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exercise-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exercise-card__title {
+  flex: 1;
+}
+
+.exercise-card__meta {
+  margin: 0;
+}
+
+.exercise-actions {
+  margin-top: 20px;
+}
+
+@media (max-width: bp.$mobile-large-breakpoint) {
+  .exercise-card { padding: 12px 16px }
+}

@@ -27,10 +27,11 @@
 
       <!-- Search Dropdown -->
       @if (showDropdown() && matchingEnrolledCourses().length > 0) {
-        <div class="search-dropdown">
+        <div class="search-dropdown" role="listbox" aria-label="Matching courses">
           @for (course of matchingEnrolledCourses(); track course.id) {
             <div
               class="search-dropdown-item"
+              role="option"
               (mousedown)="selectDropdownCourse(course)"
             >
               <span class="dropdown-code text-label-medium">{{ course.code }}</span>
@@ -77,12 +78,12 @@
     <div class="course-grid">
       @for (i of [1,2,3,4,5,6]; track i) {
         <div class="skeleton-card">
-          <div class="skeleton-thumbnail"></div>
+          <lib-skeleton variant="rect" width="100%" height="100%" />
           <div class="skeleton-body">
-            <div class="skeleton-line skeleton-title"></div>
-            <div class="skeleton-line skeleton-subtitle"></div>
-            <div class="skeleton-line skeleton-progress"></div>
-            <div class="skeleton-line skeleton-meta"></div>
+            <lib-skeleton width="80%" height="20px" />
+            <lib-skeleton width="50%" height="14px" />
+            <lib-skeleton width="100%" height="6px" />
+            <lib-skeleton width="40%" height="14px" />
           </div>
         </div>
       }
@@ -91,34 +92,23 @@
 
   <!-- Error State -->
   @else if (errorMessage()) {
-    <div class="error-state">
-      <span class="error-icon">!</span>
-      <p class="text-body-large">{{ errorMessage() }}</p>
+    <lib-empty-state
+      tone="error"
+      icon="error_outline"
+      [message]="errorMessage()"
+      role="alert"
+    >
       <lib-button variant="primary" (buttonClick)="retry()">Retry</lib-button>
-    </div>
+    </lib-empty-state>
   }
 
   <!-- Empty State -->
   @else if (filteredCourses().length === 0) {
-    <div class="empty-state">
-      <div class="empty-icon">
-        @if (activeTab() === 'enrolled') {
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-          </svg>
-        } @else {
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 4.5v15m7.5-7.5h-15"/>
-          </svg>
-        }
-      </div>
-      <p class="text-title-large">No courses yet</p>
-      @if (activeTab() === 'enrolled') {
-        <p class="text-body-medium empty-subtitle">Enroll in a course to get started</p>
-      } @else {
-        <p class="text-body-medium empty-subtitle">Create your first course</p>
-      }
-    </div>
+    <lib-empty-state
+      [icon]="activeTab() === 'enrolled' ? 'menu_book' : 'add_circle_outline'"
+      title="No courses yet"
+      [message]="activeTab() === 'enrolled' ? 'Enroll in a course to get started' : 'Create your first course'"
+    />
   }
 
   <!-- Course Grid -->
@@ -168,15 +158,12 @@
   }
 </div>
 
-<!-- Create Course Dialog -->
-<lib-dialog
+<!-- Create Course (side-sheet — non-destructive, keeps dashboard visible) -->
+<lib-side-sheet
   [open]="showCreateDialog()"
   title="Create Course"
-  confirmLabel="Create"
-  cancelLabel="Cancel"
-  [loading]="isCreating()"
-  (confirm)="onCreateConfirm()"
-  (cancel)="onCreateCancel()"
+  size="md"
+  (close)="onCreateCancel()"
 >
   <form [formGroup]="createForm" class="create-course-form">
     <lib-input
@@ -199,21 +186,24 @@
       </select>
     </div>
     @if (createError()) {
-      <p class="create-error text-body-medium">{{ createError() }}</p>
+      <p class="create-error text-body-medium" role="alert">{{ createError() }}</p>
     }
   </form>
-</lib-dialog>
 
-<!-- Course Preview Dialog -->
-<div class="apply-course-dialog">
-<lib-dialog
+  <div sideSheetFooter>
+    <lib-button variant="secondary" size="md" (buttonClick)="onCreateCancel()">Cancel</lib-button>
+    <lib-button variant="primary" size="md" [isLoading]="isCreating()" (buttonClick)="onCreateConfirm()">
+      Create
+    </lib-button>
+  </div>
+</lib-side-sheet>
+
+<!-- Course Preview (side-sheet — lets the user keep the course list in view) -->
+<lib-side-sheet
   [open]="showCoursePreview()"
-  title="Apply Course"
-  confirmLabel="Apply"
-  cancelLabel="Cancel"
-  [loading]="isApplying()"
-  (confirm)="onApplyConfirm()"
-  (cancel)="onPreviewCancel()"
+  title="Apply to Course"
+  size="sm"
+  (close)="onPreviewCancel()"
 >
   @if (previewCourse(); as course) {
     <div class="course-preview">
@@ -236,15 +226,21 @@
         </div>
       </div>
       @if (applySuccess()) {
-        <p class="apply-feedback apply-feedback--success text-body-medium">
+        <p class="apply-feedback apply-feedback--success text-body-medium" role="status">
           Your request has been sent successfully.
         </p>
       } @else if (applyError()) {
-        <p class="apply-feedback apply-feedback--error text-body-medium">
+        <p class="apply-feedback apply-feedback--error text-body-medium" role="alert">
           {{ applyError() }}
         </p>
       }
     </div>
   }
-</lib-dialog>
-</div>
+
+  <div sideSheetFooter>
+    <lib-button variant="secondary" size="md" (buttonClick)="onPreviewCancel()">Cancel</lib-button>
+    <lib-button variant="primary" size="md" [isLoading]="isApplying()" (buttonClick)="onApplyConfirm()">
+      Apply
+    </lib-button>
+  </div>
+</lib-side-sheet>

@@ -9,6 +9,14 @@
     outline: none;
     border: 1px solid var(--input-border-color-focus);
   }
+
+  &:focus-visible {
+    outline: none;
+    border: 1px solid var(--input-border-color-focus);
+    box-shadow:
+      0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+      0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
+  }
   @media (max-width: 768px) {
     font-size: 16px;
     font-weight: 400;
@@ -29,6 +37,14 @@
   &:focus {
     outline: none;
     border: 1px solid var(--input-border-color-focus);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border: 1px solid var(--input-border-color-focus);
+    box-shadow:
+      0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+      0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
   }
 }
 

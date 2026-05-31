@@ -55,14 +55,12 @@
   </div>
 
   @if (filteredEnrollments().length === 0) {
-    <div class="empty-state">
-      <span class="material-icons empty-icon">group</span>
-      @if (search() || statusFilter() !== 'All') {
-        <p class="text-body-large text-secondary">No enrollments match your search/filter criteria.</p>
-      } @else {
-        <p class="text-body-large text-secondary">No students enrolled yet. Share your course to get started.</p>
-      }
-    </div>
+    <lib-empty-state
+      icon="group"
+      [message]="(search() || statusFilter() !== 'All')
+        ? 'No enrollments match your search/filter criteria.'
+        : 'No students enrolled yet. Share your course to get started.'"
+    />
   } @else {
     <div class="table-wrapper">
       <table class="data-table">
@@ -156,12 +154,16 @@
           class="pagination-btn"
           [disabled]="page() <= 1"
           (click)="page.set(page() - 1)"
+          aria-label="Previous page"
+          title="Previous page"
         >&lt;</button>
         <span class="text-body-small">{{ page() }} / {{ totalPages() }}</span>
         <button
           class="pagination-btn"
           [disabled]="page() >= totalPages()"
           (click)="page.set(page() + 1)"
+          aria-label="Next page"
+          title="Next page"
         >&gt;</button>
       </div>
     </div>

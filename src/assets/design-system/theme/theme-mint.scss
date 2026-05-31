@@ -29,13 +29,14 @@
   --neutral-color-8: #484848;
   --neutral-color-9: #333333;
 
-  // Semantic Colors
-  --warning-color: #fbaa21;
-  --success-color: #4caf50;
-  --error-color: #f44336;
+  // Semantic Colors (WCAG AA compliant on white backgrounds)
+  --warning-color: #e65100;
+  --success-color: #388e3c;
+  --error-color: #d32f2f;
 
   // Apply token configurations
   @include token.default-configuration;
+  @include token.interaction-tokens;
   @include token.navigation-bar-theme-by-primary-color-reverse;
   @include token.footer-theme-by-primary-color;
 

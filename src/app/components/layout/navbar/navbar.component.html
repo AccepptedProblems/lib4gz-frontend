@@ -16,9 +16,15 @@
         type="button"
         aria-label="User menu"
         [attr.aria-expanded]="avatarMenuOpen()"
+        aria-haspopup="menu"
         (click)="toggleAvatarMenu($event)"
       >
         <span class="avatar-initials">{{ userInitial }}</span>
+        <span
+          class="material-symbols-outlined avatar-caret"
+          [class.avatar-caret--open]="avatarMenuOpen()"
+          aria-hidden="true"
+        >expand_more</span>
       </button>
 
       @if (avatarMenuOpen()) {

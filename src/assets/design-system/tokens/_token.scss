@@ -32,6 +32,37 @@
   --input-border-color-error: var(--error-color);
 }
 
+@mixin interaction-tokens {
+  // Opacity scale — disabled bumped from 0.5 to 0.6 for contrast compliance
+  --opacity-disabled: 0.6;
+  --opacity-hover-overlay: 0.04;
+  --opacity-backdrop: 0.5;
+
+  // Icon button sizing — meets 44px minimum touch target on mobile
+  --icon-btn-size-sm: 32px;
+  --icon-btn-size-md: 40px;
+  --icon-btn-size-lg: 44px;
+
+  // Side-sheet width tokens
+  --side-sheet-sm: 400px;
+  --side-sheet-md: 520px;
+  --side-sheet-lg: 640px;
+
+  // Focus ring — box-shadow double-ring (white inner + primary outer)
+  --focus-ring-offset: var(--neutral-color-0);
+  --focus-ring-color: var(--primary-color-300);
+  --focus-ring-width-inner: 2px;
+  --focus-ring-width-outer: 4px;
+}
+
+// Usage: @include focus-ring-visible; inside a selector's &:focus-visible { ... }
+@mixin focus-ring-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+    0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
+}
+
 @mixin navigation-bar-theme-by-primary-color {
   --nav-bar-bg-color: var(--neutral-color-0);
   --nav-bar-text-color: var(--text-primary-color);

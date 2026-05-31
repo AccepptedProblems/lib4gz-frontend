@@ -1,3 +1,5 @@
+@use 'breakpoint' as bp;
+
 :root {
   /* ============================================
    * SPACING TOKENS
@@ -429,7 +431,7 @@ p {
 /* NOTE: Global div styling removed - apply typography classes explicitly */
 
 /* Responsive adjustments */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: bp.$mobile-large-breakpoint) {
   :root {
     --display-large-size: 45px;
     --display-large-height: 52px;
@@ -456,7 +458,7 @@ p {
   font-weight: 400;
 }
 
-@media (max-width: 768px) {
+@media (max-width: bp.$mobile-large-breakpoint) {
   .page-title {
     font-size: 2rem;
   }
@@ -472,6 +474,6 @@ p {
 }
 
 .group-title {
-  font-weight: 600;
-  font-size: 19px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-m);
 }

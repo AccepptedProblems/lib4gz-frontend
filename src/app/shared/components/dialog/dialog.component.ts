@@ -1,10 +1,11 @@
-import { Component, input, output } from '@angular/core';
+import { Component, HostListener, input, output } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { ButtonComponent } from '../button/button.component';
 
 @Component({
   selector: 'lib-dialog',
   standalone: true,
-  imports: [ButtonComponent],
+  imports: [A11yModule, ButtonComponent],
   template: `
     @if (open()) {
       <div class="dialog-backdrop" (click)="cancel.emit()" aria-hidden="true"></div>
@@ -14,6 +15,8 @@ import { ButtonComponent } from '../button/button.component';
         aria-modal="true"
         [attr.aria-label]="title()"
         [style.width]="width() ? 'min(90vw, ' + width() + ')' : null"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
       >
         <div class="dialog__header">
           @if (icon()) {
@@ -57,4 +60,9 @@ export class DialogComponent {
 
   confirm = output<void>();
   cancel = output<void>();
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.open()) this.cancel.emit();
+  }
 }

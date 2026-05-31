@@ -13,7 +13,7 @@ import {
   ExerciseType, QuestionAction
 } from '../../../shared/models';
 import {
-  ButtonComponent, DialogComponent,
+  ButtonComponent, DialogComponent, SideSheetComponent,
   SkeletonComponent, TextareaComponent,
 } from '../../../shared/components';
 
@@ -48,6 +48,7 @@ const DEFAULT_MC_OPTIONS: AnswerOption[] = [
     FormsModule,
     ButtonComponent,
     DialogComponent,
+    SideSheetComponent,
     SkeletonComponent,
     TextareaComponent,
   ],

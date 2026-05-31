@@ -119,10 +119,10 @@
             <div class="content-view" role="region" aria-label="Course material">
               <!-- Module List -->
               @if (modulesWithLessons().length === 0 && !showAddModuleForm()) {
-                <div class="empty-state">
-                  <span class="material-icons empty-icon">folder_open</span>
-                  <p class="text-body-large text-secondary">No modules yet. Create your first module to start building your course.</p>
-                </div>
+                <lib-empty-state
+                  icon="folder_open"
+                  message="No modules yet. Create your first module to start building your course."
+                />
               }
 
               @for (mwl of modulesWithLessons(); track mwl.module.id; let mi = $index) {
@@ -365,14 +365,12 @@
               </div>
 
               @if (filteredSubmissions().length === 0) {
-                <div class="empty-state">
-                  <span class="material-icons empty-icon">assignment</span>
-                  @if (submissionExerciseFilter() !== 'All' || submissionStatusFilter() !== 'All') {
-                    <p class="text-body-large text-secondary">No submissions match your filter criteria.</p>
-                  } @else {
-                    <p class="text-body-large text-secondary">No submissions to review yet.</p>
-                  }
-                </div>
+                <lib-empty-state
+                  icon="assignment"
+                  [message]="(submissionExerciseFilter() !== 'All' || submissionStatusFilter() !== 'All')
+                    ? 'No submissions match your filter criteria.'
+                    : 'No submissions to review yet.'"
+                />
               } @else {
                 <div class="table-wrapper">
                   <table class="data-table">
@@ -422,12 +420,16 @@
                       class="pagination-btn"
                       [disabled]="submissionPage() <= 1"
                       (click)="submissionPage.set(submissionPage() - 1)"
+                      aria-label="Previous page"
+                      title="Previous page"
                     >&lt;</button>
                     <span class="text-body-small">{{ submissionPage() }} / {{ submissionTotalPages() }}</span>
                     <button
                       class="pagination-btn"
                       [disabled]="submissionPage() >= submissionTotalPages()"
                       (click)="submissionPage.set(submissionPage() + 1)"
+                      aria-label="Next page"
+                      title="Next page"
                     >&gt;</button>
                   </div>
                 </div>

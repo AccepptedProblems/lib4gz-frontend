@@ -1,36 +1,31 @@
 import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet, NavigationEnd } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { catchError, filter } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  CourseService,
-  ModuleService,
-  EnrollmentService,
-  LessonService,
-} from '../../../services';
+import { CourseService } from '../../../services';
 import {
   CourseResponse,
-  ModuleResponse,
-  EnrollmentResponse,
-  LessonResponse,
+  EnrollmentSummary,
   EnrollmentRole,
   EnrollmentStatus,
+  LessonResponse,
+  SyllabusModule,
 } from '../../../shared/models';
 import {
   ButtonComponent,
-  SkeletonComponent,
   SpinnerComponent,
 } from '../../../shared/components';
 
 type ScreenState = 'loading' | 'loaded' | 'error';
 
+/**
+ * Sidebar-side view of a module with expand/collapse state for the navigation tree.
+ * Lessons are eagerly loaded by `GET /courses/{id}/syllabus`.
+ */
 interface ModuleWithLessons {
-  module: ModuleResponse;
+  module: SyllabusModule;
   lessons: LessonResponse[];
   expanded: boolean;
-  lessonsLoading: boolean;
 }
 
 @Component({
@@ -38,7 +33,6 @@ interface ModuleWithLessons {
   imports: [
     RouterOutlet,
     ButtonComponent,
-    SkeletonComponent,
     SpinnerComponent,
   ],
   templateUrl: './course-layout.component.html',
@@ -49,9 +43,6 @@ export class CourseLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly courseService = inject(CourseService);
-  private readonly moduleService = inject(ModuleService);
-  private readonly enrollmentService = inject(EnrollmentService);
-  private readonly lessonService = inject(LessonService);
 
   readonly EnrollmentRole = EnrollmentRole;
 
@@ -61,11 +52,14 @@ export class CourseLayoutComponent implements OnInit {
 
   course = signal<CourseResponse | null>(null);
   modulesWithLessons = signal<ModuleWithLessons[]>([]);
-  myEnrollment = signal<EnrollmentResponse | null>(null);
 
-  // Track active lesson from URL
+  /**
+   * Caller's enrollment, exposed for children (CourseHome, CourseLesson). Reads from
+   * `course().myEnrollment` so we have one source of truth — no parallel fetches.
+   */
+  myEnrollment = computed<EnrollmentSummary | null>(() => this.course()?.myEnrollment ?? null);
+
   activeLessonId = signal<string | null>(null);
-
   sidebarOpen = signal(false);
 
   isTeacher = computed(() => this.myEnrollment()?.role === EnrollmentRole.TEACHER);
@@ -91,11 +85,10 @@ export class CourseLayoutComponent implements OnInit {
       const id = params.get('id');
       if (id && id !== this.courseId()) {
         this.courseId.set(id);
-        this.loadCourse(id);
+        this.loadSyllabus(id);
       }
     });
 
-    // Watch router events to extract lessonId from URL
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
       takeUntilDestroyed(this.destroyRef),
@@ -103,7 +96,6 @@ export class CourseLayoutComponent implements OnInit {
       this.extractLessonIdFromUrl(e.urlAfterRedirects);
     });
 
-    // Also extract from current URL on init
     this.extractLessonIdFromUrl(this.router.url);
   }
 
@@ -113,17 +105,11 @@ export class CourseLayoutComponent implements OnInit {
   }
 
   toggleModule(index: number): void {
-    const modules = [...this.modulesWithLessons()];
-    modules[index] = { ...modules[index], expanded: !modules[index].expanded };
-
-    if (modules[index].expanded && modules[index].lessons.length === 0 && !modules[index].lessonsLoading) {
-      modules[index] = { ...modules[index], lessonsLoading: true };
-      this.modulesWithLessons.set(modules);
-      this.loadLessonsForModule(index, modules[index].module.id);
-      return;
-    }
-
-    this.modulesWithLessons.set(modules);
+    this.modulesWithLessons.update(mods => {
+      const next = [...mods];
+      next[index] = { ...next[index], expanded: !next[index].expanded };
+      return next;
+    });
   }
 
   navigateToLesson(lesson: LessonResponse, moduleIndex: number, lessonIndex: number): void {
@@ -132,7 +118,7 @@ export class CourseLayoutComponent implements OnInit {
     this.sidebarOpen.set(false);
     this.router.navigate(['lesson', lesson.id], {
       relativeTo: this.route,
-      queryParams: { tab: 'summary', prefix },
+      queryParams: { prefix },
     });
   }
 
@@ -149,61 +135,33 @@ export class CourseLayoutComponent implements OnInit {
   }
 
   retry(): void {
-    this.loadCourse(this.courseId());
+    this.loadSyllabus(this.courseId());
   }
 
-  private loadCourse(courseId: string): void {
+  /**
+   * Single round-trip: course + my enrollment + modules + all lessons.
+   * Replaces the previous 4-call `forkJoin({course, modules, enrollment})` + the
+   * lazy-loaded `lessons[0]` follow-up.
+   */
+  private loadSyllabus(courseId: string): void {
     this.screenState.set('loading');
     this.errorMessage.set('');
 
-    forkJoin({
-      course: this.courseService.get(courseId),
-      modules: this.moduleService.listByCourse(courseId),
-      enrollment: this.enrollmentService.getMyEnrollment(courseId).pipe(
-        catchError(() => of(null))
-      ),
-    }).subscribe({
-      next: ({ course, modules, enrollment }) => {
+    this.courseService.getSyllabus(courseId).subscribe({
+      next: ({ course, modules }) => {
         this.course.set(course);
-        this.myEnrollment.set(enrollment);
-
-        const sortedModules = [...modules].sort((a, b) => a.orderIndex - b.orderIndex);
-        const modulesWithLessons: ModuleWithLessons[] = sortedModules.map((m, i) => ({
-          module: m,
-          lessons: [],
-          expanded: i === 0,
-          lessonsLoading: i === 0,
-        }));
-        this.modulesWithLessons.set(modulesWithLessons);
+        this.modulesWithLessons.set(
+          modules.map((module, i) => ({
+            module,
+            lessons: module.lessons,
+            expanded: i === 0,
+          }))
+        );
         this.screenState.set('loaded');
-
-        if (sortedModules.length > 0) {
-          this.loadLessonsForModule(0, sortedModules[0].id);
-        }
       },
       error: err => {
         this.errorMessage.set(err.error?.message || 'Failed to load course. Please try again.');
         this.screenState.set('error');
-      },
-    });
-  }
-
-  private loadLessonsForModule(moduleIndex: number, moduleId: string): void {
-    this.lessonService.listByModule(moduleId).subscribe({
-      next: lessons => {
-        const sorted = [...lessons].sort((a, b) => a.orderIndex - b.orderIndex);
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = {
-          ...modules[moduleIndex],
-          lessons: sorted,
-          lessonsLoading: false,
-        };
-        this.modulesWithLessons.set(modules);
-      },
-      error: () => {
-        const modules = [...this.modulesWithLessons()];
-        modules[moduleIndex] = { ...modules[moduleIndex], lessonsLoading: false };
-        this.modulesWithLessons.set(modules);
       },
     });
   }

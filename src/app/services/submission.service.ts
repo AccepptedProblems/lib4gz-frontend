@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
@@ -7,13 +7,37 @@ import {
   UpdateSubmissionRequest,
   CommentRequest,
   RevisionRequest,
-  SubmissionResponse
+  SubmissionResponse,
+  LessonSubmissionsResponse,
+  LessonSubmissionsExpand
 } from '../shared/models';
+
+export interface LessonSubmissionsOptions {
+  expand?: LessonSubmissionsExpand[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class SubmissionService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl;
+
+  /**
+   * Teacher review queue for one lesson — composite response.
+   * Replaces the 1 + 3N + M fan-out the Lesson Submissions tab used to issue.
+   */
+  listByLesson(
+    lessonId: string,
+    options?: LessonSubmissionsOptions
+  ): Observable<LessonSubmissionsResponse> {
+    let params = new HttpParams();
+    if (options?.expand?.length) {
+      params = params.set('expand', options.expand.join(','));
+    }
+    return this.http.get<LessonSubmissionsResponse>(
+      `${this.apiUrl}/v1/lessons/${lessonId}/submissions`,
+      { params }
+    );
+  }
 
   listByExercise(exerciseId: string): Observable<SubmissionResponse[]> {
     return this.http.get<SubmissionResponse[]>(

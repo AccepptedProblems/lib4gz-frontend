@@ -1,3 +1,5 @@
+@use '../../../../assets/design-system/breakpoint' as bp;
+
 // ── Layout ──────────────────────────────────────────────────────
 .editor-page {
   min-height: 100vh;
@@ -41,13 +43,13 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-sm);
-  transition: border-color 200ms ease;
+  transition: border-color var(--duration-normal) var(--easing-ease);
 }
 
 .question-card--view {
-  background: white;
-  border: 1px solid var(--neutral-color-3, #e0e0e0);
-  &:hover { border-color: var(--neutral-color-5, #9e9e9e); }
+  background: var(--neutral-color-0);
+  border: 1px solid var(--neutral-color-3);
+  &:hover { border-color: var(--neutral-color-5); }
   &.has-error { border-color: var(--error-color); }
 }
 
@@ -77,6 +79,7 @@
 .question-text {
   margin: 0;
   color: var(--text-primary-color);
+  white-space: pre-line;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -90,21 +93,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-secondary-color);
-  transition: all 200ms ease;
+  transition: all var(--duration-normal) var(--easing-ease);
   .material-icons { font-size: 18px; }
   &:hover { background: var(--primary-color-50); color: var(--primary-color-600); }
   &:disabled { opacity: 0.4; cursor: not-allowed; &:hover { background: transparent; color: var(--text-secondary-color); } }
 }
 
-.icon-btn--delete:hover { background: var(--error-color-0, #ffebee); color: var(--error-color); }
-.icon-btn--small { width: 28px; height: 28px; .material-icons { font-size: 16px; } }
+.icon-btn--delete:hover { background: var(--error-bg, var(--neutral-color-1)); color: var(--error-color); }
+.icon-btn--small { width: 36px; height: 36px; min-width: 44px; min-height: 44px; .material-icons { font-size: 16px; } }
 
 // ── Answer preview (view) ───────────────────────────────────────
 .answer-preview {
@@ -112,23 +115,23 @@
   flex-wrap: wrap;
   gap: var(--spacing-xs);
   margin-top: var(--spacing-sm);
-  padding-left: 32px;
+  padding-left: var(--spacing-xl);
 }
 
 .answer-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm, 4px);
-  font-size: 13px;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xxs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xxs);
   color: var(--text-secondary-color);
   &.correct { color: var(--primary-color-600); background: var(--primary-color-50); }
 }
 
 .text-answer-label {
   margin: var(--spacing-xs) 0 0;
-  padding-left: 32px;
+  padding-left: var(--spacing-xl);
   color: var(--neutral-color-5);
   font-style: italic;
 }
@@ -149,15 +152,14 @@
 .add-answer-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   margin-top: var(--spacing-sm);
-  padding: 4px 8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: none;
   background: transparent;
   color: var(--primary-color-600);
   cursor: pointer;
-  border-radius: var(--radius-sm, 4px);
-  // font-family: inherit is set globally in _typography.scss
+  border-radius: var(--radius-sm);
   .material-icons { font-size: 18px; }
   &:hover { background: var(--primary-color-50); }
 }
@@ -182,7 +184,7 @@
 
 // ── Action buttons ──────────────────────────────────────────────
 .question-actions { display: flex; gap: var(--spacing-sm); justify-content: space-between; }
-.btn-icon { margin-right: 4px; font-size: 18px; vertical-align: middle; }
+.btn-icon { margin-right: var(--spacing-xs); font-size: 18px; vertical-align: middle; }
 
 // ── Error state ─────────────────────────────────────────────────
 .error-state {
@@ -199,10 +201,10 @@
 // ── Fast Create ─────────────────────────────────────────────────
 .fast-create-content { display: flex; flex-direction: column; gap: var(--spacing-md); }
 
-:host ::ng-deep .warning-icon { color: var(--warning-color, #f59e0b); }
+:host ::ng-deep .warning-icon { color: var(--warning-color); }
 
 // ── Responsive ──────────────────────────────────────────────────
-@media (max-width: 767px) {
+@media (max-width: bp.$mobile-large-breakpoint) {
   .editor-page { padding: var(--spacing-md); }
   .page-header { flex-direction: column; align-items: flex-start; }
   .header-actions { width: 100%; justify-content: flex-end; }
