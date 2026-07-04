@@ -85,7 +85,7 @@
   top: calc(100% + var(--spacing-xs));
   right: 0;
   min-width: 180px;
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   z-index: var(--z-index-dropdown);
@@ -115,7 +115,7 @@
   transition: background-color var(--duration-normal) var(--easing-ease);
 
   &:hover {
-    background-color: var(--neutral-color-1);
+    background-color: var(--surface-hover);
   }
 
   .material-symbols-outlined {

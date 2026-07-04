@@ -8,7 +8,8 @@
     "start:dev": "ng serve --proxy-config proxy-conf/dev-proxy.json",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "check:surfaces": "! grep -rEn \"background(-color)?: *(#|rgba?\\(|white|var\\(--neutral-color|var\\(--primary-color)\" src/app --include='*.scss' | grep -v surface-ok | grep ."
   },
   "private": true,
   "dependencies": {

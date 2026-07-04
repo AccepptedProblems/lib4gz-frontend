@@ -71,7 +71,7 @@
   border-bottom: 1px solid var(--neutral-color-2);
 }
 
-.data-table tbody tr:hover { background: var(--neutral-color-1) }
+.data-table tbody tr:hover { background: var(--surface-hover) }
 
 .col-index { width: 50px }
 .col-date { white-space: nowrap }
@@ -97,8 +97,8 @@
 }
 
 .icon-btn .material-icons { font-size: 18px }
-.icon-btn:hover { background: var(--neutral-color-1); color: var(--text-primary-color) }
-.icon-btn--danger:hover { color: var(--error-color); background: var(--error-bg, var(--neutral-color-1)) }
+.icon-btn:hover { background: var(--surface-hover); color: var(--text-primary-color) }
+.icon-btn--danger:hover { color: var(--error-color); background: var(--surface-error-subtle) }
 
 // ── Pagination ───────────────────────────────────────────────────
 .pagination {
@@ -119,7 +119,7 @@
   padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--neutral-color-3);
   border-radius: var(--radius-sm);
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   cursor: pointer;
   font-size: var(--font-size-xs);
   min-width: 44px;
@@ -127,7 +127,7 @@
 }
 
 .pagination-btn:disabled { opacity: .4; cursor: not-allowed }
-.pagination-btn:not(:disabled):hover { background: var(--neutral-color-1) }
+.pagination-btn:not(:disabled):hover { background: var(--surface-hover) }
 
 // ── Empty States ─────────────────────────────────────────────────
 .empty-state {

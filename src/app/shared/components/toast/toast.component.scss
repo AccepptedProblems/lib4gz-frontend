@@ -21,22 +21,22 @@
   max-width: 400px;
 
   &.success {
-    background: var(--surface-success-subtle, #e8f5e9);
+    background: var(--surface-success-subtle);
     color: var(--success-color-8, #2e7d32);
   }
 
   &.error {
-    background: var(--surface-error-subtle, #ffebee);
+    background: var(--surface-error-subtle);
     color: var(--error-color-8, #c62828);
   }
 
   &.info {
-    background: var(--primary-color-100, #e0f2f1);
+    background: var(--surface-primary-subtle);
     color: var(--primary-color-800, #00695c);
   }
 
   &.warning {
-    background: var(--surface-warning-subtle, #fff3e0);
+    background: var(--surface-warning-subtle);
     color: var(--warning-color, #e65100);
   }
 }
@@ -56,7 +56,7 @@
   cursor: pointer;
   transition: background var(--duration-fast, 100ms) ease;
 
-  &:hover { background: rgba(0, 0, 0, .06) }
+  &:hover { background: rgba(0, 0, 0, var(--opacity-hover-overlay)) } // surface-ok: ink overlay on tinted toast
 }
 
 @keyframes slideIn {

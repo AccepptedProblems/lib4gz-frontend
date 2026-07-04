@@ -49,14 +49,14 @@
 }
 
 .question-card--view {
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   border: 1px solid var(--neutral-color-3);
   &:hover { border-color: var(--neutral-color-5); }
   &.has-error { border-color: var(--error-color); }
 }
 
 .question-card--edit {
-  background: var(--primary-color-50);
+  background: var(--surface-selected);
   border: 2px solid var(--primary-color-200);
   padding: var(--spacing-lg);
 }
@@ -104,11 +104,11 @@
   color: var(--text-secondary-color);
   transition: all var(--duration-normal) var(--easing-ease);
   .material-icons { font-size: 18px; }
-  &:hover { background: var(--primary-color-50); color: var(--primary-color-600); }
+  &:hover { background: var(--surface-selected); color: var(--primary-color-600); }
   &:disabled { opacity: 0.4; cursor: not-allowed; &:hover { background: transparent; color: var(--text-secondary-color); } }
 }
 
-.icon-btn--delete:hover { background: var(--error-bg, var(--neutral-color-1)); color: var(--error-color); }
+.icon-btn--delete:hover { background: var(--surface-error-subtle); color: var(--error-color); }
 .icon-btn--small { width: 36px; height: 36px; min-width: 44px; min-height: 44px; .material-icons { font-size: 16px; } }
 
 // ── Answer preview (view) ───────────────────────────────────────
@@ -128,7 +128,7 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xxs);
   color: var(--text-secondary-color);
-  &.correct { color: var(--primary-color-600); background: var(--primary-color-50); }
+  &.correct { color: var(--primary-color-600); background: var(--surface-selected); }
 }
 
 .text-answer-label {
@@ -163,7 +163,7 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   .material-icons { font-size: 18px; }
-  &:hover { background: var(--primary-color-50); }
+  &:hover { background: var(--surface-selected); }
 }
 
 .text-answer-hint { margin: var(--spacing-md) 0 0; color: var(--neutral-color-5); font-style: italic; }

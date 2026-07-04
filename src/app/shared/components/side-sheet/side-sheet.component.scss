@@ -3,7 +3,7 @@
 .side-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, var(--opacity-backdrop));
+  background: var(--surface-overlay);
   z-index: var(--z-index-drawer);
   animation: side-sheet-fade var(--duration-fast) var(--easing-ease-out);
 }
@@ -15,7 +15,7 @@
   width: min(92vw, var(--side-sheet-width, var(--side-sheet-md)));
   display: flex;
   flex-direction: column;
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   box-shadow: var(--shadow-lg);
   z-index: calc(var(--z-index-drawer) + 1);
   outline: none;
@@ -63,7 +63,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: var(--neutral-color-1);
+    background: var(--surface-hover);
     color: var(--text-primary-color);
   }
 

@@ -28,7 +28,7 @@
   .mock-card {
     width: 100%;
     padding: var(--spacing-lg);
-    background: var(--neutral-color-0);
+    background: var(--surface-raised);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     display: flex;
@@ -39,21 +39,21 @@
   .mock-line {
     height: 10px;
     border-radius: var(--radius-full);
-    background: var(--neutral-color-2);
+    background: var(--neutral-color-2); // surface-ok: illustration fill
     flex: 1;
 
     &--title {
       height: 14px;
       width: 60%;
       flex: none;
-      background: var(--primary-color-200);
+      background: var(--primary-color-200); // surface-ok: illustration fill
     }
   }
 
   .mock-progress {
     height: 8px;
     border-radius: var(--radius-full);
-    background: var(--neutral-color-2);
+    background: var(--neutral-color-2); // surface-ok: illustration fill
     overflow: hidden;
   }
 
@@ -61,7 +61,7 @@
     width: 66%;
     height: 100%;
     border-radius: var(--radius-full);
-    background: var(--primary-color-500);
+    background: var(--primary-color-500); // surface-ok: illustration fill
   }
 
   .mock-lesson {

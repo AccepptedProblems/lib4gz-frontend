@@ -16,7 +16,7 @@
 
 .sidebar { width: 280px; flex-shrink: 0; overflow-y: auto; padding-right: var(--spacing-lg) }
 .sidebar__close { display: none; background: none; border: none; cursor: pointer; padding: var(--spacing-xs); color: var(--text-secondary-color); border-radius: var(--radius-sm); position: absolute; top: var(--spacing-sm); right: var(--spacing-sm) }
-.sidebar__close:hover { background: var(--neutral-color-2) }
+.sidebar__close:hover { background: var(--surface-hover) }
 .sidebar__heading { padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md) }
 .sidebar__course-name { margin: 0 0 var(--spacing-sm) }
 .sidebar__description { margin: 0 0 var(--spacing-sm); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
@@ -31,7 +31,7 @@
 
 .module-group { border-bottom: 1px solid var(--neutral-color-2) }
 .module-header { display: flex; align-items: center; gap: var(--spacing-xs); width: 100%; padding: var(--spacing-sm) var(--spacing-md); background: none; border: none; cursor: pointer; text-align: left; transition: background var(--duration-normal); color: var(--text-primary-color) }
-.module-header:hover { background: var(--surface-hover, var(--neutral-color-1)) }
+.module-header:hover { background: var(--surface-hover) }
 .module-title { flex: 1; min-width: 0 }
 .module-count { color: var(--text-secondary-color); white-space: nowrap }
 .module-count--done { color: var(--success-color); font-weight: var(--font-weight-medium) }
@@ -45,8 +45,8 @@
 .module-lessons-wrap--expanded .module-lessons { padding-bottom: var(--spacing-sm) }
 
 .lesson-item { display: flex; align-items: flex-start; gap: var(--spacing-sm); width: 100%; padding: var(--spacing-sm) var(--spacing-md); background: none; border: none; border-left: 3px solid transparent; border-radius: var(--radius-sm); cursor: pointer; text-align: left; transition: all var(--duration-normal); color: var(--text-primary-color) }
-.lesson-item:hover:not(:disabled) { background: var(--surface-hover, var(--neutral-color-1)) }
-.lesson-item--active { background: var(--primary-color-50); border-left-color: var(--primary-color-600) }
+.lesson-item:hover:not(:disabled) { background: var(--surface-hover) }
+.lesson-item--active { background: var(--surface-selected); border-left-color: var(--primary-color-600) }
 .lesson-item--active .lesson-title { color: var(--primary-color-600); font-weight: var(--font-weight-medium) }
 .lesson-item--locked { cursor: not-allowed; opacity: .6 }
 
@@ -66,7 +66,7 @@
 .lesson-meta__icon { font-size: 13px; color: var(--neutral-color-5) }
 
 .sidebar-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: none; border: none; border-radius: var(--radius-md); cursor: pointer; color: var(--text-primary-color); transition: background var(--duration-normal) }
-.sidebar-toggle:hover { background: var(--surface-hover, var(--neutral-color-1)) }
+.sidebar-toggle:hover { background: var(--surface-hover) }
 .sidebar-toggle .material-icons { font-size: 24px; color: var(--text-secondary-color) }
 .sidebar-backdrop { display: none }
 
@@ -100,10 +100,10 @@
 
 @media (max-width: bp.$mobile-large-breakpoint) {
   .sidebar-toggle { display: flex; margin: var(--spacing-sm) var(--spacing-md) }
-  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: var(--z-index-drawer); background: var(--surface-page, var(--neutral-color-0)); transform: translateX(-100%); transition: transform var(--duration-slow) var(--easing-ease) }
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: var(--z-index-drawer); background: var(--surface-page); transform: translateX(-100%); transition: transform var(--duration-slow) var(--easing-ease) }
   .sidebar--open { transform: translateX(0); box-shadow: var(--shadow-lg) }
   .sidebar__close { display: flex }
-  .sidebar-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 399 }
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; background: var(--surface-overlay); z-index: 399 }
   .course-layout { flex-direction: column }
   .course-layout--skeleton .sidebar { display: none }
 }

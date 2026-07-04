@@ -23,7 +23,7 @@
   white-space: nowrap;
 
   &:hover {
-    background: var(--surface-hover, #f8f8f8);
+    background: var(--surface-hover);
     color: var(--text-primary-color, #1a1a1a);
   }
 

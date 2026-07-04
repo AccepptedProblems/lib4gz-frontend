@@ -25,7 +25,7 @@
 
 .lesson-detail__module-badge {
   padding: var(--spacing-xxs) var(--spacing-sm);
-  background: var(--neutral-color-2);
+  background: var(--surface-sunken);
   border-radius: var(--radius-sm);
 }
 
@@ -46,7 +46,7 @@
 // ── Summary Card ─────────────────────────────────────────────────
 .summary-card {
   padding: var(--spacing-md);
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -64,7 +64,7 @@
   flex-direction: column;
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
-  background: var(--neutral-color-0);
+  background: var(--surface-raised);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
@@ -104,9 +104,9 @@
 }
 
 .icon-btn .material-icons { font-size: 18px }
-.icon-btn:hover { background: var(--neutral-color-1); color: var(--text-primary-color) }
+.icon-btn:hover { background: var(--surface-hover); color: var(--text-primary-color) }
 .icon-btn--danger { color: var(--error-color) }
-.icon-btn--danger:hover { background: var(--error-bg, var(--neutral-color-1)) }
+.icon-btn--danger:hover { background: var(--surface-error-subtle) }
 
 // ── Exercise List ─────────────────────────────────────────────────
 .exercise-list {
@@ -125,7 +125,7 @@
 }
 
 .exercise-item:last-child { border-bottom: none }
-.exercise-item:hover { background: var(--neutral-color-1) }
+.exercise-item:hover { background: var(--surface-hover) }
 
 .exercise-item__title { font-weight: var(--font-weight-medium); flex: 1; min-width: 0 }
 .exercise-item__meta { white-space: nowrap }

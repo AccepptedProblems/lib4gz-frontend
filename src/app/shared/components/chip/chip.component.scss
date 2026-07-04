@@ -9,7 +9,7 @@
   padding: 6px 14px;
   border-radius: var(--radius-full, 9999px);
   border: 1px solid var(--neutral-color-3, #e0e0e0);
-  background: var(--surface-default, #fff);
+  background: var(--surface-raised);
   color: var(--neutral-color-7, #646464);
   font-size: 13px;
   font-weight: 500;
@@ -20,7 +20,7 @@
 
   &:hover:not(.selected) {
     border-color: var(--neutral-color-4, #c0c0c0);
-    background: var(--neutral-color-1, #fafafa);
+    background: var(--surface-hover);
   }
 
   &.selected {
@@ -29,31 +29,31 @@
 
   // ── Variant colors (applied when selected) ──────────────
   &.selected.variant-default {
-    background: var(--primary-color-100, #e0f2f1);
+    background: var(--surface-primary-subtle);
     color: var(--primary-color-700, #00796b);
     border-color: var(--primary-color-200, #b2dfdb);
   }
 
   &.selected.variant-success {
-    background: var(--surface-success-subtle, #e8f5e9);
+    background: var(--surface-success-subtle);
     color: var(--success-color-8, #2e7d32);
     border-color: transparent;
   }
 
   &.selected.variant-warning {
-    background: var(--surface-warning-subtle, #fff8e1);
+    background: var(--surface-warning-subtle);
     color: var(--warning-color-8, #e86722);
     border-color: transparent;
   }
 
   &.selected.variant-error {
-    background: var(--surface-error-subtle, #ffebee);
+    background: var(--surface-error-subtle);
     color: var(--error-color-8, #c62828);
     border-color: transparent;
   }
 
   &.selected.variant-neutral {
-    background: var(--neutral-color-2, #f2f2f2);
+    background: var(--surface-sunken);
     color: var(--neutral-color-8, #424242);
     border-color: transparent;
   }
@@ -70,7 +70,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  background: var(--neutral-color-3, #e0e0e0);
+  background: var(--surface-sunken);
   color: var(--neutral-color-7, #646464);
 
   .chip.selected & {

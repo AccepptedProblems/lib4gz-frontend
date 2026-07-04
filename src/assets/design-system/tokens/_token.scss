@@ -1,6 +1,22 @@
 @mixin default-configuration {
   --primary-color: var(--primary-color-600);
 
+  //Surfaces — every background color in the app goes through one of these.
+  //Components must not set background from neutral/primary ramps or raw hex directly.
+  --surface-page: var(--neutral-color-0); // app/page background
+  --surface-raised: var(--neutral-color-0); // cards, dropdowns, side-sheets, modals
+  --surface-input: var(--neutral-color-0); // form fields
+  --surface-sunken: var(--neutral-color-2); // wells, progress tracks, code blocks
+  --surface-hover: var(--neutral-color-1); // hover rows/items
+  --surface-selected: var(--primary-color-50); // selected/active nav items, soft-tint states
+  --surface-primary-subtle: var(--primary-color-100); // tinted chips/banners
+  --surface-brand: var(--primary-color-50); // brand/illustration panels (auth screens)
+  --surface-success-subtle: #e8f5e9;
+  --surface-warning-subtle: #fff8e1;
+  --surface-error-subtle: #ffebee;
+  --surface-overlay: rgba(0, 0, 0, var(--opacity-backdrop, 0.5)); // modal scrims
+  --surface-veil: rgba(255, 255, 255, 0.8); // loading veil over content
+
   //Border
   --border-color: var(--neutral-color-4);
   --border-color-hover: var(--neutral-color-9);

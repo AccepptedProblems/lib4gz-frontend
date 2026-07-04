@@ -3,12 +3,12 @@
 .login-page {
   display: flex;
   min-height: 100vh;
-  background-color: var(--neutral-color-0);
+  background-color: var(--surface-page);
 }
 
 .login-illustration {
   flex: 1;
-  background-color: var(--primary-color-50);
+  background-color: var(--surface-brand);
   display: flex;
   align-items: center;
   justify-content: center;

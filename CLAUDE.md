@@ -33,14 +33,14 @@ Each spec YAML includes `current_implementation`, `current_template`, and `curre
 
 Global styles are imported via `src/styles.scss` -> `src/assets/design-system/_design.scss` in this order:
 
-1. **Theme** (`theme/theme-mint.scss`) - Color palette overrides (Mint/Teal), font-family
+1. **Theme** (`theme/theme-forest.scss`) - Color palette overrides (Forest green on paper), font-family
 2. **UI Style** (`ui-style/ui-style-default.scss`) - Button padding/radius data-attribute overrides
 3. **Tokens** (`tokens/_token.scss`) - Semantic CSS custom property mixins (navbar, footer, button, input)
 4. **Typography** (`_typography.scss`) - 15-level type scale, spacing/radius/z-index/elevation tokens
 5. **Components** (`_component.scss`, `components/`) - Button, input, select, checkbox, table styles
 6. **Form** (`_form.scss`) - Form layout
 
-Active theme: **Mint** with `navigation-bar-theme-by-primary-color-reverse` (teal bg, white text) and `footer-theme-by-primary-color`.
+Active theme: **Forest** with `navigation-bar-theme-by-primary-color-reverse` (forest-green bg, white text) and `footer-theme-by-primary-color`. Page background is warm paper (`--surface-page: #f4f1eb`); all backgrounds must go through `--surface-*` tokens (`npm run check:surfaces` enforces this).
 
 ### Design Principles (see `documents/design-system/design-principles.yaml`)
 

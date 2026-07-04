@@ -59,7 +59,7 @@
 
   &:hover {
     color: var(--text-primary-color, #333333);
-    background: var(--surface-hover, #f5f5f5);
+    background: var(--surface-hover);
   }
 
   &--active {
@@ -108,7 +108,7 @@
 
   &:hover {
     color: var(--text-primary-color);
-    background: var(--surface-hover, var(--neutral-color-1));
+    background: var(--surface-hover);
   }
 
   &:focus-visible {

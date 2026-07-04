@@ -1,0 +1,61 @@
+@use "../tokens/token" as token;
+
+// Single theme applied directly to :root
+// Forest: warm green primary on a warm cream "paper" page (palette shared with w4gz.com).
+:root {
+  // Typography
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+
+  // Primary Colors (Forest) — warm green, hue ~140°; light steps blend toward
+  // paper (#f4f1eb) instead of white so tinted surfaces sit on the cream page.
+  // 600 (buttons) and 700 (links/text) pass WCAG AA both against paper and
+  // under white text.
+  --primary-color-900: #1d3a29;
+  --primary-color-800: #29513a;
+  --primary-color-700: #336247;
+  --primary-color-600: #3f7455;
+  --primary-color-500: #4d8763;
+  --primary-color-400: #6fa17f;
+  --primary-color-300: #9dbd9f;
+  --primary-color-200: #c3d6c0;
+  --primary-color-100: #dfe8d9;
+  --primary-color-50: #eef1e6;
+
+  // Neutral Colors (0=white, 9=darkest) — warmed toward paper so dividers and
+  // secondary text don't read blue-gray on the cream page.
+  --neutral-color-0: #ffffff;
+  --neutral-color-1: #f7f5f0;
+  --neutral-color-2: #f0ede6;
+  --neutral-color-3: #e3dfd5;
+  --neutral-color-4: #ccc8bd;
+  --neutral-color-5: #a9a69d;
+  --neutral-color-6: #7d7b74;
+  --neutral-color-7: #62605a;
+  --neutral-color-8: #454440;
+  --neutral-color-9: #141414;
+
+  // Semantic Colors (WCAG AA compliant on paper backgrounds)
+  --warning-color: #e65100;
+  --success-color: #388e3c;
+  --error-color: #d32f2f;
+
+  // Apply token configurations
+  @include token.default-configuration;
+  @include token.interaction-tokens;
+  @include token.navigation-bar-theme-by-primary-color-reverse;
+  @include token.footer-theme-by-primary-color;
+
+  // Surfaces — unified paper: page and raised elements share the paper
+  // background (Unified Surface principle); floating elements separate by
+  // shadow, not color. Inputs stay white — the brightest thing on the page.
+  --surface-page: #f4f1eb;
+  --surface-raised: #f4f1eb;
+  --surface-input: #ffffff;
+  --surface-sunken: #ede9e0;
+  --surface-hover: #ede9e0;
+  --surface-veil: rgba(244, 241, 235, 0.8);
+
+  // Text colors
+  --text-color-on-primary-bg: var(--neutral-color-0);
+  --button-text-color: var(--neutral-color-0);
+}

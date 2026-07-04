@@ -14,7 +14,19 @@
   gap: 12px;
 }
 
-// Card chrome comes from lib-card; only internal layout lives here.
+// Exercise cards sit directly on the page, not on a white panel: transparent
+// background with border-only chrome, hover tints the border — mirrors the
+// teacher-side exercise list in lesson-submissions.
+.exercise-list .exercise-card {
+  background: transparent;
+}
+
+.exercise-list .exercise-card:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--primary-color-300);
+}
+
 .exercise-card {
   padding: 16px 20px;
   display: flex;
