@@ -14,13 +14,12 @@
   gap: 12px;
 }
 
+// Card chrome comes from lib-card; only internal layout lives here.
 .exercise-card {
   padding: 16px 20px;
-  border: 1px solid var(--neutral-color-3, #e4e4e4);
-  border-radius: var(--radius-md, 8px);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .exercise-card__header {
@@ -34,12 +33,15 @@
   flex: 1;
 }
 
-.exercise-card__meta {
-  margin: 0;
+.exercise-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.exercise-actions {
-  margin-top: 20px;
+.exercise-card__meta {
+  margin: 0;
 }
 
 @media (max-width: bp.$mobile-large-breakpoint) {

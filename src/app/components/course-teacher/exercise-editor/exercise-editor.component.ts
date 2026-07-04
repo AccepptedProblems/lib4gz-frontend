@@ -13,8 +13,8 @@ import {
   ExerciseType, QuestionAction
 } from '../../../shared/models';
 import {
-  ButtonComponent, DialogComponent, SideSheetComponent,
-  SkeletonComponent, TextareaComponent,
+  BreadcrumbComponent, BreadcrumbItem, ButtonComponent, DialogComponent,
+  SideSheetComponent, SkeletonComponent, TextareaComponent,
 } from '../../../shared/components';
 
 // ── Local interfaces ──────────────────────────────────────────────
@@ -46,6 +46,7 @@ const DEFAULT_MC_OPTIONS: AnswerOption[] = [
   standalone: true,
   imports: [
     FormsModule,
+    BreadcrumbComponent,
     ButtonComponent,
     DialogComponent,
     SideSheetComponent,
@@ -68,6 +69,22 @@ export class ExerciseEditorComponent implements OnInit {
   exerciseId = signal<string | null>(null);
   lessonId = signal<string | null>(null);
   isEditMode = computed(() => !!this.exerciseId());
+
+  /** Wayfinding for this full-screen route (UX plan 2.1). */
+  breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+    const items: BreadcrumbItem[] = [
+      { label: 'Dashboard', routerLink: '/' },
+      { label: 'Course Management', routerLink: ['/course', this.courseId(), 'manage', 'material'] },
+    ];
+    if (this.lessonId()) {
+      items.push({
+        label: 'Lesson',
+        routerLink: ['/course', this.courseId(), 'manage', 'material', 'lesson', this.lessonId()!],
+      });
+    }
+    items.push({ label: this.isEditMode() ? 'Edit Exercise' : 'Create Exercise' });
+    return items;
+  });
 
   // ── Screen state ────────────────────────────────────────────────
   screenState = signal<'loading' | 'loaded' | 'error'>('loaded');

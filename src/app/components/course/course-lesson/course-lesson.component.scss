@@ -2,15 +2,40 @@
 
 :host { display: block; height: 100% }
 
-.loading-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
+// Center the 900px column on the *viewport*, not the content area: the left
+// margin compensates for the sidebar (280px) + content padding (32px) = 312px.
+// When the viewport is too narrow (max() clamps to 0), the column simply sits
+// against the sidebar — the closest position to true center.
+@mixin viewport-centered-column {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  margin-left: max(0px, calc(50vw - 450px - 312px));
 }
 
-.lesson-content { padding: 24px 32px }
-.lesson-detail { max-width: 900px }
+.lesson-skeleton {
+  @include viewport-centered-column;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  lib-skeleton:nth-child(2) { margin-bottom: 8px }
+}
+
+// Title + tab bar stay fixed; only .tab-content scrolls (lesson-nav pinned below).
+.lesson-content {
+  padding: 24px 32px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.lesson-detail {
+  @include viewport-centered-column;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 .tab-bar {
   display: flex;
@@ -44,8 +69,58 @@
 }
 
 .tab-content {
-  padding-top: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  // Symmetric padding + negative margin keep content aligned while giving
+  // card hover shadows/focus rings room inside the scroll container.
+  padding: 20px 12px 24px;
+  margin: 0 -12px;
 }
+
+// Previous / Next lesson navigation — a slim bar pinned below the tab content:
+// quiet "Previous" ghost button left, primary "Go to next item" right.
+// Full lesson titles surface via the title attribute on hover.
+.lesson-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--neutral-color-2);
+}
+
+.lesson-nav__prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary-color);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--duration-normal) var(--easing-ease), background var(--duration-normal) var(--easing-ease);
+
+  .material-icons { font-size: 18px }
+
+  &:hover {
+    color: var(--text-primary-color);
+    background: var(--surface-hover, var(--neutral-color-1));
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+      0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
+  }
+}
+
+.lesson-nav__next { margin-left: auto }
+.lesson-nav__next-icon { font-size: 18px }
 
 @media (max-width: bp.$mobile-large-breakpoint) {
   .lesson-content { padding: 16px }

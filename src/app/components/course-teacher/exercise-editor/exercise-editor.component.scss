@@ -8,6 +8,8 @@
 
 .editor-container { max-width: 800px; margin: 0 auto; }
 
+.editor-breadcrumb { display: block; margin-bottom: var(--spacing-sm); }
+
 // ── Page header ─────────────────────────────────────────────────
 .page-header {
   display: flex;

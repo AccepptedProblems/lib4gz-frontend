@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { CourseCacheService } from './course-cache.service';
 import {
   UserCreationRequest,
   UserResponse,
@@ -14,6 +15,8 @@ import {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  // One-way dependency: the cache service reads localStorage directly, never AuthService.
+  private readonly courseCache = inject(CourseCacheService);
   private readonly baseUrl = `${environment.apiUrl}/v1/auth`;
 
   register(request: UserCreationRequest): Observable<UserResponse> {
@@ -37,6 +40,9 @@ export class AuthService {
     localStorage.removeItem('token_expiry');
     localStorage.removeItem('user_name');
     localStorage.removeItem('user_role');
+    localStorage.removeItem('user_id');
+    // Shared-machine privacy: drop all cached course data for this user.
+    this.courseCache.clearAll().catch(() => {});
   }
 
   isAuthenticated(): boolean {
@@ -70,6 +76,8 @@ export class AuthService {
     this.storeToken(response.accessToken);
     localStorage.setItem('user_name', response.user.username);
     localStorage.setItem('user_role', response.user.role);
+    // Scopes CourseCacheService entries; sessions without it bypass the cache.
+    localStorage.setItem('user_id', response.user.id);
   }
 
   private storeToken(token: Token): void {

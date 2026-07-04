@@ -30,6 +30,15 @@
   --radius-full: 9999px;
 
   /* ============================================
+   * ELEVATION TOKENS
+   * Shadows tinted toward the teal brand hue for cohesion
+   * (design principle: elevation-over-borders)
+   * ============================================ */
+  --shadow-sm: 0 1px 2px rgba(0, 40, 35, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 40, 35, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 40, 35, 0.12);
+
+  /* ============================================
    * MOTION / ANIMATION TOKENS
    * ============================================ */
   /* Durations */

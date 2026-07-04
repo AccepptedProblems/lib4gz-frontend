@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   CreateQuestionsRequest,
@@ -8,10 +8,12 @@ import {
   QuestionResponse,
   QuestionsResponse
 } from '../shared/models';
+import { CourseCacheService } from './course-cache.service';
 
 @Injectable({ providedIn: 'root' })
 export class QuestionService {
   private readonly http = inject(HttpClient);
+  private readonly cache = inject(CourseCacheService);
   private readonly apiUrl = environment.apiUrl;
 
   listByExercise(exerciseId: string): Observable<QuestionResponse[]> {
@@ -24,13 +26,13 @@ export class QuestionService {
     return this.http.post<QuestionResponse[]>(
       `${this.apiUrl}/v1/exercises/${exerciseId}/questions`,
       request
-    );
+    ).pipe(tap(() => this.cache.bustFreshness()));
   }
 
   batchUpdate(exerciseId: string, request: UpdateQuestionsRequest): Observable<QuestionsResponse> {
     return this.http.patch<QuestionsResponse>(
       `${this.apiUrl}/v1/exercises/${exerciseId}/questions`,
       request
-    );
+    ).pipe(tap(() => this.cache.bustFreshness()));
   }
 }

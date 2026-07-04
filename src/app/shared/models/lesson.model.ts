@@ -18,6 +18,13 @@ export interface LessonResponse {
   orderIndex: number;
   hasSummary: boolean;
   exerciseCount?: number | null;
+  // Caller's completion (syllabus only): true/false for exercise-bearing lessons,
+  // null/absent when the lesson has no exercises or context carries no progress.
+  completed?: boolean | null;
+  // Caller's SUBMITTED/APPROVED exercise count (syllabus only). With
+  // exerciseCount this yields the sidebar marker: == exerciseCount → full,
+  // in between → partial, 0 → no mark.
+  completedExerciseCount?: number | null;
   createdAt: number;
   updatedAt: number;
   // Denormalized: parent module's title.

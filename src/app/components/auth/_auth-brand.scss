@@ -1,0 +1,89 @@
+// Shared brand composition for the auth screens' left panel (UX plan 3.5).
+// Pure CSS — a mock course card showing the product's progress loop, no assets.
+@mixin auth-brand-panel {
+  .brand-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xl);
+    width: 80%;
+    max-width: 400px;
+  }
+
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--primary-color-800);
+
+    .material-icons { font-size: 36px; }
+  }
+
+  .brand-name {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.5px;
+  }
+
+  .mock-card {
+    width: 100%;
+    padding: var(--spacing-lg);
+    background: var(--neutral-color-0);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .mock-line {
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--neutral-color-2);
+    flex: 1;
+
+    &--title {
+      height: 14px;
+      width: 60%;
+      flex: none;
+      background: var(--primary-color-200);
+    }
+  }
+
+  .mock-progress {
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--neutral-color-2);
+    overflow: hidden;
+  }
+
+  .mock-progress-fill {
+    width: 66%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--primary-color-500);
+  }
+
+  .mock-lesson {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+
+    .material-icons {
+      font-size: 18px;
+      color: var(--success-color);
+    }
+
+    &--pending .material-icons {
+      color: var(--neutral-color-4);
+    }
+  }
+
+  .brand-tagline {
+    margin: 0;
+    text-align: center;
+    color: var(--primary-color-800);
+    font-size: var(--font-size-s);
+    line-height: 1.5;
+  }
+}

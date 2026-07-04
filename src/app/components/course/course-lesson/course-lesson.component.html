@@ -1,7 +1,11 @@
 <div class="lesson-content" aria-live="polite">
   @if (lessonLoading()) {
-    <div class="loading-placeholder">
-      <lib-spinner type="screen" [diameter]="32" label="Loading lesson..." />
+    <div class="lesson-skeleton">
+      <lib-skeleton width="45%" height="26px" />
+      <lib-skeleton width="60%" height="36px" />
+      <lib-skeleton width="100%" height="16px" />
+      <lib-skeleton width="95%" height="16px" />
+      <lib-skeleton width="88%" height="16px" />
     </div>
   } @else if (lesson()) {
     <div class="lesson-detail">
@@ -42,6 +46,31 @@
       <div class="tab-content" role="tabpanel">
         <router-outlet />
       </div>
+
+      <!-- Linear learn path: forward navigation lives on every lesson (UX plan 1.4) -->
+      @if (previousLesson() || nextLesson()) {
+        <nav class="lesson-nav" aria-label="Lesson navigation">
+          @if (previousLesson(); as prev) {
+            <button
+              class="lesson-nav__prev"
+              (click)="navigateToEntry(prev)"
+              [title]="prev.prefix + ' ' + prev.lesson.title"
+            >
+              <span class="material-icons" aria-hidden="true">arrow_back</span>
+              Previous
+            </button>
+          }
+
+          @if (nextLesson(); as next) {
+            <span class="lesson-nav__next" [title]="next.prefix + ' ' + next.lesson.title">
+              <lib-button variant="secondary" size="md" (buttonClick)="navigateToEntry(next)">
+                Go to next item
+                <span class="material-icons lesson-nav__next-icon" aria-hidden="true">arrow_forward</span>
+              </lib-button>
+            </span>
+          }
+        </nav>
+      }
     </div>
   }
 </div>

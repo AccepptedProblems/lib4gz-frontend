@@ -1,0 +1,42 @@
+:host {
+  display: block;
+  background: var(--neutral-color-0);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition:
+    box-shadow var(--duration-normal) var(--easing-ease),
+    transform var(--duration-normal) var(--easing-ease);
+}
+
+:host(.card--elevated) {
+  border: 1px solid var(--neutral-color-2);
+  box-shadow: var(--shadow-sm);
+}
+
+:host(.card--outlined) {
+  border: 1px solid var(--neutral-color-3);
+}
+
+:host(.card--hoverable) {
+  cursor: pointer;
+}
+
+:host(.card--hoverable:hover) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+:host(:focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-ring-width-inner) var(--focus-ring-offset),
+    0 0 0 var(--focus-ring-width-outer) var(--focus-ring-color);
+  transform: translateY(-2px);
+}
+
+// :where() keeps these at zero added specificity so a consumer's
+// `.my-card { padding: ... }` always overrides the padding preset.
+:host(:where(.card--pad-none)) { padding: 0; }
+:host(:where(.card--pad-sm)) { padding: var(--spacing-sm); }
+:host(:where(.card--pad-md)) { padding: var(--spacing-md); }
+:host(:where(.card--pad-lg)) { padding: var(--spacing-lg); }

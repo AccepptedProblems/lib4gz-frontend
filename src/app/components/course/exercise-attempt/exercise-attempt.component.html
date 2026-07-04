@@ -1,7 +1,14 @@
-<!-- Loading State -->
+<!-- Loading State — page-shaped skeleton -->
 @if (screenState() === 'loading') {
-  <div class="loading-container">
-    <lib-spinner type="screen" [diameter]="48" label="Loading exercises..." />
+  <div class="page-container" aria-label="Loading exercises...">
+    <div class="attempt-skeleton">
+      <lib-skeleton width="45%" height="16px" />
+      <lib-skeleton width="60%" height="28px" />
+      <lib-skeleton width="35%" height="36px" />
+      <lib-skeleton width="100%" height="90px" variant="rect" />
+      <lib-skeleton width="100%" height="90px" variant="rect" />
+      <lib-skeleton width="100%" height="90px" variant="rect" />
+    </div>
   </div>
 }
 
@@ -32,7 +39,10 @@
   <div class="page-container">
     <!-- Header Bar -->
     <div class="header-bar">
-      <h1 class="text-headline-small header-title">{{ headerTitle() }}</h1>
+      <div class="header-context">
+        <lib-breadcrumb [items]="breadcrumbItems()" />
+        <h1 class="text-headline-small header-title">{{ headerTitle() }}</h1>
+      </div>
       <div class="header-actions">
         <lib-button variant="secondary" size="md" (buttonClick)="handleCancel()">
           Cancel
@@ -58,9 +68,11 @@
           </button>
         }
       </div>
-      <button class="fast-fill-btn" (click)="openFastFill()">
-        ⚡ Fast Fill Answer
-      </button>
+      @if (canFastFill()) {
+        <button class="fast-fill-btn" (click)="openFastFill()">
+          ⚡ Fast Fill Answer
+        </button>
+      }
     </div>
 
     <!-- Exercise Content -->
@@ -71,7 +83,7 @@
         @for (question of activeQuestions(); track question.id; let qi = $index) {
           <div class="question-card" [class.question-card--last]="qi === activeQuestions().length - 1">
             <div class="question-header">
-              <span class="text-body-medium question-number">{{ qi + 1 }}.</span>
+              <span class="text-label-medium question-number">Question {{ qi + 1 }} of {{ activeQuestions().length }}</span>
               <span class="text-body-large question-content">{{ question.content }}</span>
             </div>
 
@@ -115,6 +127,16 @@
         }
       </div>
     }
+
+    <!-- Sticky submit footer — the primary action stays reachable on long exercises -->
+    <div class="submit-footer">
+      <span class="text-body-medium submit-footer__status">
+        {{ answeredCount() }} of {{ totalQuestions() }} questions answered
+      </span>
+      <lib-button variant="primary" size="md" (buttonClick)="handleSubmit()">
+        Submit
+      </lib-button>
+    </div>
   </div>
 
   <!-- Submit Confirmation Dialog -->

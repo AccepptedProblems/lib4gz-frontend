@@ -1,2 +1,49 @@
 /* You can add global styles to this file, and also import other style files */
 @use 'assets/design-system/design' as design-system;
+
+/* Browser default body margin (8px) breaks viewport-locked layouts — the page
+   would always be 16px taller than the viewport and scroll slightly. */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Thin, quiet scrollbars for every scroll container (page, sidebar, tab panels,
+   dropdowns, textareas). Standard properties cover Chromium/Firefox/Safari 18.2+;
+   the -webkit rules are the fallback for older Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-color-4) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--neutral-color-4);
+  border-radius: var(--radius-full);
+  /* Transparent border + content-box clip fakes a floating 4px-wide thumb */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--neutral-color-5);
+}
+
+/* Accessibility: neutralize decorative motion for users who opt out.
+   Covers hover lifts, shimmer loops, accordion/progress transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

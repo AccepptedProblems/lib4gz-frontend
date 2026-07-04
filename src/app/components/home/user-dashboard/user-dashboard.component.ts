@@ -7,15 +7,16 @@ import { CourseService } from '../../../services/course.service';
 import { EnrollmentService } from '../../../services/enrollment.service';
 import { AuthService } from '../../../services/auth.service';
 import { MeService } from '../../../services/me.service';
+import { ProgressService, LastVisitedLesson } from '../../../services/progress.service';
 import { CourseResponse, Visibility, UserRole } from '../../../shared/models';
-import { ButtonComponent, EmptyStateComponent, InputComponent, SideSheetComponent, SkeletonComponent, TextareaComponent } from '../../../shared/components';
+import { ButtonComponent, CardComponent, EmptyStateComponent, InputComponent, ProgressBarComponent, SideSheetComponent, SkeletonComponent, TextareaComponent } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 
 type Tab = 'enrolled' | 'created';
 
 @Component({
   selector: 'app-user-dashboard',
-  imports: [ReactiveFormsModule, ButtonComponent, EmptyStateComponent, InputComponent, SideSheetComponent, SkeletonComponent, TextareaComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, EmptyStateComponent, InputComponent, ProgressBarComponent, SideSheetComponent, SkeletonComponent, TextareaComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.scss'
 })
@@ -24,6 +25,7 @@ export class UserDashboardComponent implements OnInit {
   private readonly enrollmentService = inject(EnrollmentService);
   private readonly authService = inject(AuthService);
   private readonly meService = inject(MeService);
+  private readonly progressService = inject(ProgressService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
@@ -76,6 +78,93 @@ export class UserDashboardComponent implements OnInit {
       ? this.enrolledCourses()
       : this.createdCourses();
   });
+
+  /**
+   * "Continue learning" resume card (UX plan 1.5). Server resume state
+   * (`course.progress.lastVisited*`, cross-device) and this device's
+   * localStorage entry are both candidates — the most recent one wins, so a
+   * visit on another device surfaces here while a just-made local visit still
+   * shows instantly without a refetch.
+   */
+  resumeInfo = computed(() => {
+    let best: { visit: LastVisitedLesson; course: CourseResponse } | null = null;
+
+    for (const course of this.enrolledCourses()) {
+      const progress = course.progress;
+      if (!progress?.lastVisitedLessonId || !progress.lastVisitedLessonTitle) continue;
+      const visit: LastVisitedLesson = {
+        courseId: course.id,
+        courseTitle: course.title,
+        lessonId: progress.lastVisitedLessonId,
+        lessonTitle: progress.lastVisitedLessonTitle,
+        prefix: null,
+        updatedAt: progress.lastVisitedAt ?? 0,
+      };
+      if (!best || visit.updatedAt > best.visit.updatedAt) best = { visit, course };
+    }
+
+    const local = this.progressService.lastVisited();
+    if (local) {
+      const course = this.enrolledCourses().find(c => c.id === local.courseId);
+      if (course && (!best || local.updatedAt > best.visit.updatedAt)) {
+        best = { visit: local, course };
+      }
+    }
+
+    if (!best) return null;
+    return { ...best, percent: this.courseProgress(best.course) };
+  });
+
+  /**
+   * Server-derived percent (done exercises over exercise-bearing lessons) when
+   * available; localStorage-derived otherwise. `totalLessons === 0` means no
+   * gradable content — show 0 rather than a fake 100.
+   */
+  courseProgress(course: CourseResponse): number {
+    const progress = course.progress;
+    if (progress && progress.totalLessons > 0) {
+      return Math.min(100, Math.round((progress.completedLessons / progress.totalLessons) * 100));
+    }
+    return this.progressService.percent(course.id);
+  }
+
+  /**
+   * Zero-asset card art (UX plan 3.1): a gradient + initials derived from the course
+   * code hash, so every card is stable across sessions but visually distinct.
+   */
+  private static readonly CARD_GRADIENTS: ReadonlyArray<[string, string]> = [
+    ['#00695c', '#26a69a'], // deep teal
+    ['#00838f', '#4dd0e1'], // cyan
+    ['#2e7d32', '#81c784'], // green
+    ['#5c6bc0', '#9fa8da'], // indigo
+    ['#00796b', '#80cbc4'], // mint
+    ['#455a64', '#90a4ae'], // blue-grey
+    ['#6d4c41', '#bcaaa4'], // warm brown
+    ['#7b1fa2', '#ce93d8'], // plum
+  ];
+
+  courseGradient(course: CourseResponse): string {
+    const hash = [...course.code].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+    const [from, to] = UserDashboardComponent.CARD_GRADIENTS[hash % UserDashboardComponent.CARD_GRADIENTS.length];
+    return `linear-gradient(135deg, ${from}, ${to})`;
+  }
+
+  courseInitials(course: CourseResponse): string {
+    return course.title
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(word => word[0].toUpperCase())
+      .join('');
+  }
+
+  resumeLearning(): void {
+    const info = this.resumeInfo();
+    if (!info) return;
+    this.router.navigate(['/course', info.visit.courseId, 'lesson', info.visit.lessonId], {
+      queryParams: info.visit.prefix ? { prefix: info.visit.prefix } : {},
+    });
+  }
 
   ngOnInit(): void {
     this.userName.set(this.authService.getUserName());

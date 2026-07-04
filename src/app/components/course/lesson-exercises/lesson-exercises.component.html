@@ -7,8 +7,17 @@
   <p class="text-body-medium text-secondary">No exercises available for this lesson.</p>
 } @else {
   <div class="exercise-list">
-    @for (exercise of sortedExercises(); track exercise.id) {
-      <div class="exercise-card">
+    @for (exercise of sortedExercises(); track exercise.id; let i = $index) {
+      <lib-card
+        class="exercise-card"
+        padding="none"
+        [hoverable]="true"
+        role="link"
+        tabindex="0"
+        [attr.aria-label]="getActionLabel(exercise.mySubmissionStatus) + ' ' + exercise.title"
+        (click)="navigateToExercise(i)"
+        (keydown.enter)="navigateToExercise(i)"
+      >
         <div class="exercise-card__header">
           <span class="text-title-medium exercise-card__title">{{ exercise.title }}</span>
           @if (exercise.mySubmissionStatus; as status) {
@@ -20,16 +29,19 @@
             />
           }
         </div>
-        <p class="text-body-medium text-secondary exercise-card__meta">
-          {{ getExerciseTypeLabel(exercise.type) }} · {{ exercise.questionCount ?? 0 }} {{ (exercise.questionCount ?? 0) === 1 ? 'Question' : 'Questions' }}
-        </p>
-      </div>
+        <div class="exercise-card__footer">
+          <p class="text-body-medium text-secondary exercise-card__meta">
+            {{ getExerciseTypeLabel(exercise.type) }} · {{ exercise.questionCount ?? 0 }} {{ (exercise.questionCount ?? 0) === 1 ? 'Question' : 'Questions' }}
+          </p>
+          <lib-button
+            [variant]="isActionPrimary(exercise.mySubmissionStatus) ? 'primary' : 'secondary'"
+            size="sm"
+            (buttonClick)="navigateToExercise(i)"
+          >
+            {{ getActionLabel(exercise.mySubmissionStatus) }}
+          </lib-button>
+        </div>
+      </lib-card>
     }
-  </div>
-
-  <div class="exercise-actions">
-    <lib-button variant="primary" size="md" (buttonClick)="navigateToExercise()">
-      Do Exercise
-    </lib-button>
   </div>
 }

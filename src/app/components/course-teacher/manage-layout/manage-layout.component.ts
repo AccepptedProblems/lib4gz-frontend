@@ -15,7 +15,7 @@ import {
 } from '../../../shared/models';
 import {
   ButtonComponent,
-  SpinnerComponent,
+  SkeletonComponent,
   TextareaComponent,
 } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
@@ -38,7 +38,7 @@ interface SidebarNavItem {
     RouterOutlet,
     FormsModule,
     ButtonComponent,
-    SpinnerComponent,
+    SkeletonComponent,
     TextareaComponent,
   ],
   templateUrl: './manage-layout.component.html',

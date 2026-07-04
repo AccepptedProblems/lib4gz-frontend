@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, filter } from 'rxjs';
-import { ExerciseService } from '../../../services';
+import { ExerciseService, ProgressService } from '../../../services';
 import {
   ExerciseResponse,
   LessonResponse,
@@ -11,6 +11,7 @@ import {
 } from '../../../shared/models';
 import {
   ButtonComponent,
+  CardComponent,
   ChipComponent,
   SkeletonComponent,
 } from '../../../shared/components';
@@ -25,7 +26,7 @@ import { CourseLessonComponent } from '../course-lesson/course-lesson.component'
  */
 @Component({
   selector: 'app-lesson-exercises',
-  imports: [ButtonComponent, ChipComponent, SkeletonComponent],
+  imports: [ButtonComponent, CardComponent, ChipComponent, SkeletonComponent],
   templateUrl: './lesson-exercises.component.html',
   styleUrl: './lesson-exercises.component.scss',
 })
@@ -33,6 +34,7 @@ export class LessonExercisesComponent {
   private readonly parent = inject(CourseLessonComponent);
   private readonly router = inject(Router);
   private readonly exerciseService = inject(ExerciseService);
+  private readonly progressService = inject(ProgressService);
   private readonly destroyRef = inject(DestroyRef);
 
   exercises = signal<ExerciseResponse[]>([]);
@@ -52,14 +54,29 @@ export class LessonExercisesComponent {
       .subscribe(lesson => this.loadFor(lesson));
   }
 
-  navigateToExercise(): void {
+  /** Opens the attempt screen focused on the clicked exercise (UX plan 2.3). */
+  navigateToExercise(exerciseIndex: number): void {
     const lesson = this.parent.lesson();
     if (!lesson) return;
     const prefix = this.parent.lessonPrefix();
     this.router.navigate(
       ['/course', this.parent.courseId(), 'lesson', lesson.id, 'attempt'],
-      { queryParams: prefix ? { prefix } : {} }
+      { queryParams: { ...(prefix ? { prefix } : {}), exercise: exerciseIndex } }
     );
+  }
+
+  getActionLabel(status: SubmissionStatus | null | undefined): string {
+    switch (status) {
+      case SubmissionStatus.DRAFT: return 'Continue';
+      case SubmissionStatus.SUBMITTED:
+      case SubmissionStatus.APPROVED: return 'Review';
+      case SubmissionStatus.NEEDS_REVISION: return 'Revise';
+      default: return 'Start';
+    }
+  }
+
+  isActionPrimary(status: SubmissionStatus | null | undefined): boolean {
+    return !status || status === SubmissionStatus.DRAFT || status === SubmissionStatus.NEEDS_REVISION;
   }
 
   getExerciseTypeLabel(type: ExerciseType): string {
@@ -108,12 +125,32 @@ export class LessonExercisesComponent {
     }
 
     this.loading.set(true);
-    this.exerciseService.listByLesson(lesson.id).subscribe({
+    this.exerciseService.listByLesson(lesson.id, { courseId: this.parent.courseId() }).subscribe({
       next: exs => {
         this.exercises.set(exs);
         this.loading.set(false);
+        this.syncCompletion(lesson, exs);
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  /**
+   * Client-side completion derivation (UX plan 1.2): a lesson with exercises counts
+   * as complete once every exercise has a SUBMITTED or APPROVED submission.
+   */
+  private syncCompletion(lesson: LessonResponse, exercises: ExerciseResponse[]): void {
+    if (this.parent.isTeacher()) return;
+    const doneIds = exercises
+      .filter(
+        ex =>
+          ex.mySubmissionStatus === SubmissionStatus.SUBMITTED ||
+          ex.mySubmissionStatus === SubmissionStatus.APPROVED,
+      )
+      .map(ex => ex.id);
+    this.progressService.markExercisesSubmitted(this.parent.courseId(), lesson.id, doneIds);
+    if (exercises.length > 0 && doneIds.length === exercises.length) {
+      this.progressService.markLessonCompleted(this.parent.courseId(), lesson.id);
+    }
   }
 }

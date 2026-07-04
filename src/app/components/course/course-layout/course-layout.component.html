@@ -1,7 +1,27 @@
-<!-- Loading State -->
+<!-- Loading State — layout-shaped skeleton preserves the sidebar + content shape -->
 @if (screenState() === 'loading') {
-  <div class="loading-container">
-    <lib-spinner type="screen" [diameter]="48" label="Loading course..." />
+  <div class="course-layout course-layout--skeleton" aria-label="Loading course...">
+    <aside class="sidebar">
+      <div class="sidebar__heading">
+        <lib-skeleton width="75%" height="24px" />
+        <lib-skeleton width="100%" height="14px" />
+        <lib-skeleton width="55%" height="14px" />
+        <lib-skeleton width="40%" height="14px" />
+      </div>
+      <hr class="sidebar__divider" />
+      <div class="sidebar__material sidebar__material--skeleton">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <lib-skeleton width="90%" height="18px" />
+        }
+      </div>
+    </aside>
+    <main class="content-area content-area--skeleton">
+      <lib-skeleton width="40%" height="28px" />
+      <lib-skeleton width="100%" height="16px" />
+      <lib-skeleton width="95%" height="16px" />
+      <lib-skeleton width="90%" height="16px" />
+      <lib-skeleton width="100%" height="240px" variant="rect" />
+    </main>
   </div>
 }
 
@@ -50,6 +70,15 @@
           {{ course.createdBy.name }}
         </span>
 
+        @if (showProgress()) {
+          <div class="sidebar__progress">
+            <lib-progress-bar [value]="courseProgressPercent()" [showLabel]="true" />
+            <span class="text-label-medium sidebar__progress-count">
+              {{ completedLessonCount() }} of {{ totalLessonCount() }} lessons completed
+            </span>
+          </div>
+        }
+
         @if (isTeacher()) {
           <lib-button variant="primary" size="sm" (buttonClick)="navigateToManage()">
             Manage Course
@@ -78,14 +107,27 @@
               <span class="material-icons module-chevron" [class.rotated]="mwl.expanded">
                 chevron_right
               </span>
-              <span class="text-title-medium">{{ i + 1 }}. {{ mwl.module.title }}</span>
+              <span class="text-title-medium module-title">{{ i + 1 }}. {{ mwl.module.title }}</span>
+              @if (showProgress() && moduleGradableCount(mwl) > 0) {
+                <span
+                  class="text-label-medium module-count"
+                  [class.module-count--done]="moduleCompletedCount(mwl) === moduleGradableCount(mwl)"
+                >
+                  {{ moduleCompletedCount(mwl) }}/{{ moduleGradableCount(mwl) }}
+                </span>
+              }
             </div>
 
-            @if (mwl.expanded) {
+            <div
+              class="module-lessons-wrap"
+              [class.module-lessons-wrap--expanded]="mwl.expanded"
+            >
               <div
                 class="module-lessons"
                 [id]="'module-lessons-' + mwl.module.id"
                 role="list"
+                [attr.aria-hidden]="!mwl.expanded"
+                [inert]="!mwl.expanded"
               >
                 @for (lesson of mwl.lessons; track lesson.id; let j = $index) {
                     <div
@@ -98,17 +140,46 @@
                       tabindex="0"
                       (keydown.enter)="!isContentLocked() && navigateToLesson(lesson, i, j)"
                     >
-                      <span class="text-body-medium">{{ i + 1 }}.{{ j + 1 }} {{ lesson.title }}</span>
-                      @if (lesson.hasSummary) {
-                        <span class="material-icons lesson-icon" title="Has summary">description</span>
+                      @if (showProgress()) {
+                        @switch (lessonMark(lesson)) {
+                          @case ('full') {
+                            <span class="material-icons lesson-check lesson-check--done" title="All exercises submitted">check_circle</span>
+                          }
+                          @case ('half') {
+                            <span class="material-icons lesson-check lesson-check--half" title="Some exercises submitted">timelapse</span>
+                          }
+                          @default {
+                            <!-- No submissions (or no exercises): no mark; spacer keeps titles aligned. -->
+                            <span class="lesson-check lesson-check--spacer" aria-hidden="true"></span>
+                          }
+                        }
                       }
+                      <div class="lesson-info">
+                        <span class="text-body-medium lesson-title">{{ i + 1 }}.{{ j + 1 }} {{ lesson.title }}</span>
+                        @if (lesson.hasSummary || (lesson.exerciseCount ?? 0) > 0) {
+                          <span class="text-label-medium lesson-meta">
+                            @if (lesson.hasSummary) {
+                              <span class="lesson-meta__part">
+                                <span class="material-icons lesson-meta__icon" aria-hidden="true">description</span>
+                                Summary
+                              </span>
+                            }
+                            @if ((lesson.exerciseCount ?? 0) > 0) {
+                              <span class="lesson-meta__part">
+                                <span class="material-icons lesson-meta__icon" aria-hidden="true">quiz</span>
+                                {{ lesson.exerciseCount }} {{ lesson.exerciseCount === 1 ? 'exercise' : 'exercises' }}
+                              </span>
+                            }
+                          </span>
+                        }
+                      </div>
                     </div>
                   }
                   @if (mwl.lessons.length === 0) {
                     <p class="text-body-medium text-secondary no-lessons">No lessons yet</p>
                   }
               </div>
-            }
+            </div>
           </div>
         }
 
@@ -128,4 +199,11 @@
       <router-outlet />
     </main>
   </div>
+
+  <!-- Course-completion celebration (rare by design — milestone only) -->
+  @if (celebrating()) {
+    <div class="celebration-overlay" aria-hidden="true">
+      <span class="material-icons celebration-check">check_circle</span>
+    </div>
+  }
 }

@@ -1,6 +1,8 @@
 @if (enrollmentLoading()) {
-  <div class="home-container">
-    <lib-spinner type="screen" [diameter]="32" label="Loading..." />
+  <div class="home-container home-container--skeleton" aria-label="Loading...">
+    <lib-skeleton width="45%" height="28px" />
+    <lib-skeleton width="70%" height="16px" />
+    <lib-skeleton width="30%" height="40px" variant="rect" />
   </div>
 } @else if (isContentLocked() && !isEnrolled()) {
   <div class="enroll-cta">

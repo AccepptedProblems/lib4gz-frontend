@@ -10,4 +10,7 @@ export * from './toast/toast.component';
 export * from './chip/chip.component';
 export * from './textarea/textarea.component';
 export * from './empty-state/empty-state.component';
+export * from './card/card.component';
+export * from './progress-bar/progress-bar.component';
+export * from './breadcrumb/breadcrumb.component';
 export * from './side-sheet/side-sheet.component';

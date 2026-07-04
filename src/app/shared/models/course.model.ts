@@ -30,6 +30,23 @@ export interface CourseResponse {
   enrollmentCount?: number | null;
   // Denormalized: caller's enrollment. Null when unenrolled (PUBLIC visibility only).
   myEnrollment?: EnrollmentSummary | null;
+  // Caller's progress, server-derived from submissions. Present on enrolled
+  // listings (GET /v1/me/courses) and the syllabus; null elsewhere.
+  progress?: CourseProgressResponse | null;
+}
+
+/**
+ * Server-side course progress. A lesson counts as done when all of its exercises
+ * are SUBMITTED/APPROVED; lessons without exercises are excluded, so
+ * `totalLessons` is the number of exercise-bearing lessons. `totalLessons === 0`
+ * means no gradable content yet — render no percentage.
+ */
+export interface CourseProgressResponse {
+  completedLessons: number;
+  totalLessons: number;
+  lastVisitedLessonId?: string | null;
+  lastVisitedLessonTitle?: string | null;
+  lastVisitedAt?: number | null;
 }
 
 export type CourseListType = 'created' | 'enrolled' | 'public';

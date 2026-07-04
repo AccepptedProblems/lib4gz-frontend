@@ -2,8 +2,17 @@
 
 :host { display: block }
 
-// Loading & Error states
-.loading-container, .error-container {
+// Loading skeleton — mirrors header + question cards
+.attempt-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  lib-skeleton:nth-child(2) { margin-bottom: 8px }
+}
+
+// Error states
+.error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,7 +48,14 @@
   border-bottom: 1px solid var(--neutral-color-2, #f2f2f2);
 }
 
-.header-title { margin: 0 }
+.header-context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.header-title { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 
 .header-actions {
   display: flex;
@@ -131,13 +147,15 @@
 
 .question-header {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
 .question-number {
   font-weight: 600;
-  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--text-secondary-color, #646464);
 }
 
@@ -180,6 +198,25 @@
 
 .mc-option-text {
   color: var(--text-primary-color, #333333);
+}
+
+// Sticky submit footer — mirrors the header actions at the bottom of long exercises
+.submit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin: 32px -32px 0;
+  padding: 12px 32px;
+  background: var(--surface-page, #ffffff);
+  border-top: 1px solid var(--neutral-color-2, #f2f2f2);
+}
+
+.submit-footer__status {
+  color: var(--text-secondary-color, #646464);
 }
 
 // Unanswered breakdown list (submit dialog)
@@ -246,4 +283,6 @@
   .mc-options { margin-left: 0 }
 
   .question-card { padding: 16px 0 }
+
+  .submit-footer { margin: 24px -16px 0; padding: 12px 16px }
 }

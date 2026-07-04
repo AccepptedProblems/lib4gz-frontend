@@ -1,3 +1,5 @@
+@use '../auth-brand' as brand;
+
 .register-page {
   display: flex;
   min-height: 100vh;
@@ -16,13 +18,7 @@
   }
 }
 
-.illustration-placeholder {
-  width: 80%;
-  max-width: 400px;
-  aspect-ratio: 1;
-  border-radius: var(--radius-lg);
-  background-color: var(--primary-color-100);
-}
+@include brand.auth-brand-panel;
 
 .register-form-container {
   flex: 1;

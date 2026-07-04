@@ -8,4 +8,6 @@
 
 .summary-content {
   line-height: 1.7;
+  // Summaries are plain text with meaningful newlines/list dashes — preserve them.
+  white-space: pre-line;
 }

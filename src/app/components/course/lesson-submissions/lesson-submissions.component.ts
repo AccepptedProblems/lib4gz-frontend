@@ -168,7 +168,7 @@ export class LessonSubmissionsComponent {
     }
 
     this.loading.set(true);
-    this.submissionService.listByLesson(lesson.id, { expand: ['answers', 'questions'] }).subscribe({
+    this.submissionService.listByLesson(lesson.id, { expand: ['answers', 'questions'], courseId: this.parent.courseId() }).subscribe({
       next: ({ exercises }) => {
         this.exerciseGroups.set(exercises);
         this.loading.set(false);

@@ -6,7 +6,7 @@ import {
 } from '../../../shared/models';
 import {
   ButtonComponent,
-  SpinnerComponent,
+  SkeletonComponent,
 } from '../../../shared/components';
 import { CourseLayoutComponent } from '../course-layout/course-layout.component';
 
@@ -19,7 +19,7 @@ import { CourseLayoutComponent } from '../course-layout/course-layout.component'
  */
 @Component({
   selector: 'app-course-home',
-  imports: [ButtonComponent, SpinnerComponent],
+  imports: [ButtonComponent, SkeletonComponent],
   templateUrl: './course-home.component.html',
   styleUrl: './course-home.component.scss',
 })

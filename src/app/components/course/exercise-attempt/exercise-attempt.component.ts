@@ -3,18 +3,22 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, Subject, of } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ExerciseService, SubmissionService } from '../../../services';
+import { AuthService, CourseService, ExerciseService, LessonService, ProgressService, SubmissionService } from '../../../services';
+import { ToastService } from '../../../shared/components/toast/toast.component';
 import {
   ExerciseResponse,
   QuestionResponse,
   AnswerRequest,
   ExerciseType,
+  UserRole,
 } from '../../../shared/models';
 import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
   ButtonComponent,
-  SpinnerComponent,
   DialogComponent,
   SideSheetComponent,
+  SkeletonComponent,
   TextareaComponent,
 } from '../../../shared/components';
 
@@ -23,10 +27,11 @@ type ScreenState = 'loading' | 'loaded' | 'error' | 'no-exercises';
 @Component({
   selector: 'app-exercise-attempt',
   imports: [
+    BreadcrumbComponent,
     ButtonComponent,
-    SpinnerComponent,
     DialogComponent,
     SideSheetComponent,
+    SkeletonComponent,
     TextareaComponent,
   ],
   templateUrl: './exercise-attempt.component.html',
@@ -37,7 +42,12 @@ export class ExerciseAttemptComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly exerciseService = inject(ExerciseService);
+  private readonly lessonService = inject(LessonService);
+  private readonly courseService = inject(CourseService);
   private readonly submissionService = inject(SubmissionService);
+  private readonly progressService = inject(ProgressService);
+  private readonly authService = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   // Expose enum
   readonly ExerciseType = ExerciseType;
@@ -64,6 +74,9 @@ export class ExerciseAttemptComponent implements OnInit {
   showSubmitDialog = signal(false);
   showCancelDialog = signal(false);
   showFastFillDialog = signal(false);
+
+  // Exercise tab requested via `?exercise=<index>` (per-card action on the exercises tab)
+  private requestedExerciseIndex: number | null = null;
 
   // Fast Fill Answer
   fastFillText = signal('');
@@ -119,9 +132,32 @@ export class ExerciseAttemptComponent implements OnInit {
     return result;
   });
 
-  headerTitle = computed(() =>
-    this.lessonPrefix() ? 'Exercise ' + this.lessonPrefix() : 'Exercise'
-  );
+  // Wayfinding context (UX plan 2.1/2.2) — loaded alongside the exercises.
+  lessonTitle = signal('');
+  courseTitle = signal('');
+
+  headerTitle = computed(() => {
+    const lesson = this.lessonTitle();
+    if (!lesson) return 'Exercise';
+    return this.lessonPrefix() ? `${this.lessonPrefix()} ${lesson}` : lesson;
+  });
+
+  breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+    const prefixParams = this.lessonPrefix() ? { prefix: this.lessonPrefix() } : undefined;
+    return [
+      { label: 'Dashboard', routerLink: '/' },
+      { label: this.courseTitle() || 'Course', routerLink: ['/course', this.courseId()] },
+      {
+        label: this.lessonTitle() || 'Lesson',
+        routerLink: ['/course', this.courseId(), 'lesson', this.lessonId(), 'exercises'],
+        queryParams: prefixParams,
+      },
+      { label: 'Exercise Attempt' },
+    ];
+  });
+
+  /** Fast Fill is a grading shortcut, not a student feature — teachers/admins only (UX plan 2.6). */
+  canFastFill = computed(() => this.authService.hasRole(UserRole.TEACHER, UserRole.ADMIN));
 
   ngOnInit(): void {
     // Extract route params (paramsInheritanceStrategy: 'always' makes ancestor params available)
@@ -138,6 +174,8 @@ export class ExerciseAttemptComponent implements OnInit {
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       this.lessonPrefix.set(params.get('prefix') ?? '');
+      const exercise = params.get('exercise');
+      this.requestedExerciseIndex = exercise !== null ? Number(exercise) : null;
     });
 
     // Auto-save pipeline
@@ -313,11 +351,23 @@ export class ExerciseAttemptComponent implements OnInit {
       next: () => {
         this.isSubmitting.set(false);
         this.showSubmitDialog.set(false);
+        // Partial progress feeds the sidebar's half-mark; the lesson counts as
+        // complete only when every exercise got a submission (UX plan 1.2).
+        this.progressService.markExercisesSubmitted(
+          this.courseId(),
+          this.lessonId(),
+          [...submissionIdMap.keys()],
+        );
+        if (this.exercises().every(ex => submissionIdMap.has(ex.id))) {
+          this.progressService.markLessonCompleted(this.courseId(), this.lessonId());
+        }
+        this.toast.success('Answers submitted');
         this.navigateBack();
       },
       error: () => {
         this.isSubmitting.set(false);
         this.showSubmitDialog.set(false);
+        this.toast.error('Failed to submit answers. Please try again.');
       },
     });
   }
@@ -340,9 +390,20 @@ export class ExerciseAttemptComponent implements OnInit {
    * Single round-trip: each exercise arrives with its questions and the caller's
    * draft submission (if any). Replaces the previous 1 + 2N fan-out.
    */
+  /** Best-effort context fetch for the breadcrumb/heading — never blocks the exercises. */
+  private loadContext(lessonId: string): void {
+    this.lessonService.get(lessonId).pipe(catchError(() => of(null))).subscribe(lesson => {
+      if (lesson) this.lessonTitle.set(lesson.title);
+    });
+    this.courseService.get(this.courseId()).pipe(catchError(() => of(null))).subscribe(course => {
+      if (course) this.courseTitle.set(course.title);
+    });
+  }
+
   private loadExercises(lessonId: string): void {
     this.screenState.set('loading');
     this.errorMessage.set('');
+    this.loadContext(lessonId);
 
     this.exerciseService
       .listByLesson(lessonId, { expand: ['questions', 'mySubmission'] })
@@ -354,7 +415,12 @@ export class ExerciseAttemptComponent implements OnInit {
             return;
           }
           this.exercises.set(sorted);
-          this.activeExerciseIndex.set(0);
+          const requested = this.requestedExerciseIndex;
+          this.activeExerciseIndex.set(
+            requested !== null && Number.isInteger(requested)
+              ? Math.max(0, Math.min(sorted.length - 1, requested))
+              : 0,
+          );
           this.hydrateFromExpandedExercises(sorted);
           this.screenState.set('loaded');
         },

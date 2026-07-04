@@ -41,7 +41,7 @@ export class LessonSummaryComponent {
     }
     this.loading.set(true);
     this.error.set(false);
-    this.summaryService.get(lesson.id).subscribe({
+    this.summaryService.get(lesson.id, this.parent.courseId()).subscribe({
       next: s => {
         this.summary.set(s);
         this.loading.set(false);

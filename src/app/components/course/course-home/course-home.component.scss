@@ -11,5 +11,13 @@
   padding: 24px 32px;
 }
 
+.home-container--skeleton {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+
+  lib-skeleton { align-self: flex-start; width: 100% }
+}
+
 .placeholder-icon { font-size: 48px; color: #c0c0c0 }
 .enroll-icon { font-size: 48px; color: var(--primary-color-400, #26a69a) }
