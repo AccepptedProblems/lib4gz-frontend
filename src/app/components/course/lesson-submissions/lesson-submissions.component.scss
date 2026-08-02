@@ -141,6 +141,8 @@
 
 .submission-message__answer {
   padding-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 @media (max-width: bp.$mobile-large-breakpoint) {
