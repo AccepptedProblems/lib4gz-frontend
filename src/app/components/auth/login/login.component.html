@@ -1,28 +1,6 @@
 <div class="login-page">
   <div class="login-illustration" aria-hidden="true">
-    <div class="brand-panel">
-      <div class="brand-mark">
-        <span class="material-icons">school</span>
-        <span class="brand-name">Lib4GZ</span>
-      </div>
-      <div class="mock-card">
-        <div class="mock-line mock-line--title"></div>
-        <div class="mock-progress"><div class="mock-progress-fill"></div></div>
-        <div class="mock-lesson">
-          <span class="material-icons">check_circle</span>
-          <div class="mock-line"></div>
-        </div>
-        <div class="mock-lesson">
-          <span class="material-icons">check_circle</span>
-          <div class="mock-line"></div>
-        </div>
-        <div class="mock-lesson mock-lesson--pending">
-          <span class="material-icons">radio_button_unchecked</span>
-          <div class="mock-line"></div>
-        </div>
-      </div>
-      <p class="brand-tagline">Learn at your own pace.<br />Watch your progress add up.</p>
-    </div>
+    <app-auth-brand />
   </div>
 
   <div class="login-form-container">
@@ -72,8 +50,11 @@
         </lib-button>
       </form>
 
+      <div class="auth-divider text-body-small">or</div>
+      <app-google-sign-in text="signin_with" (credential)="onGoogle($event)" />
+
       <p class="login-register-link text-body-medium">
-        Don't have an account? <a routerLink="/register">Register</a>
+        Don't have an account? <a routerLink="/register">Create one</a>
       </p>
     </div>
   </div>

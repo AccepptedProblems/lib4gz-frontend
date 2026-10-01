@@ -1,0 +1,9 @@
+@use '../auth-brand' as brand;
+
+:host {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+@include brand.auth-brand-panel;

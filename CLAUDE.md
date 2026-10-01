@@ -22,12 +22,16 @@ The project uses a comprehensive **OpenSpec YAML document system** in `documents
 
 - `documents/openspec.yaml` - Project index with all screen specs, routes, and phases
 - `documents/design-system/` - Tokens, colors, typography, components, theme, breakpoints
-- `documents/design-system/design-principles.yaml` - **Core design principles (MUST follow)**
+- `documents/design-system/design-principles-{1min,5min,full}.md` - **Core design principles (MUST follow)**
 - `documents/layout/` - Navbar and footer specs
 - `documents/screens/` - Per-screen specs (structure, states, acceptance criteria)
 - `documents/network/` - API endpoints, data models, networking config
 
-Each spec YAML includes `current_implementation`, `current_template`, and `current_styles` sections showing the exact code that should exist. Treat these as the source of truth.
+Each screen's `contract.yaml` points at the component, template, and style files. Per `documents/_writing-guidelines.md` §8, specs link to code rather than embedding it: the code in `src/` is the source of truth, the spec states the intent.
+
+**Business-level docs live in `../docs/`.** They are written for non-technical readers. Update the matching `../docs/features/*.md` whenever a user-visible feature changes.
+
+**`documents/` and `.claude/` are git-ignored in this repo**, so these specs are not version-controlled.
 
 ### SCSS Design System Layers
 
@@ -42,7 +46,7 @@ Global styles are imported via `src/styles.scss` -> `src/assets/design-system/_d
 
 Active theme: **Mint** with `navigation-bar-theme-by-primary-color-reverse` (teal bg, white text) and `footer-theme-by-primary-color`.
 
-### Design Principles (see `documents/design-system/design-principles.yaml`)
+### Design Principles (see `documents/design-system/design-principles-full.md`)
 
 These principles apply to **all screens and components**:
 
@@ -65,9 +69,14 @@ These principles apply to **all screens and components**:
 ### Auth Flow
 
 - JWT stored in `localStorage` as `access_token` with `token_expiry`
+- The signed-in user is stored in `localStorage` as `user` (JSON `UserResponse`) plus `user_name`, `user_role`, `user_id`. `AuthService.setCurrentUser()` writes them and updates the `currentUser` signal; `userName`/`userInitial` are computed from it (navbar reads these, Profile edits show at once)
 - `AuthService.isAuthenticated()` checks token existence and expiry
 - Unauthenticated users redirect to `/login`
-- Navbar/footer hidden on `/login` and `/register` routes (controlled by `AppComponent.showNavbar` signal)
+- Sign in: email or username + password, or Google (`app-google-sign-in` renders the Google Identity Services button; ID token → `POST /v1/auth/google:sign-in`; the account connected to that Google id signs in, a new account goes to `/register/complete`, and a Google account whose email already belongs to an account is refused, never joined). Joining Google to an account is `AuthService.connectGoogle` → `POST /v1/auth/google:connect` from `/profile`; it also sets the email and avatar from Google
+- Sign up (no username/password registration): `/register` (email, then the 6-digit code in `app-email-code-dialog`) → `/register/complete` (username, display name, password on the email path) → auto sign-in. Step state lives in `RegistrationFlowService` (sessionStorage); `registrationIdGuard` bounces to `/register`
+- Read API error text with `apiErrorMessage(err, fallback)` (`shared/utils/api-error.ts`); the backend sends `errors[0].reason`, not `message`. It shows server text only for 4xx and 503, which the backend words for people; a 5xx or a network error shows `fallback`. Never read `err.error` in a component
+- `errorInterceptor` does not try a token refresh for 401s from `/v1/auth/` URLs
+- Navbar/footer hidden on `/login`, `/register`, `/register/complete` (controlled by `AppComponent.showNavbar` signal)
 
 ### API
 
@@ -78,7 +87,9 @@ These principles apply to **all screens and components**:
 ### Route Structure
 
 - `/login`, `/register` - Public auth screens
+- `/register/complete` (registrationIdGuard) - Public sign-up final step
 - `/` - User dashboard (authGuard)
+- `/profile` - Own profile: display name; the email is read-only and comes from the connected Google account, which the Google button connects or switches (authGuard)
 - `/course/:id` - Student course views (authGuard)
 - `/course/:id/manage` - Teacher management views (authGuard + roleGuard with `roles: ['teacher']`)
 - `**` - 404 not-found

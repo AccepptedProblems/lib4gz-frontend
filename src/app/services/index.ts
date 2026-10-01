@@ -8,5 +8,6 @@ export * from './exercise.service';
 export * from './question.service';
 export * from './submission.service';
 export * from './me.service';
+export * from './registration-flow.service';
 export * from './progress.service';
 export * from './course-cache.service';

@@ -11,6 +11,7 @@ import { ProgressService, LastVisitedLesson } from '../../../services/progress.s
 import { CourseResponse, Visibility, UserRole } from '../../../shared/models';
 import { ButtonComponent, CardComponent, EmptyStateComponent, InputComponent, ProgressBarComponent, SideSheetComponent, SkeletonComponent, TextareaComponent } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type Tab = 'enrolled' | 'created';
 
@@ -279,7 +280,7 @@ export class UserDashboardComponent implements OnInit {
       },
       error: err => {
         this.isCreating.set(false);
-        this.createError.set(err.error?.message || 'Failed to create course. Please try again.');
+        this.createError.set(apiErrorMessage(err, 'Failed to create course. Please try again.'));
         this.toast.error('Failed to create course');
       }
     });
@@ -307,7 +308,7 @@ export class UserDashboardComponent implements OnInit {
       },
       error: err => {
         this.isApplying.set(false);
-        this.applyError.set(err.error?.message || 'Failed to apply. Please try again.');
+        this.applyError.set(apiErrorMessage(err, 'Failed to apply. Please try again.'));
         this.toast.error('Failed to send enrollment request');
       }
     });
@@ -331,7 +332,7 @@ export class UserDashboardComponent implements OnInit {
     this.searchError.set('');
   }
 
-  // One round-trip: `GET /v1/me/courses` returns both lists in a single response.
+  // One round-trip: `GET /v1/users/me/courses` returns both lists in a single response.
   private loadCourses(): void {
     this.isLoading.set(true);
     this.errorMessage.set('');
@@ -346,7 +347,7 @@ export class UserDashboardComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: err => {
-        this.errorMessage.set(err.error?.message || 'Failed to load courses. Please try again.');
+        this.errorMessage.set(apiErrorMessage(err, 'Failed to load courses. Please try again.'));
         this.isLoading.set(false);
       }
     });

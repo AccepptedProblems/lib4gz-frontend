@@ -1,0 +1,75 @@
+<div class="register-page">
+  <div class="register-illustration" aria-hidden="true">
+    <app-auth-brand />
+  </div>
+
+  <div class="register-form-container">
+    <div class="register-form-wrapper">
+      <h2 class="text-headline-medium register-heading">Set up your account</h2>
+      <p class="text-body-medium register-caption">Your username can't be changed later</p>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-row">
+          <lib-input formControlName="email" label="Email" type="email" />
+        </div>
+
+        <div class="form-row">
+          <lib-input
+            formControlName="username"
+            label="Username"
+            type="text"
+            [required]="true"
+            [error]="getFieldError('username')"
+          />
+        </div>
+
+        <div class="form-row">
+          <lib-input
+            formControlName="name"
+            label="Display name"
+            type="text"
+            [error]="getFieldError('name')"
+          />
+        </div>
+
+        @if (requiresPassword) {
+          <div class="form-row">
+            <lib-input
+              formControlName="password"
+              label="Password"
+              type="password"
+              [required]="true"
+              [error]="getFieldError('password')"
+            />
+          </div>
+
+          <div class="form-row">
+            <lib-input
+              formControlName="confirmPassword"
+              label="Confirm password"
+              type="password"
+              [required]="true"
+              [error]="getFieldError('confirmPassword')"
+            />
+          </div>
+        }
+
+        @if (errorMessage()) {
+          <div class="register-error" role="alert">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <lib-button
+          type="submit"
+          variant="primary"
+          size="lg"
+          [isLoading]="isLoading()"
+          [disabled]="form.invalid"
+        >
+          Create account
+        </lib-button>
+      </form>
+    </div>
+  </div>
+</div>

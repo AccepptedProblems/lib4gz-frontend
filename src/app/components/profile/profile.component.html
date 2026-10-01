@@ -1,0 +1,72 @@
+<div class="profile">
+  <h1 class="text-headline-medium profile__title">Profile</h1>
+
+  @if (user(); as u) {
+    <div class="profile__identity">
+      <lib-avatar [src]="u.avatarUrl" [name]="u.name" size="lg" />
+      <div>
+        <p class="text-title-medium">{{ u.name }}</p>
+        <p class="text-body-medium profile__muted">&#64;{{ u.username }}</p>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="form-row">
+        <lib-input formControlName="username" label="Username" type="text" />
+      </div>
+
+      <div class="form-row">
+        <lib-input
+          formControlName="name"
+          label="Display name"
+          type="text"
+          [required]="true"
+          [error]="getNameError()"
+        />
+      </div>
+
+      <div class="form-row">
+        <lib-input formControlName="email" label="Email" type="email" />
+      </div>
+
+      <div class="profile__email-status text-body-medium">
+        @if (u.emailVerified) {
+          <lib-badge variant="success">Verified</lib-badge>
+        } @else {
+          <lib-badge variant="warning">Unverified</lib-badge>
+        }
+      </div>
+
+      <div class="profile__google">
+        <app-google-sign-in
+          text="continue_with"
+          [label]="googleLabel()"
+          [width]="280"
+          (credential)="connectGoogle($event)"
+        />
+        @if (googleHint()) {
+          <p class="profile__google-hint text-body-small profile__muted">{{ googleHint() }}</p>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <div class="profile__error" role="alert">{{ errorMessage() }}</div>
+      }
+
+      <div class="profile__actions">
+        <lib-button
+          type="submit"
+          variant="primary"
+          [isLoading]="isSaving()"
+          [disabled]="form.controls.name.invalid || form.controls.name.pristine"
+        >
+          Save changes
+        </lib-button>
+      </div>
+    </form>
+  } @else if (isLoading()) {
+    <lib-spinner />
+  } @else if (errorMessage()) {
+    <div class="profile__error" role="alert">{{ errorMessage() }}</div>
+  }
+</div>

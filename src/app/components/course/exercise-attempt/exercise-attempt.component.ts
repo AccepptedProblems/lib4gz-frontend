@@ -5,6 +5,7 @@ import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService, CourseService, ExerciseService, LessonService, ProgressService, SubmissionService } from '../../../services';
 import { ToastService } from '../../../shared/components/toast/toast.component';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import {
   ExerciseResponse,
   QuestionResponse,
@@ -425,7 +426,7 @@ export class ExerciseAttemptComponent implements OnInit {
           this.screenState.set('loaded');
         },
         error: err => {
-          this.errorMessage.set(err.error?.message || 'Failed to load exercises. Please try again.');
+          this.errorMessage.set(apiErrorMessage(err, 'Failed to load exercises. Please try again.'));
           this.screenState.set('error');
         },
       });

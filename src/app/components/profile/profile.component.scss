@@ -1,0 +1,55 @@
+:host { display: block; }
+
+.profile {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+.profile__title {
+  margin: 0 0 var(--spacing-lg);
+}
+
+.profile__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+
+  p { margin: 0; }
+}
+
+.profile__muted {
+  color: var(--neutral-color-6);
+}
+
+.profile__email-status {
+  display: flex;
+  align-items: center;
+  margin: calc(-1 * var(--spacing-xs)) 0 var(--spacing-md);
+}
+
+// The Google button under the email, wearing our own label, with a hint below it where one helps.
+// app-google-sign-in centres itself, so the column keeps it left-aligned with the form.
+.profile__google {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+}
+
+.profile__google-hint {
+  margin: 0;
+}
+
+.profile__error {
+  color: var(--error-color);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--body-small-size);
+}
+
+.profile__actions {
+  display: flex;
+  justify-content: flex-end;
+}

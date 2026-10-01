@@ -1,0 +1,24 @@
+<div class="otp" [class.has-error]="error()" role="group" aria-label="One-time code">
+  @for (digit of digits(); track $index) {
+    <input
+      #box
+      class="otp__box"
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="6"
+      [value]="digit"
+      [disabled]="isDisabled()"
+      [attr.aria-label]="'Digit ' + ($index + 1) + ' of 6'"
+      [attr.aria-invalid]="!!error()"
+      (input)="onInput($index, $event)"
+      (keydown)="onKeydown($index, $event)"
+      (paste)="onPaste($index, $event)"
+      (focus)="onFocus($event)"
+      (blur)="onBlur()"
+    />
+  }
+</div>
+@if (error()) {
+  <span class="error-text text-body-small" role="alert">{{ error() }}</span>
+}

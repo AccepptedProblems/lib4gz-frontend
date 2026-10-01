@@ -19,7 +19,7 @@
         aria-haspopup="menu"
         (click)="toggleAvatarMenu($event)"
       >
-        <span class="avatar-initials">{{ userInitial }}</span>
+        <span class="avatar-initials">{{ userInitial() }}</span>
         <span
           class="material-symbols-outlined avatar-caret"
           [class.avatar-caret--open]="avatarMenuOpen()"
@@ -29,7 +29,16 @@
 
       @if (avatarMenuOpen()) {
         <div class="avatar-menu" role="menu" (click)="$event.stopPropagation()">
-          <span class="avatar-menu-username">{{ userName }}</span>
+          <span class="avatar-menu-username">{{ userName() }}</span>
+          <a
+            class="avatar-menu-item"
+            role="menuitem"
+            routerLink="/profile"
+            (click)="closeMenu()"
+          >
+            <span class="material-symbols-outlined">person</span>
+            Profile
+          </a>
           <button
             class="avatar-menu-item"
             type="button"

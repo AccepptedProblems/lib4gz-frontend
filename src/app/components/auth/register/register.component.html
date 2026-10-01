@@ -1,33 +1,12 @@
 <div class="register-page">
   <div class="register-illustration" aria-hidden="true">
-    <div class="brand-panel">
-      <div class="brand-mark">
-        <span class="material-icons">school</span>
-        <span class="brand-name">Lib4GZ</span>
-      </div>
-      <div class="mock-card">
-        <div class="mock-line mock-line--title"></div>
-        <div class="mock-progress"><div class="mock-progress-fill"></div></div>
-        <div class="mock-lesson">
-          <span class="material-icons">check_circle</span>
-          <div class="mock-line"></div>
-        </div>
-        <div class="mock-lesson">
-          <span class="material-icons">check_circle</span>
-          <div class="mock-line"></div>
-        </div>
-        <div class="mock-lesson mock-lesson--pending">
-          <span class="material-icons">radio_button_unchecked</span>
-          <div class="mock-line"></div>
-        </div>
-      </div>
-      <p class="brand-tagline">Learn at your own pace.<br />Watch your progress add up.</p>
-    </div>
+    <app-auth-brand />
   </div>
 
   <div class="register-form-container">
     <div class="register-form-wrapper">
       <h2 class="text-headline-medium register-heading">Create your account</h2>
+      <p class="text-body-medium register-caption">We'll send a 6-digit code to confirm your email</p>
 
       <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
         <div class="form-row">
@@ -36,49 +15,15 @@
             label="Email"
             type="email"
             [required]="true"
-            [error]="getFieldError('email')"
+            [error]="getEmailError()"
           />
         </div>
 
-        <div class="form-row">
-          <lib-input
-            formControlName="username"
-            label="Username"
-            type="text"
-            [required]="true"
-            [error]="getFieldError('username')"
-          />
-        </div>
-
-        <div class="form-row">
-          <lib-input
-            formControlName="password"
-            label="Password"
-            type="password"
-            [required]="true"
-            [error]="getFieldError('password')"
-          />
-        </div>
-
-        <div class="form-row">
-          <lib-input
-            formControlName="confirmPassword"
-            label="Confirm Password"
-            type="password"
-            [required]="true"
-            [error]="getFieldError('confirmPassword')"
-          />
-        </div>
-
-        <div class="form-row terms-row">
-          <label class="checkbox">
-            <input type="checkbox" formControlName="terms" />
-            <span class="text-body-medium">I agree to the Terms and Conditions</span>
-          </label>
-          @if (registerForm.get('terms')?.touched && registerForm.get('terms')?.hasError('required')) {
-            <span class="form-field-error text-body-small">You must accept the terms</span>
-          }
-        </div>
+        @if (emailInUse()) {
+          <div class="register-error" role="alert">
+            This email already has an account. <a routerLink="/login">Sign in</a> instead.
+          </div>
+        }
 
         @if (errorMessage()) {
           <div class="register-error" role="alert">
@@ -93,13 +38,29 @@
           [isLoading]="isLoading()"
           [disabled]="registerForm.invalid"
         >
-          Register
+          Continue with email
         </lib-button>
       </form>
 
+      <div class="auth-divider text-body-small">or</div>
+      <app-google-sign-in text="signup_with" (credential)="onGoogle($event)" />
+
       <p class="register-login-link text-body-medium">
-        Already have an account? <a routerLink="/login">Login</a>
+        Already have an account? <a routerLink="/login">Sign in</a>
       </p>
     </div>
   </div>
+
+  <app-email-code-dialog
+    [open]="codeDialogOpen()"
+    [email]="flow.email() ?? ''"
+    title="Check your email"
+    [loading]="isVerifying()"
+    [resending]="isResending()"
+    [error]="codeError()"
+    [cooldownUntil]="flow.cooldownUntil()"
+    (verify)="verifyCode($event)"
+    (resend)="resendCode()"
+    (cancel)="closeCodeDialog()"
+  />
 </div>

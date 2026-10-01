@@ -112,6 +112,7 @@
   cursor: pointer;
   color: var(--text-primary-color);
   font-size: var(--font-size-xs);
+  text-decoration: none;
   transition: background-color var(--duration-normal) var(--easing-ease);
 
   &:hover {

@@ -15,7 +15,7 @@ export class AppComponent {
   title = 'lib4gz-fe';
 
   private readonly router = inject(Router);
-  private readonly hiddenRoutes = ['/login', '/register'];
+  private readonly hiddenRoutes = ['/login', '/register', '/register/complete'];
   private readonly hiddenRoutePatterns = [
     /^\/course\/[^/]+\/manage\/exercise\//,
     /^\/course\/[^/]+\/lesson\/[^/]+\/attempt/,

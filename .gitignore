@@ -43,3 +43,8 @@ Thumbs.db
 .vscode/
 documents/
 deploy/
+
+# Local secrets
+.env
+.env.*
+!.env.example

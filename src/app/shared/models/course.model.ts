@@ -31,7 +31,7 @@ export interface CourseResponse {
   // Denormalized: caller's enrollment. Null when unenrolled (PUBLIC visibility only).
   myEnrollment?: EnrollmentSummary | null;
   // Caller's progress, server-derived from submissions. Present on enrolled
-  // listings (GET /v1/me/courses) and the syllabus; null elsewhere.
+  // listings (GET /v1/users/me/courses) and the syllabus; null elsewhere.
   progress?: CourseProgressResponse | null;
 }
 

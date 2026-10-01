@@ -1,4 +1,3 @@
-@use '../auth-brand' as brand;
 
 .login-page {
   display: flex;
@@ -18,7 +17,6 @@
   }
 }
 
-@include brand.auth-brand-panel;
 
 .login-form-container {
   flex: 1;
@@ -72,5 +70,21 @@
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: var(--spacing-lg) 0;
+  color: var(--neutral-color-6);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--neutral-color-3);
   }
 }

@@ -1,5 +1,4 @@
-@use '../auth-brand' as brand;
-
+// Shared by the sign-up steps: register and register-complete.
 .register-page {
   display: flex;
   min-height: 100vh;
@@ -17,8 +16,6 @@
     display: none;
   }
 }
-
-@include brand.auth-brand-panel;
 
 .register-form-container {
   flex: 1;
@@ -43,19 +40,17 @@
 
 .register-heading {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-xs);
 }
 
-.terms-row {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
+.register-caption {
+  text-align: center;
+  color: var(--neutral-color-6);
+  margin-bottom: var(--spacing-xl);
 
-  .checkbox {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
+  strong {
+    color: var(--text-primary-color);
+    font-weight: 600;
   }
 }
 
@@ -64,6 +59,27 @@
   margin-bottom: var(--spacing-md);
   font-size: var(--body-small-size);
   font-weight: var(--body-small-weight);
+
+  a {
+    color: var(--primary-color);
+    font-weight: 500;
+  }
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: var(--spacing-lg) 0;
+  color: var(--neutral-color-6);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--neutral-color-3);
+  }
 }
 
 .register-login-link {

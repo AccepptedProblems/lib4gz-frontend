@@ -19,6 +19,7 @@ import {
   TextareaComponent,
 } from '../../../shared/components';
 import { ToastService } from '../../../shared/components/toast/toast.component';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type ScreenState = 'loading' | 'loaded' | 'error';
 
@@ -177,7 +178,7 @@ export class ManageLayoutComponent implements OnInit {
         this.screenState.set('loaded');
       },
       error: err => {
-        this.errorMessage.set(err.error?.message || 'Failed to load course data. Please try again.');
+        this.errorMessage.set(apiErrorMessage(err, 'Failed to load course data. Please try again.'));
         this.screenState.set('error');
       },
     });

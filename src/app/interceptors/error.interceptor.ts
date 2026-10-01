@@ -23,6 +23,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
+      // A 401 from sign-in or sign-up means bad credentials, not an expired session. Connecting a
+      // Google account is the one authenticated call under /v1/auth/, so it takes the normal path.
+      if (req.url.includes('/v1/auth/') && !req.url.includes('/v1/auth/google:connect')) {
+        return throwError(() => error);
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         refreshToken$.next(null);

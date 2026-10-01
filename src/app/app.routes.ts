@@ -1,11 +1,17 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
+import { registrationIdGuard } from './guards/registration.guard';
 
 export const routes: Routes = [
   // Auth (no guard)
   { path: 'login', loadComponent: () => import('./components/auth/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', loadComponent: () => import('./components/auth/register/register.component').then(m => m.RegisterComponent) },
+  {
+    path: 'register/complete',
+    loadComponent: () => import('./components/auth/register-complete/register-complete.component').then(m => m.RegisterCompleteComponent),
+    canActivate: [registrationIdGuard]
+  },
 
   // Dashboard at root
   {
@@ -13,6 +19,13 @@ export const routes: Routes = [
     loadComponent: () => import('./components/home/user-dashboard/user-dashboard.component').then(m => m.UserDashboardComponent),
     canActivate: [authGuard],
     pathMatch: 'full'
+  },
+
+  // Profile
+  {
+    path: 'profile',
+    loadComponent: () => import('./components/profile/profile.component').then(m => m.ProfileComponent),
+    canActivate: [authGuard]
   },
 
   // Course routes (student)
