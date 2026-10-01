@@ -1,0 +1,61 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+pagination:
+  selector: lib-pagination
+  status: planned
+  component:
+    file: src/app/shared/components/pagination/pagination.component.ts
+    template: src/app/shared/components/pagination/pagination.component.html
+    styles: src/app/shared/components/pagination/pagination.component.scss
+    standalone: true
+    imports: []
+
+  inputs:
+    - name: totalItems
+      type: number
+      required: true
+    - name: pageSize
+      type: number
+      default: "10"
+    - name: currentPage
+      type: number
+      default: "1"
+      description: 1-indexed
+    - name: pageSizeOptions
+      type: "number[]"
+      default: "[10, 25, 50]"
+
+  outputs:
+    - name: pageChange
+      type: number
+    - name: pageSizeChange
+      type: number
+
+  computed:
+    - name: totalPages
+      expression: "Math.ceil(this.totalItems() / this.pageSize())"
+    - name: pages
+      expression: "computed array of visible page numbers with ellipsis"
+      description: >
+        Shows first, last, current, and adjacent pages. Uses -1 sentinel
+        for ellipsis gaps.
+
+  behavior:
+    - Page number buttons + prev/next nav
+    - Ellipsis for large page ranges
+    - Items-per-page dropdown
+    - Prev disabled on page 1; next disabled on last page
+    - Keyboard accessible
+
+  usage: |
+    <lib-pagination
+      [totalItems]="students.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="currentPage = $event"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />

@@ -1,0 +1,64 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+chip:
+  selector: lib-chip
+  status: implemented
+  component:
+    file: src/app/shared/components/chip/chip.component.ts
+    styles: src/app/shared/components/chip/chip.component.scss
+    standalone: true
+    imports: []
+
+  description: >
+    Filter chip used in inline filter lists. Toggleable selected/unselected
+    state, optional count badge, variant-based color when selected.
+
+  types:
+    - name: ChipVariant
+      definition: "'default' | 'success' | 'warning' | 'error' | 'neutral'"
+
+  inputs:
+    - name: label
+      type: string
+      required: true
+    - name: value
+      type: string
+      required: true
+      description: Value emitted on click (e.g. status enum value)
+    - name: selected
+      type: boolean
+      default: "false"
+    - name: variant
+      type: ChipVariant
+      default: "'default'"
+      description: >
+        Color applied when selected. Unselected chips always use neutral
+        styling.
+    - name: count
+      type: "number | null"
+      default: "null"
+      description: >
+        When non-null and > 0, renders a small numeric badge after the label.
+
+  outputs:
+    - name: chipClick
+      type: string
+      description: Emits the chip's value on click
+
+  behavior:
+    - Selected uses variant-specific bg/text; unselected uses neutral
+    - Optional count badge renders inline after label
+    - role=option + aria-selected for a11y
+
+  usage: |
+    <!-- Status filter chips -->
+    <div class="chip-list" role="listbox" aria-label="Filter by status">
+      <lib-chip label="All" value="All" [selected]="filter() === 'All'" (chipClick)="setFilter($event)" />
+      <lib-chip label="Active" value="ACTIVE" variant="success" [selected]="filter() === 'ACTIVE'" (chipClick)="setFilter($event)" />
+      <lib-chip label="Pending" value="PENDING" variant="warning" [selected]="filter() === 'PENDING'" [count]="pendingCount()" (chipClick)="setFilter($event)" />
+      <lib-chip label="Rejected" value="REJECTED" variant="error" [selected]="filter() === 'REJECTED'" (chipClick)="setFilter($event)" />
+    </div>

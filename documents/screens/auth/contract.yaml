@@ -1,0 +1,107 @@
+openspec: "1.0"
+kind: ScreenContract
+owner: ntn071000@gmail.com
+last_reviewed: 2026-09-14
+review_cadence: per-release
+
+# Auth feature: sign-in + two-step sign-up (email code in a dialog, or Google).
+# Three routes, three screen components, three supporting components, one design.
+
+feature:
+  id: auth
+  name: Auth (Sign in & Sign up)
+  status: implemented
+  navbar_visible: false   # AppComponent.hiddenRoutes lists all three paths
+
+routes:
+  - path: /login
+    component_ref: login
+    guard: []
+    target_users: [public]
+  - path: /register
+    component_ref: register   # hosts app-email-code-dialog for the 6-digit code
+    guard: []
+    target_users: [public]
+  - path: /register/complete
+    component_ref: register-complete
+    guard: [registrationIdGuard]
+    redirect_on_fail: /register
+    target_users: [public]
+
+components:
+  - id: login
+    selector: app-login
+    file: src/app/components/auth/login/login.component.ts
+    template: src/app/components/auth/login/login.component.html
+    styles: src/app/components/auth/login/login.component.scss
+    standalone: true
+
+  - id: register
+    selector: app-register
+    file: src/app/components/auth/register/register.component.ts
+    template: src/app/components/auth/register/register.component.html
+    styles: src/app/components/auth/register/register.component.scss
+    standalone: true
+
+  - id: register-complete
+    selector: app-register-complete
+    file: src/app/components/auth/register-complete/register-complete.component.ts
+    template: src/app/components/auth/register-complete/register-complete.component.html
+    styles: src/app/components/auth/register/register.component.scss   # shared sign-up stylesheet
+    standalone: true
+
+  - id: auth-brand
+    selector: app-auth-brand
+    file: src/app/components/auth/auth-brand/auth-brand.component.ts
+    styles: src/app/components/auth/auth-brand/auth-brand.component.scss   # includes ../_auth-brand.scss mixin
+    standalone: true
+
+  - id: google-sign-in
+    selector: app-google-sign-in
+    file: src/app/components/auth/google-sign-in/google-sign-in.component.ts
+    typings: src/app/shared/types/google-gsi.d.ts
+    standalone: true
+
+  - id: email-code-dialog
+    selector: app-email-code-dialog
+    file: src/app/components/auth/email-code-dialog/email-code-dialog.component.ts   # inline template + styles
+    standalone: true
+    used_by: [register, profile]   # lib-dialog + lib-otp-input; parent owns the HTTP calls
+
+state:
+  service: RegistrationFlowService
+  file: src/app/services/registration-flow.service.ts
+  guards: src/app/guards/registration.guard.ts
+  error_helper: src/app/shared/utils/api-error.ts
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - auth.login
+    - auth.register-email
+    - auth.register-email-verify
+    - auth.register-complete
+    - auth.google-sign-in
+  models:
+    - LoginRequest
+    - LoginResponse
+    - UserResponse
+    - OtpSentResponse
+    - RegistrationStartedResponse
+    - CompleteRegistrationRequest
+    - GoogleSignInResponse
+  shared_components:
+    - lib-input
+    - lib-button
+    - lib-toast
+    - lib-dialog
+    - lib-otp-input
+  external_services:
+    - google-identity-services

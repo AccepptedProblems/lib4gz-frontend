@@ -1,0 +1,54 @@
+openspec: "1.0"
+kind: ScreenContract
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+screen:
+  id: exercise-editor
+  name: Exercise Editor
+  routes:
+    - /course/:id/manage/exercise/new
+    - /course/:id/manage/exercise/:exerciseId/edit
+  guard: [authGuard, roleGuard]
+  guard_data:
+    roles: [teacher]
+  target_users: [teacher]
+  status: implemented
+
+component:
+  selector: app-exercise-editor
+  file: src/app/components/course-teacher/exercise-editor/exercise-editor.component.ts
+  template: src/app/components/course-teacher/exercise-editor/exercise-editor.component.html
+  styles: src/app/components/course-teacher/exercise-editor/exercise-editor.component.scss
+  standalone: true
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - exercises.create
+    - exercises.get
+    - exercises.update
+    - questions.list-by-exercise
+    - questions.batch-update
+  models:
+    - ExerciseResponse
+    - ExerciseType
+    - QuestionResponse
+    - QuestionAction
+    - CreateExerciseRequest
+    - UpdateExerciseRequest
+    - UpdateQuestionsRequest
+  shared_components:
+    - lib-button
+    - lib-dialog
+    - lib-skeleton
+    - lib-textarea
+    - lib-toast

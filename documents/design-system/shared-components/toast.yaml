@@ -1,0 +1,61 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-09-14
+review_cadence: per-release
+
+toast:
+  selector: lib-toast
+  status: implemented   # via ToastService in auth screens and Profile
+  component:
+    file: src/app/shared/components/toast/toast.component.ts
+    template: src/app/shared/components/toast/toast.component.html
+    styles: src/app/shared/components/toast/toast.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: ToastVariant
+      definition: "'success' | 'error' | 'warning' | 'info'"
+    - name: ToastPosition
+      definition: "'top-right' | 'top-center' | 'bottom-right'"
+
+  inputs:
+    - name: message
+      type: string
+      required: true
+    - name: variant
+      type: ToastVariant
+      default: "'info'"
+    - name: duration
+      type: number
+      default: "5000"
+      description: Auto-dismiss in ms (0 = no auto-dismiss)
+    - name: dismissible
+      type: boolean
+      default: "true"
+      description: Show close button
+
+  outputs:
+    - name: dismissed
+      type: void
+      description: Emitted on auto or manual dismissal
+
+  computed:
+    - name: iconName
+      expression: "{ success: 'check_circle', error: 'error', warning: 'warning', info: 'info' }[this.variant()]"
+
+  behavior:
+    - Shadow-lg only (no border) for floating notification feel
+    - Slide-in from the right
+    - Auto-dismiss after duration (default 5s)
+    - Manual dismiss via close button
+    - Variant-specific icon and left accent border
+    - Stacks vertically when multiple are shown
+
+  usage: |
+    <lib-toast
+      message="Course saved successfully"
+      variant="success"
+      (dismissed)="onToastDismissed()"
+    />

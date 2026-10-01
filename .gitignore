@@ -41,7 +41,6 @@ Thumbs.db
 .firebase/
 .github/
 .vscode/
-documents/
 deploy/
 
 # Local secrets

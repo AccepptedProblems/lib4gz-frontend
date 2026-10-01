@@ -1,0 +1,56 @@
+openspec: "1.0"
+kind: ScreenView
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+view:
+  id: enrollment-management
+  name: Enrollment Management
+  parent_screen: course-management
+  parent_contract: ../contract.yaml
+  routes: []   # no standalone route — rendered inline by the parent
+  rendered_when: "course-management.activeView === 'enrollment'"
+  target_users: [teacher]
+  status: scaffold
+
+deprecates:
+  - documents/_archive/enrollment-management/
+  - documents/_archive/enrollment-requests/
+
+component:
+  selector: app-enrollment-management
+  file: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.ts
+  template: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.html
+  styles: src/app/components/course-teacher/course-management/enrollment-management/enrollment-management.component.scss
+  standalone: true
+
+inputs:
+  - { name: enrollments, type: "EnrollmentResponse[]", required: true }
+
+outputs:
+  - { name: enrollmentUpdated, type: EnrollmentResponse }
+  - { name: enrollmentRemoved, type: string }
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - enrollments.approve
+    - enrollments.reject
+    - enrollments.update
+    - enrollments.delete
+  models:
+    - enrollment
+    - common
+  shared_components:
+    - lib-button
+    - lib-badge
+    - lib-chip
+    - lib-dialog

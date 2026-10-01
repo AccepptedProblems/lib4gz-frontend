@@ -1,0 +1,60 @@
+openspec: "1.0"
+kind: ScreenView
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+view:
+  id: lesson-detail-management
+  name: Lesson Detail Management
+  parent_screen: course-management
+  parent_contract: ../contract.yaml
+  routes: []   # no standalone route — rendered inline by the parent
+  rendered_when: "course-management.materialSubView === 'lesson-detail'"
+  target_users: [teacher]
+  status: scaffold
+
+component:
+  selector: app-lesson-detail-management
+  file: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.ts
+  template: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.html
+  styles: src/app/components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component.scss
+  standalone: true
+
+inputs:
+  - { name: courseId, type: string, required: true }
+  - { name: lesson, type: LessonResponse, required: true }
+  - { name: moduleTitle, type: string, required: true }
+
+outputs:
+  - { name: back, type: void }
+  - { name: lessonUpdated, type: LessonResponse }
+  - { name: exerciseDeleted, type: string }
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - summaries.get
+    - summaries.create-or-update
+    - exercises.list-by-lesson
+    - exercises.delete
+    - lessons.update
+  models:
+    - lesson
+    - exercise
+    - summary
+  shared_components:
+    - lib-button
+    - lib-badge
+    - lib-skeleton
+    - lib-dialog
+    - lib-textarea
+  pipes:
+    - LinkifyPipe

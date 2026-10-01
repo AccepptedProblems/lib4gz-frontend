@@ -1,0 +1,57 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+skeleton:
+  selector: lib-skeleton
+  status: planned
+  component:
+    file: src/app/shared/components/skeleton/skeleton.component.ts
+    template: src/app/shared/components/skeleton/skeleton.component.html
+    styles: src/app/shared/components/skeleton/skeleton.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: SkeletonVariant
+      definition: "'text' | 'circle' | 'rect'"
+
+  inputs:
+    - name: variant
+      type: SkeletonVariant
+      default: "'text'"
+      description: "text = line, circle = avatar, rect = card/image"
+    - name: width
+      type: string
+      default: "'100%'"
+    - name: height
+      type: string
+      default: "'16px'"
+      description: Ignored for circle (uses width)
+    - name: lines
+      type: number
+      default: "1"
+      description: Number of lines (text variant only)
+
+  computed:
+    - name: lineArray
+      expression: "Array.from({ length: this.lines() }, (_, i) => i)"
+
+  behavior:
+    - CSS gradient shimmer (left-to-right)
+    - text = horizontal bar, rounded ends
+    - circle = perfect circle (width = height)
+    - rect = rectangle with border-radius
+    - For multi-line, last line is 75% width for natural look
+
+  usage: |
+    <!-- Text skeleton (3 lines) -->
+    <lib-skeleton variant="text" [lines]="3" height="14px" />
+
+    <!-- Avatar skeleton -->
+    <lib-skeleton variant="circle" width="40px" />
+
+    <!-- Card image skeleton -->
+    <lib-skeleton variant="rect" width="100%" height="200px" />

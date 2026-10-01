@@ -1,0 +1,50 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+tabs:
+  selector: lib-tabs
+  status: planned
+  component:
+    file: src/app/shared/components/tabs/tabs.component.ts
+    template: src/app/shared/components/tabs/tabs.component.html
+    styles: src/app/shared/components/tabs/tabs.component.scss
+    standalone: true
+    imports: []
+
+  types:
+    - name: Tab
+      definition: "{ label: string; value: string; disabled?: boolean }"
+
+  inputs:
+    - name: tabs
+      type: "Tab[]"
+      required: true
+    - name: activeTab
+      type: string
+      required: true
+
+  outputs:
+    - name: tabChange
+      type: string
+      description: Emitted with tab value when active tab changes
+
+  behavior:
+    - Bottom 2px primary border indicator on active tab
+    - Left/right arrows move between tabs
+    - Home/End jump to first/last tab
+    - Disabled tabs are muted and non-interactive
+    - ARIA tabs pattern (role=tablist, role=tab, aria-selected)
+
+  usage: |
+    <lib-tabs
+      [tabs]="[
+        { label: 'My Courses', value: 'enrolled' },
+        { label: 'All Courses', value: 'all' },
+        { label: 'Completed', value: 'completed' }
+      ]"
+      [activeTab]="currentTab"
+      (tabChange)="currentTab = $event"
+    />

@@ -1,0 +1,461 @@
+# Non-technical overview of the product: ../../docs/README.md
+openspec: "1.0"
+owner: ntn071000@gmail.com
+last_reviewed: 2026-09-14
+review_cadence: per-release
+kind: ProjectIndex
+
+info:
+  title: LMS Platform Frontend
+  version: "2.0.0"
+  description: >
+    Learning Management System frontend application built with Angular 17+.
+    Supports course enrollment, content consumption, exercise submission,
+    and teacher management workflows.
+
+    This index points at structured docs. Every screen has PRD (1min/5min/full),
+    tech design (1min/5min/full), and a single-version contract.yaml. Reference
+    docs (design tokens, color, typography, API endpoints, models) are
+    single-version YAML. See `_writing-guidelines.md` and `_document-workflow.md`
+    at the root of `documents/` for the rules.
+  phase: "1"
+
+project:
+  name: lib4gz-fe
+  framework: Angular 17+
+  language: TypeScript 5+
+  styling: SCSS with CSS custom properties
+  ui_library: Angular Material (spinner only)
+  icons: Material Symbols (Google Fonts)
+  state: RxJS 7+ with signal-based inputs
+
+  target_users:
+    - role: student
+      description: Enroll in courses, view content, complete exercises
+    - role: teacher
+      description: Create courses, review submissions, manage enrollments
+
+# ════════════════════════════════════════════════════════════════
+# RULES — read these before writing or editing any doc
+# ════════════════════════════════════════════════════════════════
+
+rules:
+  writing_guidelines: ./_writing-guidelines.md
+  document_workflow: ./_document-workflow.md
+  archive_policy: ./_archive/README.md
+
+# ════════════════════════════════════════════════════════════════
+# DESIGN SYSTEM
+# ════════════════════════════════════════════════════════════════
+
+design_system:
+  index: ./design-system/spec.yaml
+
+  principles:
+    "1min": ./design-system/design-principles-1min.md
+    "5min": ./design-system/design-principles-5min.md
+    "full": ./design-system/design-principles-full.md
+
+  reference:
+    tokens: ./design-system/tokens.yaml
+    color: ./design-system/color.yaml
+    typography: ./design-system/typography.yaml
+    breakpoints: ./design-system/breakpoints.yaml
+    theme: ./design-system/theme.yaml
+    icons: ./design-system/icons.yaml
+    components: ./design-system/components.yaml
+    shared_pipes: ./design-system/shared-pipes.yaml
+
+  shared_components:
+    index: ./design-system/shared-components/index.yaml
+    folder: ./design-system/shared-components/
+
+# ════════════════════════════════════════════════════════════════
+# LAYOUT
+# ════════════════════════════════════════════════════════════════
+
+layout:
+  - id: navbar
+    title: Navigation Bar
+    folder: ./layout/navbar/
+    contract: ./layout/navbar/contract.yaml
+    prd:
+      "1min": ./layout/navbar/prd-1min.md
+      "5min": ./layout/navbar/prd-5min.md
+      "full": ./layout/navbar/prd-full.md
+    design:
+      "1min": ./layout/navbar/design-1min.md
+      "5min": ./layout/navbar/design-5min.md
+      "full": ./layout/navbar/design-full.md
+    description: Persistent navigation bar shown on authenticated screens.
+
+  - id: footer
+    title: Footer
+    folder: ./layout/footer/
+    contract: ./layout/footer/contract.yaml
+    prd:
+      "1min": ./layout/footer/prd-1min.md
+      "5min": ./layout/footer/prd-5min.md
+      "full": ./layout/footer/prd-full.md
+    design:
+      "1min": ./layout/footer/design-1min.md
+      "5min": ./layout/footer/design-5min.md
+      "full": ./layout/footer/design-full.md
+    description: Site footer with copyright text.
+
+# ════════════════════════════════════════════════════════════════
+# NETWORK LAYER
+# ════════════════════════════════════════════════════════════════
+
+network:
+  readme: ./network/README.md
+  reference:
+    networking: ./network/networking.yaml
+    api_endpoints: ./network/api-endpoints.yaml
+    models: ./network/models.yaml
+
+# ════════════════════════════════════════════════════════════════
+# EXTERNAL SERVICES
+# ════════════════════════════════════════════════════════════════
+
+external_services:
+  - id: google-identity-services
+    name: Google Identity Services (Sign in with Google)
+    script: https://accounts.google.com/gsi/client
+    loaded_in: src/index.html
+    config: environment.googleClientId   # public OAuth Web client id
+    typings: src/app/shared/types/google-gsi.d.ts
+    used_by: [auth]
+    notes: >
+      Browser gets a Google ID token from the rendered button and posts it to
+      POST /v1/auth/google:sign-in. No redirect URIs, no client secret. If the script is
+      blocked the Google button does not render; email paths still work.
+
+# ════════════════════════════════════════════════════════════════
+# SCREENS (active)
+# ════════════════════════════════════════════════════════════════
+
+screens:
+  # Authentication (public)
+  - id: auth
+    title: Auth Screens (Sign in & two-step Sign up with code dialog, Google)
+    folder: ./screens/auth/
+    contract: ./screens/auth/contract.yaml
+    prd:
+      "1min": ./screens/auth/prd-1min.md
+      "5min": ./screens/auth/prd-5min.md
+      "full": ./screens/auth/prd-full.md
+    design:
+      "1min": ./screens/auth/design-1min.md
+      "5min": ./screens/auth/design-5min.md
+      "full": ./screens/auth/design-full.md
+    routes: [/login, /register, /register/complete]   # 6-digit code entered in a dialog on /register
+    category: authentication
+    target_users: [public]
+
+  # Account (any signed-in user)
+  - id: profile
+    title: Profile
+    folder: ./screens/profile/
+    contract: ./screens/profile/contract.yaml
+    prd:
+      "1min": ./screens/profile/prd-1min.md
+      "5min": ./screens/profile/prd-5min.md
+      "full": ./screens/profile/prd-full.md
+    design:
+      "1min": ./screens/profile/design-1min.md
+      "5min": ./screens/profile/design-5min.md
+      "full": ./screens/profile/design-full.md
+    routes: [/profile]
+    category: account
+    target_users: [student, teacher, admin]
+
+  # Student
+  - id: user-dashboard
+    title: User Dashboard
+    folder: ./screens/user-dashboard/
+    contract: ./screens/user-dashboard/contract.yaml
+    prd:
+      "1min": ./screens/user-dashboard/prd-1min.md
+      "5min": ./screens/user-dashboard/prd-5min.md
+      "full": ./screens/user-dashboard/prd-full.md
+    design:
+      "1min": ./screens/user-dashboard/design-1min.md
+      "5min": ./screens/user-dashboard/design-5min.md
+      "full": ./screens/user-dashboard/design-full.md
+    routes: [/]
+    category: student
+    target_users: [student, teacher]
+
+  - id: course-dashboard
+    title: Course Dashboard
+    folder: ./screens/course-dashboard/
+    contract: ./screens/course-dashboard/contract.yaml
+    prd:
+      "1min": ./screens/course-dashboard/prd-1min.md
+      "5min": ./screens/course-dashboard/prd-5min.md
+      "full": ./screens/course-dashboard/prd-full.md
+    design:
+      "1min": ./screens/course-dashboard/design-1min.md
+      "5min": ./screens/course-dashboard/design-5min.md
+      "full": ./screens/course-dashboard/design-full.md
+    routes: [/course/:id]
+    category: student
+    target_users: [student]
+
+  - id: summary-view
+    title: Summary View
+    folder: ./screens/summary-view/
+    contract: ./screens/summary-view/contract.yaml
+    prd:
+      "1min": ./screens/summary-view/prd-1min.md
+      "5min": ./screens/summary-view/prd-5min.md
+      "full": ./screens/summary-view/prd-full.md
+    design:
+      "1min": ./screens/summary-view/design-1min.md
+      "5min": ./screens/summary-view/design-5min.md
+      "full": ./screens/summary-view/design-full.md
+    routes: [/course/:courseId/lesson/:lessonId/summary]
+    category: student
+    target_users: [student]
+
+  - id: lesson-view
+    title: Lesson View
+    folder: ./screens/lesson-view/
+    contract: ./screens/lesson-view/contract.yaml
+    prd:
+      "1min": ./screens/lesson-view/prd-1min.md
+      "5min": ./screens/lesson-view/prd-5min.md
+      "full": ./screens/lesson-view/prd-full.md
+    design:
+      "1min": ./screens/lesson-view/design-1min.md
+      "5min": ./screens/lesson-view/design-5min.md
+      "full": ./screens/lesson-view/design-full.md
+    routes: [/course/:courseId/lesson/:lessonId]
+    category: student
+    target_users: [student]
+
+  - id: exercise-attempt
+    title: Exercise Attempt
+    folder: ./screens/exercise-attempt/
+    contract: ./screens/exercise-attempt/contract.yaml
+    prd:
+      "1min": ./screens/exercise-attempt/prd-1min.md
+      "5min": ./screens/exercise-attempt/prd-5min.md
+      "full": ./screens/exercise-attempt/prd-full.md
+    design:
+      "1min": ./screens/exercise-attempt/design-1min.md
+      "5min": ./screens/exercise-attempt/design-5min.md
+      "full": ./screens/exercise-attempt/design-full.md
+    routes: [/course/:id/lesson/:lessonId/attempt]
+    category: student
+    target_users: [student]
+    replaces: [exercise-do]
+
+  # Teacher
+  - id: course-management
+    title: Course Management
+    folder: ./screens/course-management/
+    contract: ./screens/course-management/contract.yaml
+    prd:
+      "1min": ./screens/course-management/prd-1min.md
+      "5min": ./screens/course-management/prd-5min.md
+      "full": ./screens/course-management/prd-full.md
+    design:
+      "1min": ./screens/course-management/design-1min.md
+      "5min": ./screens/course-management/design-5min.md
+      "full": ./screens/course-management/design-full.md
+    routes: [/course/:id/manage]
+    category: teacher
+    target_users: [teacher]
+    sub_components:
+      - id: lesson-detail-management
+        kind: ChildComponent
+        folder: ./screens/course-management/lesson-detail-management/
+        contract: ./screens/course-management/lesson-detail-management/contract.yaml
+        prd:
+          "1min": ./screens/course-management/lesson-detail-management/prd-1min.md
+          "5min": ./screens/course-management/lesson-detail-management/prd-5min.md
+          "full": ./screens/course-management/lesson-detail-management/prd-full.md
+        design:
+          "1min": ./screens/course-management/lesson-detail-management/design-1min.md
+          "5min": ./screens/course-management/lesson-detail-management/design-5min.md
+          "full": ./screens/course-management/lesson-detail-management/design-full.md
+        description: Lesson detail editor inside the Course Material view.
+      - id: enrollment-management
+        kind: ScreenView
+        folder: ./screens/course-management/enrollment-management/
+        contract: ./screens/course-management/enrollment-management/contract.yaml
+        prd:
+          "1min": ./screens/course-management/enrollment-management/prd-1min.md
+          "5min": ./screens/course-management/enrollment-management/prd-5min.md
+          "full": ./screens/course-management/enrollment-management/prd-full.md
+        design:
+          "1min": ./screens/course-management/enrollment-management/design-1min.md
+          "5min": ./screens/course-management/enrollment-management/design-5min.md
+          "full": ./screens/course-management/enrollment-management/design-full.md
+        description: >
+          Inline view (not a standalone screen) rendered inside course-management.
+          Replaces the deprecated /manage/enrollments and /manage/requests routes.
+        replaces:
+          - _archive/enrollment-management
+          - _archive/enrollment-requests
+
+  - id: exercise-editor
+    title: Exercise Editor
+    folder: ./screens/exercise-editor/
+    contract: ./screens/exercise-editor/contract.yaml
+    prd:
+      "1min": ./screens/exercise-editor/prd-1min.md
+      "5min": ./screens/exercise-editor/prd-5min.md
+      "full": ./screens/exercise-editor/prd-full.md
+    design:
+      "1min": ./screens/exercise-editor/design-1min.md
+      "5min": ./screens/exercise-editor/design-5min.md
+      "full": ./screens/exercise-editor/design-full.md
+    routes:
+      - /course/:id/manage/exercise/new
+      - /course/:id/manage/exercise/:exerciseId/edit
+    category: teacher
+    target_users: [teacher]
+
+  # Utility
+  - id: not-found
+    title: Not Found (404)
+    folder: ./screens/not-found/
+    contract: ./screens/not-found/contract.yaml
+    prd:
+      "1min": ./screens/not-found/prd-1min.md
+      "5min": ./screens/not-found/prd-5min.md
+      "full": ./screens/not-found/prd-full.md
+    design:
+      "1min": ./screens/not-found/design-1min.md
+      "5min": ./screens/not-found/design-5min.md
+      "full": ./screens/not-found/design-full.md
+    routes: ["**"]
+    category: utility
+    target_users: [all]
+
+# ════════════════════════════════════════════════════════════════
+# ARCHIVED SCREENS (do not implement from these)
+# ════════════════════════════════════════════════════════════════
+
+archived:
+  readme: ./_archive/README.md
+  items:
+    - id: enrollment-management
+      folder: ./_archive/enrollment-management/
+      replaced_by: course-management/enrollment-management
+      archived_on: 2026-03-09
+      reason: Merged into course-management as an inline view.
+
+    - id: enrollment-requests
+      folder: ./_archive/enrollment-requests/
+      replaced_by: course-management/enrollment-management
+      archived_on: 2026-03-09
+      reason: Folded into the same Enrollment inline view.
+
+    - id: exercise-do
+      folder: ./_archive/exercise-do/
+      replaced_by: exercise-attempt
+      archived_on: 2026-03-12
+      reason: Exercise-doing UI merged into exercise-attempt's tabbed interface.
+
+# ════════════════════════════════════════════════════════════════
+# USER FLOWS
+# ════════════════════════════════════════════════════════════════
+
+user_flows:
+  sign_up_email:
+    description: New user signs up with an email code, then lands signed in
+    steps:
+      - { screen: auth, route: /register, note: "email, then the code in app-email-code-dialog" }
+      - { screen: auth, route: /register/complete }
+      - { screen: user-dashboard, route: / }
+
+  sign_up_google:
+    description: New Google user picks a username, then lands signed in
+    steps:
+      - { screen: auth, route: /login, note: "or /register; Google returns a registration" }
+      - { screen: auth, route: /register/complete }
+      - { screen: user-dashboard, route: / }
+
+  account:
+    description: Signed-in user edits name or email (email confirmed by code)
+    steps:
+      - { screen: user-dashboard, route: / }
+      - { screen: profile, route: /profile, note: "navbar avatar menu → Profile" }
+
+  student:
+    description: Student journey through the platform
+    steps:
+      - { screen: auth, route: /login }
+      - { screen: user-dashboard, route: / }
+      - { screen: course-dashboard, route: /course/:id }
+      - { screen: lesson-view, route: /course/:courseId/lesson/:lessonId }
+      - { screen: summary-view, route: /course/:courseId/lesson/:lessonId/summary }
+      - { screen: exercise-attempt, route: /course/:id/lesson/:lessonId/attempt }
+
+  teacher:
+    description: Teacher management journey
+    steps:
+      - { screen: auth, route: /login }
+      - { screen: user-dashboard, route: / }
+      - { screen: course-management, route: /course/:id/manage }
+      - { screen: exercise-editor, route: /course/:id/manage/exercise/new }
+
+# ════════════════════════════════════════════════════════════════
+# IMPLEMENTATION PHASES
+# ════════════════════════════════════════════════════════════════
+
+phases:
+  - id: "1A"
+    name: Core Auth & Navigation
+    screens: [auth, not-found]
+
+  - id: "1D"
+    name: Accounts (email sign-up, Google, Profile)
+    screens: [auth, profile]
+
+  - id: "1B"
+    name: Student Experience
+    screens:
+      - user-dashboard
+      - course-dashboard
+      - lesson-view
+      - summary-view
+      - exercise-attempt
+
+  - id: "1C"
+    name: Teacher Experience
+    screens:
+      - course-management
+      - exercise-editor
+
+# ════════════════════════════════════════════════════════════════
+# ROUTING
+# ════════════════════════════════════════════════════════════════
+
+routing:
+  file: src/app/app.routes.ts
+  structure:
+    - { path: login, screen: auth, guard: none }
+    - { path: register, screen: auth, guard: none }
+    - { path: register/complete, screen: auth, guard: registrationIdGuard, redirect_on_fail: /register }
+    - { path: "", screen: user-dashboard, guard: authGuard, pathMatch: full }
+    - { path: profile, screen: profile, guard: authGuard }
+    - path: "course/:id"
+      guard: authGuard
+      children:
+        - { path: "", screen: course-dashboard }
+        - { path: "lesson/:lessonId", screen: lesson-view }
+        - { path: "lesson/:lessonId/summary", screen: summary-view }
+        - { path: "lesson/:lessonId/attempt", screen: exercise-attempt }
+    - path: "course/:id/manage"
+      guard: [authGuard, roleGuard]
+      guard_data: { roles: [teacher] }
+      children:
+        - { path: "", screen: course-management }
+        - { path: exercise/new, screen: exercise-editor }
+        - { path: "exercise/:exerciseId/edit", screen: exercise-editor }
+    - { path: "**", screen: not-found }

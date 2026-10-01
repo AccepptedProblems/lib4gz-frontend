@@ -1,0 +1,40 @@
+openspec: "1.0"
+kind: SharedComponent
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+breadcrumb:
+  selector: lib-breadcrumb
+  status: planned
+  component:
+    file: src/app/shared/components/breadcrumb/breadcrumb.component.ts
+    template: src/app/shared/components/breadcrumb/breadcrumb.component.html
+    styles: src/app/shared/components/breadcrumb/breadcrumb.component.scss
+    standalone: true
+    imports: [RouterLink]
+
+  types:
+    - name: BreadcrumbItem
+      definition: "{ label: string; routerLink?: string | any[] }"
+
+  inputs:
+    - name: items
+      type: "BreadcrumbItem[]"
+      required: true
+      description: Ordered list of breadcrumb path items
+
+  behavior:
+    - Items separated by chevron_right icon
+    - All items except the last are links
+    - Last item is plain text (current page)
+    - Wrapped in nav with aria-label='Breadcrumb'
+
+  usage: |
+    <lib-breadcrumb
+      [items]="[
+        { label: 'Dashboard', routerLink: '/' },
+        { label: 'Course Name', routerLink: '/course/123' },
+        { label: 'Lesson 1' }
+      ]"
+    />

@@ -1,0 +1,346 @@
+openspec: "1.0"
+kind: Screen
+info:
+  title: Enrollment Management (Teacher)
+  version: "2.0.0"
+  description: >
+    DEPRECATED — This screen has been merged into the Course Management screen
+    as an inline view. See course-management/spec.yaml for the current enrollment
+    management implementation.
+
+screen:
+  id: enrollment-management
+  name: Enrollment Management
+  route: /course/:id/manage/enrollments
+  component:
+    selector: app-enrollment
+    file: src/app/components/course-teacher/enrollment/enrollment.component.ts
+    template: src/app/components/course-teacher/enrollment/enrollment.component.html
+    styles: src/app/components/course-teacher/enrollment/enrollment.component.scss
+    standalone: true
+  guard: [authGuard, roleGuard]
+  guard_data:
+    roles: [teacher]
+  target_users: [teacher]
+  deprecated: true
+  deprecated_note: >
+    Enrollment management is now an inline view within the Course Management
+    screen (course-management/spec.yaml). This screen is no longer routed.
+    The enrollment view within course management handles all enrollment
+    management functionality including search, filter, approve/reject,
+    role changes, and removal.
+  status: deprecated
+
+  purpose: >
+    Manage student enrollments for a course. View enrolled students,
+    track their progress, and manage their enrollment status.
+
+  layout:
+    desktop:
+      description: "Table view with search/filter bar and pagination. >1200px."
+      ascii: |
+        +----------------------------------------------------------+
+        |  Navbar                                                  |
+        +----------------------------------------------------------+
+        |  < Back to Course Management                             |
+        |  Enrolled Students                                       |
+        |  Course: Introduction to Angular                         |
+        +----------------------------------------------------------+
+        |  [Search by name/email...]   [Status: All ▼] [Export CSV]|
+        +----------------------------------------------------------+
+        |  ☐ | Student    | Email       | Enrolled | Progress | Status  | Actions |
+        |  ☐ | John Doe   | john@ex.com | Jan 15   | ████░ 80%| Active  | [···]   |
+        |  ☐ | Jane Smith | jane@ex.com | Jan 10   | █████100%| Complete| [···]   |
+        |  ☐ | Bob Wilson | bob@ex.com  | Jan 20   | █░░░░ 20%| Active  | [···]   |
+        +----------------------------------------------------------+
+        |  [Bulk Actions ▼]    Showing 1-20 of 156                 |
+        |                      [< 1 2 3 ... 8 >]                  |
+        +----------------------------------------------------------+
+    mobile:
+      description: "Card view with compact layout. <768px."
+      ascii: |
+        +----------------------+
+        |  Navbar              |
+        +----------------------+
+        |  < Back              |
+        |  Enrolled Students   |
+        +----------------------+
+        |  [Search...]         |
+        |  [Status ▼] [Export] |
+        +----------------------+
+        |  +----------------+  |
+        |  | John Doe       |  |
+        |  | john@ex.com    |  |
+        |  | Jan 15 | 80%   |  |
+        |  | [Active] [···] |  |
+        |  +----------------+  |
+        +----------------------+
+        |  [< 1 2 3 >]         |
+        +----------------------+
+
+  components:
+    - id: page-header
+      name: Page Header
+      type: inline
+      elements:
+        - Back link to Course Management
+        - 'Title: "Enrolled Students"'
+        - Course name subtitle
+
+    - id: filter-bar
+      name: Filter Bar
+      type: inline
+      elements:
+        - name: Search
+          type: text-input
+          placeholder: Search by name or email
+          behavior: Debounced 300ms
+        - name: Status Filter
+          type: dropdown
+          options: [All, Active, Completed, Inactive]
+        - name: Export
+          type: button
+          action: Download CSV
+
+    - id: enrollment-table
+      name: Enrollment Table (Desktop)
+      type: inline
+      columns:
+        - name: Checkbox
+          description: Bulk selection
+          sortable: false
+        - name: Student
+          description: Name + Avatar
+          sortable: true
+        - name: Email
+          description: Student email
+          sortable: true
+        - name: Enrolled
+          description: Enrollment date
+          sortable: true
+        - name: Progress
+          description: Progress bar + percentage
+          sortable: true
+        - name: Status
+          description: Status badge
+          sortable: true
+        - name: Actions
+          description: Action menu
+          sortable: false
+      status_badges:
+        - status: Active
+          color: Green
+          meaning: Currently enrolled, not completed
+        - status: Completed
+          color: Blue
+          meaning: Finished all content
+        - status: Inactive
+          color: Gray
+          meaning: No activity for 30+ days
+      actions_menu:
+        - View Progress Details
+        - Send Message (future)
+        - Remove from Course
+
+    - id: mobile-card
+      name: Mobile Card View
+      type: inline
+      layout: |
+        +--------------------------------+
+        |  [Avatar] John Doe             |
+        |  john@example.com              |
+        |  ────────────────────────────  |
+        |  Enrolled: Jan 15, 2026        |
+        |  Progress: ████░░░░░░ 40%      |
+        |  [Active]              [···]   |
+        +--------------------------------+
+
+    - id: pagination
+      name: Pagination
+      type: inline
+      features:
+        - Page numbers with prev/next arrows
+        - Items per page selector (20, 50, 100)
+        - Total count display
+
+    - id: bulk-actions
+      name: Bulk Actions
+      type: inline
+      layout: |
+        +--------------------------------+
+        |  [✓] 3 selected                |
+        |  [Remove Selected]             |
+        +--------------------------------+
+
+  states:
+    - name: loading
+      description: Table skeleton, filter bar visible but disabled
+    - name: loaded
+      description: Data displayed, all actions enabled
+    - name: empty
+      description: '"No students enrolled yet" with copy course link CTA'
+    - name: empty-search
+      description: '"No students match your search" with filter adjustment hint'
+    - name: error
+      description: Error message with retry button
+
+  data_flow:
+    route_params:
+      - name: id
+        type: string
+        description: Course UUID
+    service_calls:
+      - service: EnrollmentService
+        method: listByCourse
+        params: courseId
+      - service: EnrollmentService
+        method: delete
+        params: enrollmentId
+        description: Remove enrollment
+
+  interactions:
+    - action: Search
+      trigger: Type in search
+      result: Filter list (debounced 300ms)
+    - action: Filter status
+      trigger: Select dropdown
+      result: Filter list by status
+    - action: Sort column
+      trigger: Click column header
+      result: Sort ascending/descending
+    - action: Select row
+      trigger: Click checkbox
+      result: Add to selection
+    - action: Select all
+      trigger: Click header checkbox
+      result: Select all visible rows
+    - action: View details
+      trigger: Click "View Progress"
+      result: Open progress modal
+    - action: Remove student
+      trigger: Click "Remove"
+      result: Confirm dialog, then remove
+    - action: Bulk remove
+      trigger: Click "Remove Selected"
+      result: Confirm, remove all selected
+    - action: Export
+      trigger: Click "Export CSV"
+      result: Download CSV file
+    - action: Paginate
+      trigger: Click page number
+      result: Load that page
+
+  business_logic:
+    search:
+      - Case-insensitive
+      - Matches name OR email
+      - Debounced 300ms
+    status_calculation: |
+      function getStatus(enrollment) {
+        if (enrollment.progress === 100) return 'completed';
+        if (daysSince(enrollment.lastActivityAt) > 30) return 'inactive';
+        return 'active';
+      }
+    export_format:
+      type: CSV
+      columns: "Name,Email,Enrolled Date,Progress,Status,Last Activity"
+    remove_confirmation:
+      single: "Remove {name} from this course?"
+      bulk: "Remove {count} students from this course?"
+      warning: This action cannot be undone.
+
+  accessibility:
+    - Table has proper headers and scope
+    - Sortable columns announced
+    - Checkboxes properly labeled
+    - Action menus keyboard navigable
+    - Pagination announced
+    - Status colors have text labels
+
+  responsive:
+    breakpoints:
+      - range: "> 768px"
+        view: Table view
+      - range: "<= 768px"
+        view: Card view
+
+  design_system:
+    typography:
+      - $ref: "../../design-system/typography.yaml#/scale/headline/levels/1"
+        usage: "Page title: Enrolled Students (text-headline-medium)"
+      - $ref: "../../design-system/typography.yaml#/scale/body/levels/1"
+        usage: Table cells, card content (text-body-medium)
+      - $ref: "../../design-system/typography.yaml#/scale/label/levels/0"
+        usage: Status badges, column headers (text-label-large)
+      - $ref: "../../design-system/typography.yaml#/scale/label/levels/1"
+        usage: Pagination info (text-label-medium)
+    colors:
+      - $ref: "../../design-system/color.yaml#/theme_colors/primary"
+        usage: Progress bars, Active status badge
+      - $ref: "../../design-system/color.yaml#/theme_colors/semantic"
+        usage: >
+          Status badges: Active=success-color, Completed=primary,
+          Inactive=neutral-color-5. Remove action=error-color.
+      - $ref: "../../design-system/color.yaml#/theme_colors/neutral"
+        usage: Table borders, row backgrounds, disabled states
+    components:
+      - $ref: "../../design-system/components.yaml#/button"
+        usage: Export CSV, Remove, Bulk Actions buttons
+      - $ref: "../../design-system/components.yaml#/input"
+        usage: Input field styling (used via lib-input shared component)
+      - $ref: "../../design-system/components.yaml#/select_box"
+        usage: Status filter dropdown
+      - $ref: "../../design-system/components.yaml#/checkbox"
+        usage: Row selection checkboxes, select all
+    shared_components:
+      - $ref: "../../design-system/shared-components.yaml#/button"
+        usage: Action buttons with loading states (lib-button)
+      - $ref: "../../design-system/shared-components.yaml#/spinner"
+        usage: Table loading skeleton
+      - $ref: "../../design-system/shared-components.yaml#/input"
+        usage: Search by name/email input with floating label (lib-input)
+    tokens:
+      - $ref: "../../design-system/tokens.yaml#/spacing"
+        usage: Table cell padding, filter bar gaps
+      - $ref: "../../design-system/tokens.yaml#/border_radius"
+        usage: Status badge radius (--radius-full), card corners (--radius-md)
+    breakpoints:
+      - $ref: "../../design-system/breakpoints.yaml#/breakpoints/1"
+        usage: "768px: Switch from table to card view"
+
+  related_services:
+    - $ref: "../../network/api-endpoints.yaml#/resources/enrollments"
+
+  current_implementation: |
+    import { Component } from '@angular/core';
+
+    @Component({
+      selector: 'app-enrollment',
+      imports: [],
+      templateUrl: './enrollment.component.html',
+      styleUrl: './enrollment.component.scss'
+    })
+    export class EnrollmentComponent {
+
+    }
+
+  current_template: |
+    <p>enrollment works!</p>
+
+  acceptance_criteria:
+    - Page loads with enrollment list
+    - Search filters by name/email
+    - Status filter works correctly
+    - Columns are sortable
+    - Progress bar displays accurately
+    - Status badges show correct status
+    - Individual row selection works
+    - Select all selects visible rows
+    - Remove single student works
+    - Bulk remove works
+    - Export downloads CSV
+    - Pagination works correctly
+    - Empty state shows when no enrollments
+    - Empty search shows appropriate message
+    - Mobile card view works
+    - Back navigation works

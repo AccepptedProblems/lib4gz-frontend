@@ -1,0 +1,53 @@
+openspec: "1.0"
+kind: ScreenContract
+owner: ntn071000@gmail.com
+last_reviewed: 2026-09-16
+review_cadence: per-release
+
+screen:
+  id: profile
+  name: Profile
+  routes:
+    - /profile
+  guard: [authGuard]
+  guard_data:
+    roles: []
+  target_users: [student, teacher, admin]
+  status: implemented
+
+component:
+  selector: app-profile
+  file: src/app/components/profile/profile.component.ts
+  template: src/app/components/profile/profile.component.html
+  styles: src/app/components/profile/profile.component.scss
+  spec: src/app/components/profile/profile.component.spec.ts
+  standalone: true
+
+supporting_components:
+  - selector: app-google-sign-in   # shared with /login and /register; see screens/auth/contract.yaml
+    file: src/app/components/auth/google-sign-in/google-sign-in.component.ts
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - me.get
+    - me.update
+    - auth.google-connect
+  models:
+    - UserResponse
+    - UpdateMeRequest
+    - GoogleSignInRequest
+  shared_components:
+    - lib-input
+    - lib-button
+    - lib-avatar
+    - lib-badge
+    - lib-toast
+    - lib-spinner

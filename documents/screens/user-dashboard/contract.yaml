@@ -1,0 +1,47 @@
+openspec: "1.0"
+kind: ScreenContract
+owner: ntn071000@gmail.com
+last_reviewed: 2026-05-06
+review_cadence: per-release
+
+screen:
+  id: user-dashboard
+  name: User Dashboard
+  routes:
+    - /
+  guard: [authGuard]
+  guard_data:
+    roles: []
+  target_users: [student, teacher]
+  status: scaffold
+
+component:
+  selector: app-user-dashboard
+  file: src/app/components/home/user-dashboard/user-dashboard.component.ts
+  template: src/app/components/home/user-dashboard/user-dashboard.component.html
+  styles: src/app/components/home/user-dashboard/user-dashboard.component.scss
+  standalone: true
+
+related_docs:
+  prd:
+    - prd-1min.md
+    - prd-5min.md
+    - prd-full.md
+  design:
+    - design-1min.md
+    - design-5min.md
+    - design-full.md
+  api_endpoints:
+    - courses.list
+    - courses.create
+    - courses.get-by-code
+    - enrollments.enroll
+  models:
+    - CourseResponse
+    - Visibility
+    - UserRole
+  shared_components:
+    - lib-button
+    - lib-dialog
+    - lib-input
+    - lib-textarea
