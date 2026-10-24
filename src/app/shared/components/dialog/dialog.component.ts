@@ -37,6 +37,7 @@ import { ButtonComponent } from '../button/button.component';
             [variant]="confirmVariant()"
             size="md"
             [isLoading]="loading()"
+            [disabled]="confirmDisabled()"
             (buttonClick)="confirm.emit()"
           >
             {{ confirmLabel() }}
@@ -57,6 +58,7 @@ export class DialogComponent {
   cancelLabel = input<string>('Cancel');
   confirmVariant = input<'primary' | 'destructive'>('primary');
   loading = input<boolean>(false);
+  confirmDisabled = input<boolean>(false);
 
   confirm = output<void>();
   cancel = output<void>();

@@ -115,7 +115,7 @@
               </button>
               <button
                 class="icon-btn icon-btn--danger"
-                (click)="confirmDeleteExercise(exercise.id, exercise.title)"
+                (click)="confirmDeleteExercise(exercise)"
                 [attr.aria-label]="'Delete Exercise: ' + exercise.title"
                 title="Delete"
               >
@@ -138,10 +138,15 @@
   confirmLabel="Delete"
   confirmVariant="destructive"
   [loading]="deleting()"
+  [confirmDisabled]="deleteSubmissions() === 'loading'"
   (confirm)="executeDelete()"
   (cancel)="cancelDelete()"
 >
-  <p>Are you sure you want to delete <strong>{{ deleteExerciseName() }}</strong>?</p>
-  <p class="text-body-small warning-text">This will also delete all student submissions for this exercise.</p>
+  <div class="delete-facts">
+    <p>Are you sure you want to delete <strong>{{ deleteExerciseName() }}</strong>?</p>
+    <p>{{ deleteContents() }}</p>
+    <p aria-live="polite">{{ deleteSubmissionsText() }}</p>
+    <p class="text-body-small warning-text">{{ noUndoWarning }}</p>
+  </div>
 </lib-dialog>
 }

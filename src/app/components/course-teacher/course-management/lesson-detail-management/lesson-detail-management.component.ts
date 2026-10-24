@@ -1,6 +1,7 @@
-import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import {
   LessonService,
   ExerciseService,
@@ -21,6 +22,13 @@ import {
 } from '../../../../shared/components';
 import { LinkifyPipe } from '../../../../shared/pipes';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
+import { apiErrorMessage } from '../../../../shared/utils/api-error';
+import {
+  NO_UNDO_WARNING,
+  SubmissionCount,
+  contentsWarning,
+  submissionsWarning,
+} from '../../../../shared/utils/delete-warning';
 
 /**
  * Teacher lesson detail page.
@@ -73,7 +81,14 @@ export class LessonDetailManagementComponent implements OnInit {
   deleteDialogOpen = signal(false);
   deleteExerciseId = signal('');
   deleteExerciseName = signal('');
+  deleteQuestionCount = signal(0);
+  deleteSubmissions = signal<SubmissionCount>('loading');
   deleting = signal(false);
+  private countSub?: Subscription;
+
+  deleteContents = computed(() => contentsWarning([[this.deleteQuestionCount(), 'question']]));
+  deleteSubmissionsText = computed(() => submissionsWarning(this.deleteSubmissions(), 'exercise'));
+  readonly noUndoWarning = NO_UNDO_WARNING;
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
@@ -85,6 +100,7 @@ export class LessonDetailManagementComponent implements OnInit {
         this.loadLessonData(lessonId);
       }
     });
+    this.destroyRef.onDestroy(() => this.countSub?.unsubscribe());
   }
 
   /**
@@ -142,24 +158,37 @@ export class LessonDetailManagementComponent implements OnInit {
         this.savingTitle.set(false);
         this.toast.success('Lesson updated');
       },
-      error: () => {
+      error: err => {
         this.savingTitle.set(false);
-        this.toast.error('Failed to update lesson');
+        this.toast.error(apiErrorMessage(err, 'Failed to update lesson'));
       },
     });
   }
 
-  confirmDeleteExercise(exerciseId: string, name: string): void {
-    this.deleteExerciseId.set(exerciseId);
-    this.deleteExerciseName.set(name);
+  /** Opens the confirm dialog and counts the student submissions inside. Delete waits for the count. */
+  confirmDeleteExercise(exercise: ExerciseResponse): void {
+    this.countSub?.unsubscribe();
+    this.deleteExerciseId.set(exercise.id);
+    this.deleteExerciseName.set(exercise.title);
+    this.deleteQuestionCount.set(exercise.questionCount ?? 0);
+    this.deleteSubmissions.set('loading');
     this.deleteDialogOpen.set(true);
+    this.countSub = this.exerciseService.get(exercise.id, { expand: ['submissionCount'] }).subscribe({
+      next: ex => {
+        this.deleteQuestionCount.set(ex.questionCount ?? this.deleteQuestionCount());
+        this.deleteSubmissions.set(ex.submissionCount ?? 'unknown');
+      },
+      error: () => this.deleteSubmissions.set('unknown'),
+    });
   }
 
   cancelDelete(): void {
+    this.countSub?.unsubscribe();
     this.deleteDialogOpen.set(false);
   }
 
   executeDelete(): void {
+    if (this.deleteSubmissions() === 'loading') return;
     this.deleting.set(true);
     const id = this.deleteExerciseId();
     this.exerciseService.delete(id).subscribe({
@@ -169,9 +198,9 @@ export class LessonDetailManagementComponent implements OnInit {
         this.deleting.set(false);
         this.toast.success('Exercise deleted');
       },
-      error: () => {
+      error: err => {
         this.deleting.set(false);
-        this.toast.error('Failed to delete exercise');
+        this.toast.error(apiErrorMessage(err, 'Failed to delete exercise'));
       },
     });
   }
@@ -191,9 +220,9 @@ export class LessonDetailManagementComponent implements OnInit {
         this.savingSummary.set(false);
         this.toast.success('Summary saved');
       },
-      error: () => {
+      error: err => {
         this.savingSummary.set(false);
-        this.toast.error('Failed to save summary');
+        this.toast.error(apiErrorMessage(err, 'Failed to save summary'));
       },
     });
   }

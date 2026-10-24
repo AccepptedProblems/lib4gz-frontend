@@ -34,7 +34,13 @@ export interface ExerciseResponse {
   questions?: QuestionResponse[] | null;
   // Returned when listed with `?expand=mySubmission`
   mySubmission?: SubmissionResponse | null;
+  // Returned when GET /exercises/{id}?expand=submissionCount and the caller teaches the course:
+  // student submissions, drafts included.
+  submissionCount?: number | null;
 }
 
-/** Tokens accepted by `GET /lessons/{id}/exercises?expand=` and `GET /exercises/{id}?expand=`. */
-export type ExerciseExpand = 'questions' | 'mySubmission';
+/**
+ * Tokens accepted by `GET /lessons/{id}/exercises?expand=` and `GET /exercises/{id}?expand=`.
+ * `submissionCount` works on the single exercise read only.
+ */
+export type ExerciseExpand = 'questions' | 'mySubmission' | 'submissionCount';

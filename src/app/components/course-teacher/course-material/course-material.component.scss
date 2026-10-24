@@ -191,3 +191,59 @@
 }
 
 .warning-text { color: #e86722; margin-top: 4px }
+
+.delete-facts p { margin: 0 0 var(--spacing-sm) }
+.delete-facts p:last-child { margin-bottom: 0 }
+
+// Drag and drop
+.module-list,
+.lesson-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.module-list { gap: 16px }
+.lesson-list { gap: 8px }
+
+.module-list:empty,
+.lesson-list:empty { display: none }
+
+// A <button> for keyboard reorder; reset the global button rule.
+.drag-handle {
+  font-size: 20px;
+  color: var(--neutral-color-5);
+  background: none;
+  min-height: 0;
+  padding: 0;
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+
+  &:hover:not(:disabled) { transform: none }
+}
+
+.drag-handle--locked {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.module-section.cdk-drag-preview,
+.lesson-row.cdk-drag-preview {
+  background: var(--neutral-color-0);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.cdk-drag-placeholder {
+  background: var(--primary-color-50);
+  border-radius: var(--radius-md);
+  outline: 1px dashed var(--primary-color-300);
+  outline-offset: -1px;
+
+  > * { visibility: hidden }
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging > .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform var(--duration-normal) var(--easing-ease-out);
+}

@@ -11,6 +11,11 @@ export interface UpdateLessonRequest {
   orderIndex?: number | null;
 }
 
+/** Every visible lesson of the module, in the new order. */
+export interface ReorderLessonsRequest {
+  lessonIds: string[];
+}
+
 export interface LessonResponse {
   id: string;
   moduleId: string;
@@ -35,6 +40,9 @@ export interface LessonResponse {
   summary?: SummaryResponse | null;
   // Returned when GET /lessons/{id}?expand=exercises
   exercises?: ExerciseResponse[] | null;
+  // Returned when GET /lessons/{id}?expand=submissionCount and the caller teaches the course:
+  // student submissions inside, drafts included.
+  submissionCount?: number | null;
 }
 
 export interface ModuleSummary {
@@ -44,4 +52,10 @@ export interface ModuleSummary {
 }
 
 /** Tokens the lessons GET endpoint accepts for `?expand=`. */
-export type LessonExpand = 'summary' | 'exercises' | 'module' | 'questions' | 'mySubmission';
+export type LessonExpand =
+  | 'summary'
+  | 'exercises'
+  | 'module'
+  | 'questions'
+  | 'mySubmission'
+  | 'submissionCount';

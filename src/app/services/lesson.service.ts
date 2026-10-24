@@ -6,7 +6,8 @@ import {
   CreateLessonRequest,
   UpdateLessonRequest,
   LessonResponse,
-  LessonExpand
+  LessonExpand,
+  ReorderLessonsRequest
 } from '../shared/models';
 import { CourseCacheService } from './course-cache.service';
 
@@ -68,6 +69,15 @@ export class LessonService {
     return this.http.patch<LessonResponse>(
       `${this.apiUrl}/v1/lessons/${lessonId}`,
       request
+    ).pipe(tap(() => this.cache.bustFreshness()));
+  }
+
+  /** Sends every lesson of the module in the new order; returns them as `listByModule` does. */
+  reorder(moduleId: string, lessonIds: string[]): Observable<LessonResponse[]> {
+    const body: ReorderLessonsRequest = { lessonIds };
+    return this.http.put<LessonResponse[]>(
+      `${this.apiUrl}/v1/modules/${moduleId}/lessons/order`,
+      body
     ).pipe(tap(() => this.cache.bustFreshness()));
   }
 

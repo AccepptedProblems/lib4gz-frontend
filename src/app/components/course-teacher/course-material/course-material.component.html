@@ -14,153 +14,189 @@
       />
     }
 
-    @for (mwl of modulesWithLessons(); track mwl.module.id; let mi = $index) {
-      <div class="module-section">
-        <!-- Module Header -->
-        <div class="module-header">
-          <button
-            class="module-toggle"
-            (click)="toggleModule(mi)"
-            [attr.aria-expanded]="mwl.expanded"
-            [attr.aria-controls]="'module-body-' + mwl.module.id"
-          >
-            <span class="material-icons module-chevron" [class.rotated]="mwl.expanded">
-              chevron_right
-            </span>
-          </button>
+    <div
+      class="module-list"
+      cdkDropList
+      [cdkDropListDisabled]="reorderLocked()"
+      (cdkDropListDropped)="dropModule($event)"
+    >
+      @for (mwl of modulesWithLessons(); track mwl.module.id; let mi = $index) {
+        <div class="module-section" cdkDrag cdkDragLockAxis="y">
+          <!-- Module Header -->
+          <div class="module-header">
+            <button
+              type="button"
+              class="material-icons drag-handle"
+              [class.drag-handle--locked]="reorderLocked()"
+              [attr.aria-disabled]="reorderLocked()"
+              cdkDragHandle
+              [attr.aria-label]="'Move Module: ' + mwl.module.title + '. Arrow up or down moves it.'"
+              title="Drag to reorder"
+              (keydown.arrowup)="moveModuleByKey($event, mi, -1)"
+              (keydown.arrowdown)="moveModuleByKey($event, mi, 1)"
+            >drag_indicator</button>
+            <button
+              class="module-toggle"
+              (click)="toggleModule(mi)"
+              [attr.aria-expanded]="mwl.expanded"
+              [attr.aria-controls]="'module-body-' + mwl.module.id"
+            >
+              <span class="material-icons module-chevron" [class.rotated]="mwl.expanded">
+                chevron_right
+              </span>
+            </button>
 
-          @if (editingModuleId() === mwl.module.id) {
-            <div class="inline-form inline-form--row">
-              <input
-                class="inline-input"
-                [value]="editModuleTitle()"
-                (input)="editModuleTitle.set($any($event.target).value)"
-                (keydown.enter)="saveEditModule(mwl.module.id, mi)"
-                (keydown.escape)="cancelEditModule()"
-              />
-              <lib-button variant="primary" size="sm" [isLoading]="savingModule()" (buttonClick)="saveEditModule(mwl.module.id, mi)">
-                Save
-              </lib-button>
-              <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditModule()">
-                Cancel
-              </lib-button>
-            </div>
-          } @else {
-            <span class="text-title-medium module-title" (click)="toggleModule(mi)">
-              Module {{ mi + 1 }}: {{ mwl.module.title }}
-            </span>
-            <div class="module-actions">
-              <button
-                class="icon-btn"
-                (click)="startEditModule(mwl.module.id, mwl.module.title)"
-                [attr.aria-label]="'Edit Module: ' + mwl.module.title"
-                title="Edit"
+            @if (editingModuleId() === mwl.module.id) {
+              <div class="inline-form inline-form--row">
+                <input
+                  class="inline-input"
+                  [value]="editModuleTitle()"
+                  (input)="editModuleTitle.set($any($event.target).value)"
+                  (keydown.enter)="saveEditModule(mwl.module.id)"
+                  (keydown.escape)="cancelEditModule()"
+                />
+                <lib-button variant="primary" size="sm" [isLoading]="savingModule()" (buttonClick)="saveEditModule(mwl.module.id)">
+                  Save
+                </lib-button>
+                <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditModule()">
+                  Cancel
+                </lib-button>
+              </div>
+            } @else {
+              <span class="text-title-medium module-title" (click)="toggleModule(mi)">
+                Module {{ mi + 1 }}: {{ mwl.module.title }}
+              </span>
+              <div class="module-actions">
+                <button
+                  class="icon-btn"
+                  (click)="startEditModule(mwl.module.id, mwl.module.title)"
+                  [attr.aria-label]="'Edit Module: ' + mwl.module.title"
+                  title="Edit"
+                >
+                  <span class="material-icons">edit</span>
+                </button>
+                <button
+                  class="icon-btn icon-btn--danger"
+                  (click)="confirmDeleteModule(mwl)"
+                  [attr.aria-label]="'Delete Module: ' + mwl.module.title"
+                  title="Delete"
+                >
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Module Body (lessons) -->
+          @if (mwl.expanded) {
+            <div class="module-body" [id]="'module-body-' + mwl.module.id">
+              <div
+                class="lesson-list"
+                cdkDropList
+                [cdkDropListDisabled]="reorderLocked()"
+                (cdkDropListDropped)="dropLesson(mwl.module.id, $event)"
               >
-                <span class="material-icons">edit</span>
-              </button>
-              <button
-                class="icon-btn icon-btn--danger"
-                (click)="confirmDeleteModule(mwl.module.id, mwl.module.title)"
-                [attr.aria-label]="'Delete Module: ' + mwl.module.title"
-                title="Delete"
-              >
-                <span class="material-icons">delete</span>
-              </button>
+                @for (lesson of mwl.lessons; track lesson.id; let li = $index) {
+                  <div class="lesson-row" cdkDrag cdkDragLockAxis="y">
+                    <div class="lesson-row__main">
+                      <button
+                        type="button"
+                        class="material-icons drag-handle"
+                        [class.drag-handle--locked]="reorderLocked()"
+                        [attr.aria-disabled]="reorderLocked()"
+                        cdkDragHandle
+                        [attr.aria-label]="'Move Lesson: ' + lesson.title + '. Arrow up or down moves it.'"
+                        title="Drag to reorder"
+                        (keydown.arrowup)="moveLessonByKey($event, mwl.module.id, li, -1)"
+                        (keydown.arrowdown)="moveLessonByKey($event, mwl.module.id, li, 1)"
+                      >drag_indicator</button>
+                      @if (editingLessonId() === lesson.id) {
+                        <div class="inline-form inline-form--row">
+                          <input
+                            class="inline-input"
+                            [value]="editLessonTitle()"
+                            (input)="editLessonTitle.set($any($event.target).value)"
+                            (keydown.enter)="saveEditLesson(lesson.id, mwl.module.id)"
+                            (keydown.escape)="cancelEditLesson()"
+                          />
+                          <lib-button variant="primary" size="sm" [isLoading]="savingLesson()" (buttonClick)="saveEditLesson(lesson.id, mwl.module.id)">
+                            Save
+                          </lib-button>
+                          <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditLesson()">
+                            Cancel
+                          </lib-button>
+                        </div>
+                      } @else {
+                        <span
+                          class="text-body-medium lesson-title lesson-title--clickable"
+                          (click)="enterLessonDetail(lesson)"
+                        >
+                          <span class="lesson-prefix">{{ mi + 1 }}.{{ li + 1 }}</span>
+                          {{ lesson.title }}
+                        </span>
+                        <div class="lesson-meta">
+                          @if (lesson.hasSummary) {
+                            <span class="material-icons summary-icon" title="Has summary">description</span>
+                          }
+                        </div>
+                        <div class="lesson-actions">
+                          <button
+                            class="icon-btn"
+                            (click)="startEditLesson(lesson.id, lesson.title)"
+                            [attr.aria-label]="'Edit Lesson: ' + lesson.title"
+                            title="Edit"
+                          >
+                            <span class="material-icons">edit</span>
+                          </button>
+                          <button
+                            class="icon-btn icon-btn--danger"
+                            (click)="confirmDeleteLesson(lesson)"
+                            [attr.aria-label]="'Delete Lesson: ' + lesson.title"
+                            title="Delete"
+                          >
+                            <span class="material-icons">delete</span>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (mwl.lessons.length === 0) {
+                <p class="text-body-medium text-secondary empty-text">No lessons in this module yet.</p>
+              }
+
+              <!-- Add Lesson (bottom) -->
+              @if (addingLessonModuleId() === mwl.module.id) {
+                <div class="inline-form lesson-add-form">
+                  <input
+                    class="inline-input"
+                    [value]="newLessonTitle()"
+                    (input)="newLessonTitle.set($any($event.target).value)"
+                    placeholder="Lesson title"
+                    (keydown.enter)="submitAddLesson(mwl.module.id)"
+                    (keydown.escape)="cancelAddLesson()"
+                  />
+                  <div class="inline-form__actions">
+                    <lib-button variant="primary" size="sm" [isLoading]="addingLesson()" (buttonClick)="submitAddLesson(mwl.module.id)">
+                      Save
+                    </lib-button>
+                    <lib-button variant="secondary" size="sm" (buttonClick)="cancelAddLesson()">
+                      Cancel
+                    </lib-button>
+                  </div>
+                </div>
+              } @else {
+                <lib-button variant="secondary" size="sm" (buttonClick)="showAddLesson(mwl.module.id)">
+                  + Add Lesson
+                </lib-button>
+              }
             </div>
           }
         </div>
-
-        <!-- Module Body (lessons) -->
-        @if (mwl.expanded) {
-          <div class="module-body" [id]="'module-body-' + mwl.module.id">
-            @for (lesson of mwl.lessons; track lesson.id; let li = $index) {
-              <div class="lesson-row">
-                <div class="lesson-row__main">
-                  @if (editingLessonId() === lesson.id) {
-                    <div class="inline-form inline-form--row">
-                      <input
-                        class="inline-input"
-                        [value]="editLessonTitle()"
-                        (input)="editLessonTitle.set($any($event.target).value)"
-                        (keydown.enter)="saveEditLesson(lesson.id, mi, li)"
-                        (keydown.escape)="cancelEditLesson()"
-                      />
-                      <lib-button variant="primary" size="sm" [isLoading]="savingLesson()" (buttonClick)="saveEditLesson(lesson.id, mi, li)">
-                        Save
-                      </lib-button>
-                      <lib-button variant="secondary" size="sm" (buttonClick)="cancelEditLesson()">
-                        Cancel
-                      </lib-button>
-                    </div>
-                  } @else {
-                    <span
-                      class="text-body-medium lesson-title lesson-title--clickable"
-                      (click)="enterLessonDetail(lesson)"
-                    >
-                      <span class="lesson-prefix">{{ mi + 1 }}.{{ li + 1 }}</span>
-                      {{ lesson.title }}
-                    </span>
-                    <div class="lesson-meta">
-                      @if (lesson.hasSummary) {
-                        <span class="material-icons summary-icon" title="Has summary">description</span>
-                      }
-                    </div>
-                    <div class="lesson-actions">
-                      <button
-                        class="icon-btn"
-                        (click)="startEditLesson(lesson.id, lesson.title)"
-                        [attr.aria-label]="'Edit Lesson: ' + lesson.title"
-                        title="Edit"
-                      >
-                        <span class="material-icons">edit</span>
-                      </button>
-                      <button
-                        class="icon-btn icon-btn--danger"
-                        (click)="confirmDeleteLesson(lesson.id, lesson.title, mwl.module.id)"
-                        [attr.aria-label]="'Delete Lesson: ' + lesson.title"
-                        title="Delete"
-                      >
-                        <span class="material-icons">delete</span>
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (mwl.lessons.length === 0) {
-              <p class="text-body-medium text-secondary empty-text">No lessons in this module yet.</p>
-            }
-
-            <!-- Add Lesson (bottom) -->
-            @if (addingLessonModuleId() === mwl.module.id) {
-              <div class="inline-form lesson-add-form">
-                <input
-                  class="inline-input"
-                  [value]="newLessonTitle()"
-                  (input)="newLessonTitle.set($any($event.target).value)"
-                  placeholder="Lesson title"
-                  (keydown.enter)="submitAddLesson(mwl.module.id, mi)"
-                  (keydown.escape)="cancelAddLesson()"
-                />
-                <div class="inline-form__actions">
-                  <lib-button variant="primary" size="sm" [isLoading]="addingLesson()" (buttonClick)="submitAddLesson(mwl.module.id, mi)">
-                    Save
-                  </lib-button>
-                  <lib-button variant="secondary" size="sm" (buttonClick)="cancelAddLesson()">
-                    Cancel
-                  </lib-button>
-                </div>
-              </div>
-            } @else {
-              <lib-button variant="secondary" size="sm" (buttonClick)="showAddLesson(mwl.module.id)">
-                + Add Lesson
-              </lib-button>
-            }
-          </div>
-        }
-      </div>
-    }
+      }
+    </div>
 
     <!-- Add Module (bottom) -->
     @if (showAddModuleForm()) {
@@ -192,23 +228,21 @@
 
 <!-- Delete Confirmation Dialog -->
 <lib-dialog
-  [open]="deleteDialogOpen()"
-  [title]="'Delete ' + deleteType()"
+  [open]="deleteTarget() !== null"
+  [title]="'Delete ' + (deleteTarget()?.type ?? '')"
   icon="warning"
   iconClass="warning"
   confirmLabel="Delete"
   confirmVariant="destructive"
   [loading]="deleting()"
+  [confirmDisabled]="deleteSubmissions() === 'loading'"
   (confirm)="executeDelete()"
   (cancel)="cancelDelete()"
 >
-  <p>Are you sure you want to delete <strong>{{ deleteEntityName() }}</strong>?</p>
-  @switch (deleteType()) {
-    @case ('module') {
-      <p class="text-body-small warning-text">This will also delete all lessons and exercises in this module.</p>
-    }
-    @case ('lesson') {
-      <p class="text-body-small warning-text">This will also delete the lesson summary and any linked exercises.</p>
-    }
-  }
+  <div class="delete-facts">
+    <p>Are you sure you want to delete <strong>{{ deleteTarget()?.name }}</strong>?</p>
+    <p>{{ deleteContents() }}</p>
+    <p aria-live="polite">{{ deleteSubmissionsText() }}</p>
+    <p class="text-body-small warning-text">{{ noUndoWarning }}</p>
+  </div>
 </lib-dialog>
