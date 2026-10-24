@@ -107,7 +107,7 @@
                     type="radio"
                     name="default-correct"
                     [checked]="opt.isCorrect"
-                    (change)="setDefaultCorrectOption(oi)"
+                    (click)="setDefaultCorrectOption(oi)"
                     class="answer-radio"
                     [attr.aria-label]="'Mark default answer ' + (oi + 1) + ' as correct'"
                   />
@@ -237,7 +237,7 @@
                             type="radio"
                             [name]="'correct-' + i"
                             [checked]="opt.isCorrect"
-                            (change)="setCorrectOption(oi)"
+                            (click)="setCorrectOption(oi)"
                             class="answer-radio"
                             [attr.aria-label]="'Mark answer ' + (oi + 1) + ' as correct'"
                           />
@@ -321,13 +321,29 @@
   (close)="cancelFastCreate()"
 >
   <div class="fast-create-content">
+    <div class="ai-prompt">
+      <p class="ai-prompt__title text-label-large">Let an AI write the questions for you.</p>
+      <p class="ai-prompt__text text-body-medium">
+        Copy the prompt, paste it into ChatGPT, Claude or Gemini, and add your topic.
+        The reply comes back in the layout this box accepts. Paste it below.
+      </p>
+      <lib-button variant="secondary" size="sm" (buttonClick)="copyAiPrompt()">
+        <span class="material-icons btn-icon">content_copy</span>
+        Copy AI prompt
+      </lib-button>
+    </div>
     <lib-textarea
       label="Paste your numbered question list below"
-      [placeholder]="'1. First question\n2. Second question\n3. Third question'"
+      [placeholder]="fastCreatePlaceholderText()"
       [minRows]="8"
       [value]="fastCreateText()"
       (valueChange)="onFastCreateInput($event)"
     />
+    @if (fastCreateNoCorrectCount() > 0) {
+      <p class="fast-create-hint text-body-small">
+        {{ fastCreateNoCorrectCount() }} {{ fastCreateNoCorrectCount() === 1 ? 'question has' : 'questions have' }} no correct answer marked.
+      </p>
+    }
   </div>
 
   <div sideSheetFooter>

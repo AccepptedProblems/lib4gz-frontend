@@ -202,6 +202,10 @@
 
 // ── Fast Create ─────────────────────────────────────────────────
 .fast-create-content { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.fast-create-hint { color: var(--warning-color); margin: 0; }
+.ai-prompt { display: flex; flex-direction: column; gap: var(--spacing-sm); align-items: flex-start; }
+.ai-prompt__title { margin: 0; }
+.ai-prompt__text { color: var(--text-secondary-color); margin: 0; }
 
 :host ::ng-deep .warning-icon { color: var(--warning-color); }
 

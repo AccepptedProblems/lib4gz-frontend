@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService, CourseService, ExerciseService, LessonService, ProgressService, SubmissionService } from '../../../services';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { apiErrorMessage } from '../../../shared/utils/api-error';
+import { splitNumbered } from '../../../shared/utils/fast-create';
 import {
   ExerciseResponse,
   QuestionResponse,
@@ -508,27 +509,6 @@ export class ExerciseAttemptComponent implements OnInit {
   }
 
   private parseAnswers(text: string): string[] {
-    if (!text.trim()) return [];
-
-    const lines = text.split('\n');
-    const result: string[] = [];
-    const numberedRegex = /^\s*(\d+)\s*[.)]\s*/;
-    let current: string[] = [];
-
-    for (const line of lines) {
-      const match = numberedRegex.exec(line);
-      if (match) {
-        const prev = current.join('\n').trim();
-        if (prev) result.push(prev);
-        current = [line.replace(numberedRegex, '')];
-      } else {
-        current.push(line);
-      }
-    }
-
-    const last = current.join('\n').trim();
-    if (last) result.push(last);
-
-    return result;
+    return splitNumbered(text);
   }
 }

@@ -16,6 +16,8 @@ import {
   BreadcrumbComponent, BreadcrumbItem, ButtonComponent, DialogComponent,
   SideSheetComponent, SkeletonComponent, TextareaComponent,
 } from '../../../shared/components';
+import { parseFastCreate, ParsedQuestion } from '../../../shared/utils/fast-create';
+import { fastCreatePlaceholder, fastCreatePrompt } from '../../../shared/utils/fast-create-prompts';
 
 // ── Local interfaces ──────────────────────────────────────────────
 
@@ -37,7 +39,7 @@ export interface EditorQuestion {
 
 /** Default answer options for a new MULTIPLE_CHOICE question. */
 const DEFAULT_MC_OPTIONS: AnswerOption[] = [
-  { text: '', isCorrect: true },
+  { text: '', isCorrect: false },
   { text: '', isCorrect: false },
 ];
 
@@ -122,7 +124,12 @@ export class ExerciseEditorComponent implements OnInit {
 
   // ── Fast Create ─────────────────────────────────────────────────
   fastCreateText = signal<string>('');
-  parsedQuestions = signal<string[]>([]);
+  parsedQuestions = signal<ParsedQuestion[]>([]);
+  /** Parsed multiple-choice questions with no starred option. Shown under the paste box. */
+  fastCreateNoCorrectCount = computed(() =>
+    this.parsedQuestions().filter(q => q.warnings.includes('No correct answer marked')).length
+  );
+  fastCreatePlaceholderText = computed(() => fastCreatePlaceholder(this.exerciseType()));
   private fastCreateInput$ = new Subject<string>();
 
   // ── Dirty tracking ──────────────────────────────────────────────
@@ -187,7 +194,7 @@ export class ExerciseEditorComponent implements OnInit {
     this.fastCreateInput$
       .pipe(debounceTime(200), takeUntilDestroyed(this.destroyRef))
       .subscribe(text => {
-        this.parsedQuestions.set(this.parseQuestions(text));
+        this.parsedQuestions.set(parseFastCreate(this.exerciseType(), text));
       });
 
     // Load data if edit mode
@@ -401,15 +408,6 @@ export class ExerciseEditorComponent implements OnInit {
         });
         return;
       }
-      const hasCorrect = options.some(o => o.isCorrect);
-      if (!hasCorrect) {
-        this.questionOptionErrors.update(m => {
-          const next = new Map(m);
-          next.set(idx, 'Select a correct answer');
-          return next;
-        });
-        return;
-      }
     }
 
     // Clear errors
@@ -512,7 +510,7 @@ export class ExerciseEditorComponent implements OnInit {
 
   setCorrectOption(optionIndex: number): void {
     this.tempOptions.update(opts =>
-      opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex }))
+      opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex && !o.isCorrect }))
     );
   }
 
@@ -523,14 +521,7 @@ export class ExerciseEditorComponent implements OnInit {
 
   removeOption(optionIndex: number): void {
     if (this.tempOptions().length <= 2) return;
-    const wasCorrect = this.tempOptions()[optionIndex].isCorrect;
     this.tempOptions.update(opts => opts.filter((_, i) => i !== optionIndex));
-    // If removed option was correct, mark the first one as correct
-    if (wasCorrect) {
-      this.tempOptions.update(opts =>
-        opts.map((o, i) => ({ ...o, isCorrect: i === 0 }))
-      );
-    }
   }
 
   // ── Default answer options (exercise-level placeholders) ────────
@@ -543,7 +534,7 @@ export class ExerciseEditorComponent implements OnInit {
 
   setDefaultCorrectOption(optionIndex: number): void {
     this.defaultOptions.update(opts =>
-      opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex }))
+      opts.map((o, i) => ({ ...o, isCorrect: i === optionIndex && !o.isCorrect }))
     );
   }
 
@@ -554,13 +545,7 @@ export class ExerciseEditorComponent implements OnInit {
 
   removeDefaultOption(optionIndex: number): void {
     if (this.defaultOptions().length <= 2) return;
-    const wasCorrect = this.defaultOptions()[optionIndex].isCorrect;
     this.defaultOptions.update(opts => opts.filter((_, i) => i !== optionIndex));
-    if (wasCorrect) {
-      this.defaultOptions.update(opts =>
-        opts.map((o, i) => ({ ...o, isCorrect: i === 0 }))
-      );
-    }
   }
 
   // ── Fast Create ─────────────────────────────────────────────────
@@ -583,11 +568,11 @@ export class ExerciseEditorComponent implements OnInit {
     this.saveOrDiscardCurrentEdit();
 
     const startIndex = this.questions().length;
-    const newQuestions: EditorQuestion[] = parsed.map((text, i) => ({
+    const newQuestions: EditorQuestion[] = parsed.map((q, i) => ({
       id: null,
-      content: text,
+      content: q.content,
       orderIndex: startIndex + i,
-      meta: this.buildDefaultMeta(),
+      meta: q.meta,
       isNew: true,
       isEditing: false,
     }));
@@ -600,33 +585,14 @@ export class ExerciseEditorComponent implements OnInit {
     this.showFastCreate.set(false);
   }
 
-  private parseQuestions(text: string): string[] {
-    if (!text.trim()) return [];
-
-    const lines = text.split('\n');
-    const result: string[] = [];
-    const numberedRegex = /^\s*(\d+)\s*[.)]\s*/;
-    let current: string[] = [];
-
-    for (const line of lines) {
-      const match = numberedRegex.exec(line);
-      if (match) {
-        // Flush previous question
-        const prev = current.join('\n').trim();
-        if (prev) result.push(prev);
-        // Start new question with the remainder after the number prefix
-        current = [line.slice(match[0].length)];
-      } else {
-        // Continuation line — append to current question
-        current.push(line);
-      }
-    }
-
-    // Flush last question
-    const last = current.join('\n').trim();
-    if (last) result.push(last);
-
-    return result;
+  /** Put the prompt for the current exercise type on the clipboard. */
+  copyAiPrompt(): void {
+    const prompt = fastCreatePrompt(this.exerciseType());
+    const write = navigator.clipboard?.writeText(prompt) ?? Promise.reject();
+    write.then(
+      () => this.toast.success('Prompt copied. Paste it into your AI chat.'),
+      () => this.toast.error('Could not copy. Your browser blocked clipboard access.'),
+    );
   }
 
   // ── Validation ──────────────────────────────────────────────────
@@ -668,10 +634,6 @@ export class ExerciseEditorComponent implements OnInit {
           const emptyOpt = options.find(o => !o.text.trim());
           if (emptyOpt) {
             qOptErrors.set(i, `Question ${i + 1}: all answer options must have text`);
-            valid = false;
-          }
-          if (!options.some(o => o.isCorrect)) {
-            qOptErrors.set(i, `Question ${i + 1}: select a correct answer`);
             valid = false;
           }
         }
