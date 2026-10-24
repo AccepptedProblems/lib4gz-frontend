@@ -37,11 +37,11 @@ testem.log
 Thumbs.db
 
 # Project-specific
-.claude/
+# Claude Code: per-machine settings only; skills and CLAUDE.md files are tracked
+.claude/settings.local.json
 .firebase/
 .github/
 .vscode/
-deploy/
 
 # Local secrets
 .env
