@@ -5,9 +5,13 @@ import { ExerciseType } from '../models/enums';
  * Keep each prompt in step with the parser in `fast-create.ts`.
  */
 
-const COMMON_HEAD = `You write exercise questions for a teacher. Reply with the questions only: no introduction, no explanation, no code fences.`;
+const COMMON_HEAD = `You turn a teacher's material into a list of exercise questions. Reply with the questions only: no introduction, no explanation, no code fences.`;
 
-const COMMON_TAIL = `- Write in the same language as the material below.
+const SOURCE_RULES = `- If the material already contains questions or exercise items, copy each one word for word, in order. Do not reword it, do not merge a section heading or shared instruction into each item, and do not add, drop or renumber items.
+- Only write new questions when the teacher's instructions below ask for that.`;
+
+const COMMON_TAIL = `${SOURCE_RULES}
+- Write in the same language as the material below.
 
 Material and instructions from the teacher:
 `;
