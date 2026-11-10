@@ -20,6 +20,7 @@ function user(overrides: Partial<UserResponse> = {}): UserResponse {
     role: UserRole.USER,
     emailVerified: false,
     googleConnected: false,
+    raceAppearance: null,
     ...overrides,
   };
 }

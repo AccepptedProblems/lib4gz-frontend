@@ -23,7 +23,7 @@ import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type ScreenState = 'loading' | 'loaded' | 'error';
 
-type ActiveView = 'material' | 'enrollment' | 'submissions';
+type ActiveView = 'material' | 'enrollment' | 'submissions' | 'race';
 
 interface SidebarNavItem {
   id: ActiveView;
@@ -78,6 +78,7 @@ export class ManageLayoutComponent implements OnInit {
   navItems = computed<SidebarNavItem[]>(() => [
     { id: 'material', label: 'Course Material', icon: 'menu_book', badge: null, routePath: 'material' },
     { id: 'enrollment', label: 'Enrollment', icon: 'group', badge: this.pendingEnrollmentCount() || null, routePath: 'enrollment' },
+    { id: 'race', label: 'Race Questions', icon: 'sports_motorsports', badge: null, routePath: 'race-questions' },
   ]);
 
   ngOnInit(): void {
@@ -105,6 +106,8 @@ export class ManageLayoutComponent implements OnInit {
       this.activeView.set('enrollment');
     } else if (url.includes('/submissions')) {
       this.activeView.set('submissions');
+    } else if (url.includes('/race-questions')) {
+      this.activeView.set('race');
     } else {
       this.activeView.set('material');
     }

@@ -12,6 +12,9 @@ Owns: the signed-in person's own profile at `/profile`.
   `AuthService.connectGoogle`.
 - The Google button cannot be disabled during a connect (see
   `components/auth/google-sign-in/`); only its label changes.
+- The Lightning Kart look (`raceAppearance`) is not edited here. The game's Garage saves it
+  through `MeService.updateMe` and `AuthService.setCurrentUser`; this screen only carries
+  the field through `applyUser`.
 
 ## Verify
 

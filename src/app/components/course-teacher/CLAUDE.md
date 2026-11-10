@@ -4,7 +4,8 @@ Owns: the teacher's area under `/course/:id/manage`.
 
 Live screens: `manage-layout/`, `course-material/`,
 `course-management/lesson-detail-management/`, `course-management/enrollment-management/`,
-`exercise-editor/`.
+`exercise-editor/`, `race-questions/` (the Lightning Kart question bank, a sidebar item of
+the layout).
 
 Dead code, not routed or imported anywhere: `course-management/course-management.component.ts`
 with its template and stylesheet, and the stubs in `enrollment/` and `enrollment-requests/`.
@@ -28,6 +29,11 @@ Editing them changes nothing on screen.
   `shared/utils/fast-create-prompts.ts` and must describe the format that parser reads.
 - A multiple-choice question may have no correct option. The radio toggles off when the
   marked option is clicked again, and nothing pre-marks the first option.
+- The race-questions screen reuses that parser but refuses a question with no correct
+  option or a blank option: it is left out of the paste with a warning that says so. Rows are
+  the editor's state; a click opens a drawer on a copy and Done writes it back; only Save
+  writes the server, replacing the whole bank. Leaving through the sidebar with unsaved rows
+  is silent, like the exercise editor.
 - Screens change their state only after the server succeeds. The one exception is a
   drag-and-drop reorder in `course-material/`: the row moves at once, the server's answer
   then sets the order, and a failure puts the old order back.
@@ -60,7 +66,8 @@ Editing them changes nothing on screen.
 
 ## Verify
 
-Two screens have specs. The exercise editor's covers Fast Create alone: the paste, the hint,
+Three screens have specs. The race-questions spec covers the paste, the module assignment,
+the drawer and the save. The exercise editor's covers Fast Create alone: the paste, the hint,
 the prompt copy, the placeholder, saving with no correct answer, the radio toggle. Course
 material's covers reorder (the request, a drop in place, the lock, the rollback, real pointer
 drags on the handle and the title, the arrow keys, an add during a save) and the module and

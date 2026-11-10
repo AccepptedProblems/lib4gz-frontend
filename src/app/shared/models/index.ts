@@ -13,3 +13,4 @@ export * from './submission.model';
 export * from './syllabus.model';
 export * from './lesson-submissions.model';
 export * from './freshness.model';
+export * from './race.model';

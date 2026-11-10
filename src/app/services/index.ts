@@ -11,3 +11,4 @@ export * from './me.service';
 export * from './registration-flow.service';
 export * from './progress.service';
 export * from './course-cache.service';
+export * from './race.service';

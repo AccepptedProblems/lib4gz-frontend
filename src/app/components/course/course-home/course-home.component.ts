@@ -76,6 +76,10 @@ export class CourseHomeComponent implements OnInit {
     });
   }
 
+  goToRace(): void {
+    this.router.navigate(['race'], { relativeTo: this.route.parent });
+  }
+
   private redirectToFirstLesson(): void {
     const modules = this.layout.modulesWithLessons();
     const firstModule = modules[0];

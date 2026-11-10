@@ -35,7 +35,8 @@ interceptors in `../interceptors/` and `../shared/utils/api-error.ts` follow the
 - Every service method that changes course data (course, enrollment, module, lesson,
   summary, exercise, question, submission), reorders included, ends with
   `tap(() => this.cache.bustFreshness())`. A new one must too. The draft autosave,
-  `SubmissionService.createOrUpdate`, deliberately does not.
+  `SubmissionService.createOrUpdate`, deliberately does not. `RaceService` touches nothing
+  the cache holds and does not bust it.
 - Changing the shape of a cached response type needs a `DB_VERSION` bump. That drop is the
   only eviction besides logout.
 - Cache entries are keyed by the `user_id` in localStorage and wiped on logout.

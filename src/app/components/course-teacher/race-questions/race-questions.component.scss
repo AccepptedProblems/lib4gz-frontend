@@ -1,0 +1,55 @@
+:host { display: block }
+
+.race-questions { display: flex; flex-direction: column; gap: var(--spacing-lg) }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); flex-wrap: wrap }
+.page-header__title { margin: 0; color: var(--text-primary-color) }
+.page-header__actions { display: flex; gap: var(--spacing-sm) }
+
+.race-questions__muted { margin: 0; color: var(--text-secondary-color) }
+.race-questions__error { margin: 0; color: var(--error-color) }
+
+.bulk-add { display: flex; flex-direction: column; gap: var(--spacing-sm) }
+.bulk-add__row { display: flex; align-items: center; gap: var(--spacing-sm); flex-wrap: wrap }
+.bulk-add__row label { color: var(--text-secondary-color) }
+.add-warning { margin: 0; color: var(--warning-color) }
+
+.select-box-container--compact { height: 36px; min-width: 180px }
+
+.table-wrapper { overflow-x: auto }
+.question-table { width: 100%; border-collapse: collapse }
+.question-table th { text-align: left; padding: var(--spacing-xs) var(--spacing-sm); color: var(--text-secondary-color); border-bottom: 1px solid var(--neutral-color-3) }
+.question-table td { padding: var(--spacing-sm); border-bottom: 1px solid var(--neutral-color-2); vertical-align: top }
+.question-table__num { color: var(--text-secondary-color); width: 32px }
+.question-table__open {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-xxs);
+  width: 100%; padding: var(--spacing-xs); background: none; border: none; border-radius: var(--radius-sm);
+  text-align: left; font: inherit; cursor: pointer;
+  &:hover:not(:disabled) { background: var(--neutral-color-1) }
+}
+.question-table__content { white-space: pre-line; color: var(--text-primary-color) }
+.question-table__answer { color: var(--primary-color-600) }
+
+.drawer { display: flex; flex-direction: column; gap: var(--spacing-sm) }
+.drawer__text { width: 100%; height: auto; min-height: 72px; resize: vertical; font: inherit }
+.drawer__label { margin: var(--spacing-sm) 0 0 }
+.drawer__hint { color: var(--text-secondary-color) }
+.options { display: flex; flex-direction: column; gap: var(--spacing-xs) }
+.options__row { display: flex; align-items: center; gap: var(--spacing-xs) }
+.options__radio { accent-color: var(--primary-color-600); flex-shrink: 0 }
+.options__input { flex: 1; min-width: 0 }
+.options__add { align-self: flex-start; background: none; border: none; padding: 0; color: var(--primary-color-600); cursor: pointer }
+
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; min-height: 36px; padding: 0; flex-shrink: 0;
+  background: none; border: none; border-radius: var(--radius-sm);
+  color: var(--text-secondary-color); cursor: pointer;
+  transition: all var(--duration-normal) var(--easing-ease);
+  .material-icons { font-size: 18px }
+  &:hover { background: var(--neutral-color-1); color: var(--text-primary-color); transform: none }
+}
+.icon-btn--small { width: 28px; height: 28px; min-height: 28px; .material-icons { font-size: 16px } }
+.icon-btn--danger:hover { color: var(--error-color); background: var(--neutral-color-1) }
+
+:host ::ng-deep .warning-icon { color: var(--warning-color) }

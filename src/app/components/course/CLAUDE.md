@@ -1,7 +1,8 @@
 # course (student screens)
 
 Owns: the course shell with its sidebar, the lesson tabs (summary, exercises, submissions),
-and the exercise attempt screen.
+the exercise attempt screen, and the entry into Lightning Kart (the game itself is
+`app/games/lightning-kart/`).
 
 ## Rules
 
@@ -28,6 +29,10 @@ and the exercise attempt screen.
 - Submit saves drafts first, then submits only the exercises that have a submission.
 - A lesson tab skips its request when the lesson payload says there is nothing to load
   (`hasSummary` false, `exerciseCount` 0).
+- The race route is a child of the layout beside `course-home`, so the game injects the
+  layout for the course id and the modules. The layout's `raceActive` marks the sidebar row
+  and switches the layout to the full viewport height, because the navbar is hidden there.
+  The row and the course-home button show only to an active enrollment on unlocked content.
 
 ## Gotchas
 

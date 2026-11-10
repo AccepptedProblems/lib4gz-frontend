@@ -44,6 +44,7 @@ export const routes: Routes = [
         loadComponent: () => import('./components/course/course-layout/course-layout.component').then(m => m.CourseLayoutComponent),
         children: [
           { path: '', pathMatch: 'full', loadComponent: () => import('./components/course/course-home/course-home.component').then(m => m.CourseHomeComponent) },
+          { path: 'race', loadComponent: () => import('./games/lightning-kart/lightning-kart.component').then(m => m.LightningKartComponent) },
           {
             path: 'lesson/:lessonId',
             loadComponent: () => import('./components/course/course-lesson/course-lesson.component').then(m => m.CourseLessonComponent),
@@ -77,6 +78,7 @@ export const routes: Routes = [
           { path: 'material', loadComponent: () => import('./components/course-teacher/course-material/course-material.component').then(m => m.CourseMaterialComponent) },
           { path: 'material/lesson/:lessonId', loadComponent: () => import('./components/course-teacher/course-management/lesson-detail-management/lesson-detail-management.component').then(m => m.LessonDetailManagementComponent) },
           { path: 'enrollment', loadComponent: () => import('./components/course-teacher/course-management/enrollment-management/enrollment-management.component').then(m => m.EnrollmentManagementComponent) },
+          { path: 'race-questions', loadComponent: () => import('./components/course-teacher/race-questions/race-questions.component').then(m => m.RaceQuestionsComponent) },
         ]
       },
     ]

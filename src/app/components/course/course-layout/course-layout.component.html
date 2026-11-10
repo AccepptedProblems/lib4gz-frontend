@@ -38,7 +38,7 @@
 
 <!-- Loaded State -->
 @if (screenState() === 'loaded' && course(); as course) {
-  <div class="course-layout" [class.content-locked]="isContentLocked()">
+  <div class="course-layout" [class.content-locked]="isContentLocked()" [class.course-layout--no-navbar]="raceActive()">
     <!-- Mobile Sidebar Toggle -->
     <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
       <span class="material-icons">menu</span>
@@ -185,6 +185,23 @@
 
         @if (modulesWithLessons().length === 0) {
           <p class="text-body-medium text-secondary sidebar-empty">No modules available</p>
+        }
+
+        @if (isEnrolled() && !isContentLocked()) {
+          <div
+            class="lesson-item race-link"
+            [class.lesson-item--active]="raceActive()"
+            [attr.aria-current]="raceActive() ? 'true' : null"
+            role="link"
+            tabindex="0"
+            (click)="navigateToRace()"
+            (keydown.enter)="navigateToRace()"
+          >
+            <span class="material-icons lesson-check race-link__icon" aria-hidden="true">sports_motorsports</span>
+            <div class="lesson-info">
+              <span class="text-body-medium lesson-title">Lightning Kart</span>
+            </div>
+          </div>
         }
       </div>
     </aside>

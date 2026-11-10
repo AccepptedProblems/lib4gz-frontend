@@ -66,6 +66,8 @@ export class CourseLayoutComponent implements OnInit {
   myEnrollment = computed<EnrollmentSummary | null>(() => this.course()?.myEnrollment ?? null);
 
   activeLessonId = signal<string | null>(null);
+  /** The Lightning Kart screen (`course/:id/race`) is the one child that is not a lesson. */
+  raceActive = signal(false);
   sidebarOpen = signal(false);
 
   isTeacher = computed(() => this.myEnrollment()?.role === EnrollmentRole.TEACHER);
@@ -226,6 +228,7 @@ export class CourseLayoutComponent implements OnInit {
   private extractLessonIdFromUrl(url: string): void {
     const match = url.match(/\/lesson\/([^/?]+)/);
     this.activeLessonId.set(match ? match[1] : null);
+    this.raceActive.set(/\/race(\/|\?|$)/.test(url));
   }
 
   toggleModule(index: number): void {
@@ -244,6 +247,11 @@ export class CourseLayoutComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { prefix },
     });
+  }
+
+  navigateToRace(): void {
+    this.sidebarOpen.set(false);
+    this.router.navigate(['race'], { relativeTo: this.route });
   }
 
   navigateToManage(): void {

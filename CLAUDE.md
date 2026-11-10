@@ -21,14 +21,19 @@ What the product does: `../docs/README.md`. Contract with the backend: `../CLAUD
 - Tests, once and without watching:
   `CHROME_BIN="<path to a Chromium browser>" npm test -- --watch=false --browsers=ChromeHeadless`.
   Plain `npm test` watches and never exits. `CHROME_BIN` is needed when Google Chrome is not
-  installed; any Chromium browser works.
+  installed; any Chromium browser works. `ChromeHeadless` has no WebGL, so the Lightning
+  Kart mode 7 and race scene specs go pending there; `--browsers=ChromeHeadlessGL` (a
+  launcher in `karma.conf.js` that draws WebGL in software) runs them too.
 - `scripts/check-docs.sh` fails when a `CLAUDE.md` names a file that no longer exists, and
   lists folders whose code changed without their doc.
 - Specs cover the app shell, the auth, cache and sign-up flow services, the registration
   guard, the token interceptor, `apiErrorMessage`, the Fast Create parser, the code input,
-  the profile screen, the exercise editor's Fast Create sheet, and the course material
-  screen's reorder and delete dialogs. The rest of the course and teacher screens have none,
-  so a change there is not verified by the tests; say so.
+  the profile screen, the exercise editor's Fast Create sheet, the course material
+  screen's reorder and delete dialogs, the race-questions editor, the race track geometry,
+  the race engine, the mode 7 view and the race scene (WebGL launcher only), the game's
+  scene flow (headless Phaser) and every character and kart drawing. The rest of
+  the course and teacher screens have none, so a change there is not verified by the tests;
+  say so.
 
 ## Deploy
 
@@ -52,6 +57,7 @@ before changing that folder.
 | `app/components/course-teacher/` | Teacher manage screens and the exercise editor |
 | `app/components/layout/` | The navbar |
 | `app/components/profile/` | Own profile |
+| `app/games/lightning-kart/` | The Lightning Kart game (Phaser 3) and its Angular host |
 
 Routes are in `src/app/app.routes.ts`. Design documents for work in this repository alone live
 in a plans folder at the root; a plan is deleted when its work is done and its lasting rules

@@ -17,6 +17,7 @@ function user(overrides: Partial<UserResponse> = {}): UserResponse {
     role: UserRole.TEACHER,
     emailVerified: false,
     googleConnected: false,
+    raceAppearance: null,
     ...overrides,
   };
 }

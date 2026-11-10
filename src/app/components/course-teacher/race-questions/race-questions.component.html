@@ -1,0 +1,161 @@
+@if (screenState() === 'loading') {
+  <div class="race-questions" aria-label="Loading race questions...">
+    <lib-skeleton width="40%" height="28px" />
+    <lib-skeleton width="100%" height="120px" variant="rect" />
+    <lib-skeleton width="100%" height="80px" variant="rect" />
+  </div>
+} @else if (screenState() === 'error') {
+  <div class="race-questions">
+    <p class="race-questions__error" role="alert">{{ errorMessage() }}</p>
+    <lib-button variant="secondary" (buttonClick)="retry()">Retry</lib-button>
+  </div>
+} @else {
+  <div class="race-questions">
+    <div class="page-header">
+      <h2 class="text-title-large page-header__title">Race Questions</h2>
+      <div class="page-header__actions">
+        <lib-button variant="secondary" (buttonClick)="cancel()" [disabled]="isSaving()">Cancel</lib-button>
+        <lib-button variant="primary" [isLoading]="isSaving()" [disabled]="!isDirty()" (buttonClick)="save()">
+          Save
+        </lib-button>
+      </div>
+    </div>
+
+    @if (modules().length === 0) {
+      <p class="text-body-medium race-questions__muted">
+        Add a module to the course first. Every race question belongs to a module.
+      </p>
+    } @else {
+      <section class="bulk-add">
+        <lib-textarea
+          label="Paste your numbered question list below"
+          placeholder="1. Capital of France?&#10;a) Berlin&#10;*b) Paris&#10;c) Rome"
+          [minRows]="6"
+          [value]="bulkText()"
+          (valueChange)="bulkText.set($event)"
+        />
+        <div class="bulk-add__row">
+          <label class="text-label-large" for="bulk-module">Module</label>
+          <div class="select-box-container select-box-container--compact">
+            <select id="bulk-module" class="select-box small-input" [value]="bulkModuleId()"
+              (change)="bulkModuleId.set($any($event.target).value)">
+              @for (m of modules(); track m.id) {
+                <option [value]="m.id" [selected]="m.id === bulkModuleId()">{{ m.title }}</option>
+              }
+            </select>
+            <span class="material-symbols-outlined select-box-icon">keyboard_arrow_down</span>
+          </div>
+          <lib-button variant="primary" size="md" [disabled]="!bulkText().trim() || isSaving()" (buttonClick)="addQuestions()">
+            Add
+          </lib-button>
+        </div>
+        @for (w of addWarnings(); track $index) {
+          <p class="add-warning text-body-small">{{ w }}</p>
+        }
+      </section>
+
+      @if (errorMessage()) {
+        <p class="race-questions__error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      @if (rows().length === 0) {
+        <p class="text-body-medium race-questions__muted">No race questions yet. Paste some above.</p>
+      } @else {
+        <div class="table-wrapper">
+          <table class="question-table">
+            <thead>
+              <tr>
+                <th class="text-label-medium">#</th>
+                <th class="text-label-medium">Question</th>
+                <th class="text-label-medium">Module</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track $index) {
+                <tr>
+                  <td class="question-table__num">{{ $index + 1 }}</td>
+                  <td>
+                    <button class="question-table__open" type="button" [disabled]="isSaving()" (click)="openEditor($index)"
+                      [attr.aria-label]="'Edit question ' + ($index + 1)">
+                      <span class="question-table__content">{{ row.content }}</span>
+                      <span class="question-table__answer text-body-small">{{ row.options[row.correctIndex] }}</span>
+                    </button>
+                  </td>
+                  <td>
+                    <div class="select-box-container select-box-container--compact">
+                      <select class="select-box small-input row-module" [attr.aria-label]="'Module of question ' + ($index + 1)"
+                        [value]="row.moduleId" [disabled]="isSaving()" (change)="setRowModule($index, $any($event.target).value)">
+                        @for (m of modules(); track m.id) {
+                          <option [value]="m.id" [selected]="m.id === row.moduleId">{{ m.title }}</option>
+                        }
+                      </select>
+                      <span class="material-symbols-outlined select-box-icon">keyboard_arrow_down</span>
+                    </div>
+                  </td>
+                  <td>
+                    <button class="icon-btn icon-btn--danger" type="button" [attr.aria-label]="'Delete question ' + ($index + 1)"
+                      [disabled]="isSaving()" (click)="removeRow($index)">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+}
+
+<lib-side-sheet [open]="editIndex() >= 0" title="Edit question" size="md" (close)="closeEditor()">
+  @if (draft(); as d) {
+    <div class="drawer">
+      <label class="text-label-large" for="draft-content">Question</label>
+      <textarea id="draft-content" class="small-input drawer__text" rows="3" [value]="d.content"
+        (input)="setDraftContent($any($event.target).value)"></textarea>
+      <p class="text-label-large drawer__label">Options <span class="text-body-small drawer__hint">(tick the correct one)</span></p>
+      <div class="options">
+        @for (opt of d.options; track $index; let oi = $index) {
+          <div class="options__row">
+            <input type="radio" class="options__radio" name="draft-correct" [checked]="oi === d.correctIndex"
+              [attr.aria-label]="'Mark option ' + (oi + 1) + ' as correct'" (change)="setDraftCorrect(oi)" />
+            <input type="text" class="small-input options__input" placeholder="Answer option" [value]="opt"
+              [attr.aria-label]="'Option ' + (oi + 1)" (input)="setDraftOption(oi, $any($event.target).value)" />
+            @if (d.options.length > minOptions) {
+              <button class="icon-btn icon-btn--small" type="button" [attr.aria-label]="'Remove option ' + (oi + 1)"
+                (click)="removeDraftOption(oi)">
+                <span class="material-icons">close</span>
+              </button>
+            }
+          </div>
+        }
+        @if (d.options.length < maxOptions) {
+          <button class="options__add text-body-small" type="button" (click)="addDraftOption()">+ Add option</button>
+        }
+      </div>
+      @if (draftError()) {
+        <p class="race-questions__error text-body-small" role="alert">{{ draftError() }}</p>
+      }
+    </div>
+  }
+  <div sideSheetFooter>
+    <lib-button variant="secondary" size="md" (buttonClick)="closeEditor()">Cancel</lib-button>
+    <lib-button variant="primary" size="md" (buttonClick)="applyEditor()">Done</lib-button>
+  </div>
+</lib-side-sheet>
+
+<lib-dialog
+  [open]="showUnsavedDialog()"
+  title="Unsaved Changes"
+  icon="warning"
+  iconClass="warning-icon"
+  confirmLabel="Leave"
+  cancelLabel="Stay"
+  confirmVariant="destructive"
+  (confirm)="confirmLeave()"
+  (cancel)="stayOnPage()"
+>
+  You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+</lib-dialog>

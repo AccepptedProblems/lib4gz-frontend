@@ -1,4 +1,5 @@
 import { UserRole } from './enums';
+import { RaceAppearance } from './race.model';
 
 export interface LoginRequest {
   username: string;
@@ -21,10 +22,13 @@ export interface UserResponse {
   emailVerified: boolean;
   /** A Google account signs this user in; the email is that account's address. */
   googleConnected: boolean;
+  /** Lightning Kart look, or null when never chosen. */
+  raceAppearance: RaceAppearance | null;
 }
 
 export interface UpdateMeRequest {
   name?: string;
+  raceAppearance?: RaceAppearance;
 }
 
 export interface LoginResponse {

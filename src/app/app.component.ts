@@ -19,6 +19,7 @@ export class AppComponent {
   private readonly hiddenRoutePatterns = [
     /^\/course\/[^/]+\/manage\/exercise\//,
     /^\/course\/[^/]+\/lesson\/[^/]+\/attempt/,
+    /^\/course\/[^/]+\/race(\/|\?|$)/,
   ];
 
   private readonly currentUrl = toSignal(

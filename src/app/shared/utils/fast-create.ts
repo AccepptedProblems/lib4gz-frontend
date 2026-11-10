@@ -16,6 +16,11 @@ export interface ParsedQuestion {
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 6;
 
+/** The warning strings a multiple-choice block can carry. */
+export const WARN_TOO_MANY_OPTIONS = `Only the first ${MAX_OPTIONS} options are kept`;
+export const WARN_TOO_FEW_OPTIONS = `Fewer than ${MIN_OPTIONS} options`;
+export const WARN_NO_CORRECT = 'No correct answer marked';
+
 const NUMBERED = /^\s*(\d+)\s*[.)]\s*/;
 const CODE_FENCE = /^\s*```/;
 /** `a)` `a.` `A)` `A.`, optionally preceded by `*` marking the correct option. */
@@ -69,7 +74,7 @@ function parseMultipleChoiceBlock(block: string): ParsedQuestion {
     if (match && options.length < MAX_OPTIONS) {
       options.push({ text: line.slice(match[0].length).trim(), isCorrect: match[1] === '*' });
     } else if (match) {
-      warnings.push(`Only the first ${MAX_OPTIONS} options are kept`);
+      warnings.push(WARN_TOO_MANY_OPTIONS);
     } else if (options.length === 0) {
       contentLines.push(line);
     } else {
@@ -81,9 +86,9 @@ function parseMultipleChoiceBlock(block: string): ParsedQuestion {
 
   while (options.length < MIN_OPTIONS) {
     options.push({ text: '', isCorrect: false });
-    if (!warnings.includes('Fewer than 2 options')) warnings.push('Fewer than 2 options');
+    if (!warnings.includes(WARN_TOO_FEW_OPTIONS)) warnings.push(WARN_TOO_FEW_OPTIONS);
   }
-  if (!options.some(o => o.isCorrect)) warnings.push('No correct answer marked');
+  if (!options.some(o => o.isCorrect)) warnings.push(WARN_NO_CORRECT);
 
   return {
     content: contentLines.join('\n').trim(),
