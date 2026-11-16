@@ -40,6 +40,8 @@ module.exports = function (config) {
         flags: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
       },
     },
+    // A WebGL spec can stay silent for over 10 s on a loaded machine; the default is 30 s.
+    browserNoActivityTimeout: 60000,
     restartOnFileChange: true
   });
 };

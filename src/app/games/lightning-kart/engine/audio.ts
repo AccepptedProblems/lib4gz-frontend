@@ -54,65 +54,66 @@ function tone(ctx: AudioContext, type: OscillatorType, hz: number, seconds: numb
   osc.stop(t0 + seconds + 0.02);
 }
 
-/** Correct: a short rising chime. */
-export function playChime(ctx: AudioContext): void {
-  tone(ctx, 'sine', 660, 0.1);
-  tone(ctx, 'sine', 990, 0.16, 0.08);
+/**
+ * Correct: a short rising chime, `step` notes up `C.ui.streak.chime` for the answers before it
+ * in the streak (0 for the first), held at the last note past the end.
+ */
+export function playChime(ctx: AudioContext, step = 0): void {
+  const steps = C.ui.streak.chime;
+  const up = 2 ** (steps[Math.max(0, Math.min(step, steps.length - 1))] / 12);
+  tone(ctx, 'sine', 660 * up, 0.1);
+  tone(ctx, 'sine', 990 * up, 0.16, 0.08);
 }
 
-/** Wrong or timed out. */
-export function playBuzzer(ctx: AudioContext): void {
-  tone(ctx, 'square', 150, 0.28);
+/** A streak of three or more broke: STREAK LOST, two falling notes and a sagging buzz. */
+export function playStreakLost(ctx: AudioContext): void {
+  tone(ctx, 'square', 523, 0.11);
+  tone(ctx, 'square', 392, 0.11, 0.12);
+  tone(ctx, 'sawtooth', 311, 0.42, 0.24, 156);
 }
 
-/** Off-road. */
-export function playRumble(ctx: AudioContext): void {
-  tone(ctx, 'sawtooth', 50, 0.14);
+/** Splash fires on a wrong answer or a timeout: a hiss of water, white noise through a band-pass sweeping down, over the pump's thwip. */
+export function playSquirt(ctx: AudioContext): void {
+  const seconds = 0.22;
+  const t0 = ctx.currentTime;
+  const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * seconds), ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const band = ctx.createBiquadFilter();
+  band.type = 'bandpass';
+  band.Q.value = 1.2;
+  band.frequency.setValueAtTime(3200, t0);
+  band.frequency.exponentialRampToValueAtTime(900, t0 + seconds);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(C.audio.fxGain, t0);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
+  noise.connect(band).connect(gain).connect(ctx.destination);
+  noise.start(t0);
+  noise.stop(t0 + seconds);
+  tone(ctx, 'sine', 600, 0.08, 0, 250);
 }
 
-/** Barrier hit. */
-export function playThud(ctx: AudioContext): void {
-  tone(ctx, 'sine', 120, 0.2, 0, 35);
+/** Splash's bubble pops on the kart. */
+export function playPop(ctx: AudioContext): void {
+  tone(ctx, 'sine', 380, 0.06, 0, 1400);
 }
 
-/** A nitro charge fired; `high` is the Double Boost chain. */
+/** Splash throws the bottle on a right answer: a soft rising swish. */
+export function playToss(ctx: AudioContext): void {
+  tone(ctx, 'triangle', 260, 0.14, 0, 620);
+}
+
+/** The kart catches the bottle: a glassy clink. */
+export function playCatch(ctx: AudioContext): void {
+  tone(ctx, 'sine', 1320, 0.07);
+  tone(ctx, 'sine', 1760, 0.1, 0.05);
+}
+
+/** A boost starts; `high` is a Double Boost. */
 export function playWhoosh(ctx: AudioContext, high: boolean): void {
   tone(ctx, 'sawtooth', high ? 320 : 200, 0.35, 0, high ? 1600 : 900);
-}
-
-export interface Screech {
-  osc: OscillatorNode;
-  lfo: OscillatorNode;
-  gain: GainNode;
-}
-
-/** The tyre screech of a drift; runs until `stopScreech`. */
-export function startScreech(ctx: AudioContext): Screech {
-  const osc = ctx.createOscillator();
-  const lfo = ctx.createOscillator();
-  const lfoGain = ctx.createGain();
-  const gain = ctx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.value = C.audio.screechHz;
-  lfo.type = 'sine';
-  lfo.frequency.value = 28;
-  lfoGain.gain.value = 180;
-  lfo.connect(lfoGain).connect(osc.frequency);
-  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(C.audio.screechGain, ctx.currentTime + 0.08);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start();
-  lfo.start();
-  return { osc, lfo, gain };
-}
-
-export function stopScreech(ctx: AudioContext, s: Screech): void {
-  const t = ctx.currentTime;
-  s.gain.gain.cancelScheduledValues(t);
-  s.gain.gain.setValueAtTime(Math.max(s.gain.gain.value, 0.0001), t);
-  s.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-  s.osc.stop(t + 0.15);
-  s.lfo.stop(t + 0.15);
 }
 
 /** Lap completed. */
@@ -120,8 +121,11 @@ export function playLapTone(ctx: AudioContext): void {
   tone(ctx, 'triangle', 880, 0.18);
 }
 
-/** Finish. */
-export function playFanfare(ctx: AudioContext): void {
+/** Finish; a perfect race climbs on past the top note, under the banner's fireworks. */
+export function playFanfare(ctx: AudioContext, perfect = false): void {
   [523, 659, 784].forEach((hz, i) => tone(ctx, 'triangle', hz, 0.16, i * 0.14));
-  tone(ctx, 'triangle', 1047, 0.5, 0.42);
+  tone(ctx, 'triangle', 1047, perfect ? 0.24 : 0.5, 0.42);
+  if (!perfect) return;
+  [1319, 1568].forEach((hz, i) => tone(ctx, 'triangle', hz, 0.12, 0.62 + i * 0.1));
+  tone(ctx, 'triangle', 2093, 0.6, 0.82);
 }

@@ -2,6 +2,7 @@
 export const SCENE = {
   boot: 'Boot',
   home: 'Home',
+  howToPlay: 'HowToPlay',
   garage: 'Garage',
   scope: 'Scope',
   ready: 'Ready',

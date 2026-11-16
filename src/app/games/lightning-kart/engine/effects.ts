@@ -1,4 +1,5 @@
-export type EffectType = 'boost' | 'slow' | 'offroad' | 'bump' | 'drift';
+/** A boost's `mul` tells a Double Boost (`C.boost.doubleMul`) from a plain one (`C.boost.mul`). */
+export type EffectType = 'boost' | 'trap';
 
 export interface Effect {
   type: EffectType;

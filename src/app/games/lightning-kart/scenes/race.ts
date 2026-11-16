@@ -1,137 +1,142 @@
 import Phaser from 'phaser';
-import { RaceQuestionResponse } from '../../../shared/models';
-import { bridgeOf } from '../bridge';
-import { Character, characterOf, Kart as KartLook, kartOf } from '../catalogue';
-import { drawKartTop } from '../draw-racer';
+import { bridgeOf, RaceQuestion } from '../bridge';
 import {
-  createEngineSound, EngineSound, playBuzzer, playChime, playFanfare, playLapTone, playRumble, playThud, playWhoosh,
-  Screech, setEngineSpeed, startScreech, stopEngineSound, stopScreech,
+  createEngineSound, EngineSound, playCatch, playChime, playFanfare, playLapTone, playPop, playSquirt, playStreakLost, playToss, playWhoosh,
+  setEngineSpeed, stopEngineSound,
 } from '../engine/audio';
-import { C } from '../engine/constants';
-import { addCharge, applySlow, createRace, fireNitro, hudState, LOCAL_RACER, Race, RaceEvent, step } from '../engine/race';
-import { mulberry32, shuffle } from '../engine/seed';
-import { hasWebGL, Mode7Camera, Mode7View } from '../render/mode7';
+import { C, cssHex } from '../engine/constants';
+import { applyBoost, applyTrap, BoostKind, boostKind, createRace, hudState, isDouble, LOCAL_RACER, Race, RaceEvent, step } from '../engine/race';
+import { answerStreak, createStreak, nextTier, Streak, StreakChange, tierOf } from '../engine/streak';
+import { Character, characterOf, Kart as KartLook, kartOf } from '../look/catalogue';
+import { drawKartTop, drawRacer } from '../look/draw';
+import { HEAD_SLIDE, racerTop } from '../look/head';
+import { drawStun, racerHead } from '../look/splash';
+import { hasWebGL, Mode7Camera, Mode7View, NO_WEBGL } from '../render/mode7';
+import { Props } from '../render/props';
+import { RoadOverlay } from '../render/road-overlay';
+import { Skyline } from '../render/skyline';
 import { createTrackTexture, TrackTexture } from '../render/track-texture';
 import { wrapAngle } from '../track/geometry';
 import { LAP } from '../track/lap';
 import { TEST_TRACK } from '../track/test-track';
-import { RaceOutcome, ScopeChoice } from './data';
+import { AnswerChecker, Verdict } from './answer-checker';
+import { Badge } from './badge';
+import { Crackle } from './crackle';
+import { perfectRace, RaceOutcome, RaceStart, ScopeChoice } from './data';
+import { DEPTH } from './depth';
+import { RaceFx } from './fx';
+import { Hud } from './hud';
 import { SCENE } from './keys';
 import { reducedMotion } from './motion';
-import { button, Button, cornerButton, formatTime, label, setupStage, wrapText } from './widgets';
+import { QuestionPanel } from './question-panel';
+import { RaceKeys, setupRaceInput } from './race-input';
+import { Splash } from './splash';
+import { Button, cornerButton, setupStage, wrapText } from './widgets';
 
 const UI = C.ui;
 const ROAD = UI.road;
 const FX = UI.fx;
+const STREAK = UI.streak;
 const W = UI.stage.w;
 const H = UI.stage.h;
-const DEPTH = { ground: 0, world: 10, lines: 90, hud: 100, flash: 150, overlay: 200, shout: 300 };
-const KEY_NUMBERS = ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'];
 
-interface OpenQuestion {
-  question: RaceQuestionResponse;
-  openedMs: number;
-  container: Phaser.GameObjects.Container;
-  countdown: Phaser.GameObjects.Text;
-  bar: Phaser.GameObjects.Graphics;
-  barX: number;
-  barY: number;
-  barW: number;
-}
+/** The answer awaiting its verdict: for that showing of its question, first sent at race time `atMs`. */
+interface Asked { question: RaceQuestion; choice: number | null; showing: object; atMs: number; resent: boolean }
 
 /**
  * The race: the engine stepped every frame, the track seen through the mode 7 view from
- * behind the kart, boxes and the kart placed by projection, the countdown, the HUD, the
- * question overlay, and every row of the design file's Feedback table. Left/Right or A/D
- * steer, Down or S drifts, Up, W or Space fires a charge, 1 to 6 answer, Escape twice
- * quits. Touch: hold a half of the stage to steer, Drift and Nitro buttons in the bottom
- * corners. Without WebGL only one line of text shows.
+ * behind the kart, boxes and the kart placed by projection, the countdown, the HUD
+ * (`hud.ts`), the question overlay (`question-panel.ts`), Splash after every answer
+ * (`splash.ts`), the streak's badge (`badge.ts`), flame, sounds and Lightning look, and every
+ * row of the design file's Feedback table (`fx.ts`). The keys and the held halves of the
+ * stage are wired in `race-input.ts`; Escape twice quits. The questions are the server's
+ * deal, in its order, one per box row until they run out. An answer goes to the race's
+ * `AnswerChecker` and its outcome waits for the verdict, asked again and then given up on race
+ * time (`C.answer`). Without WebGL only one line of text shows.
  */
 export class RaceScene extends Phaser.Scene {
   private choice!: ScopeChoice;
+  private raceId = '';
   private race!: Race;
-  private seed = 0;
   private phase: 'countdown' | 'racing' | 'done' = 'countdown';
   private playable = false;
   private calm = false;
 
   private view: Mode7View | null = null;
+  private skyline: Skyline | null = null;
+  private props: Props | null = null;
+  private roadOverlay: RoadOverlay | null = null;
   private texture!: TrackTexture;
   private cam!: Mode7Camera;
   private look!: { character: Character; kart: KartLook };
   private kartObj!: Phaser.GameObjects.Container;
   private kartG!: Phaser.GameObjects.Graphics;
+  private stunBack!: Phaser.GameObjects.Graphics; // the far half of the stun's ring, under the racer
+  private stunFront!: Phaser.GameObjects.Graphics; // its near half, over the racer
+  private trapped = false; // whether the last racing frame had a trap, so its end is seen
+  private stunEndMs: number | null = null; // race time the last trap ended, for the ring's fade
+  private behind: { s: number; lean: number } | null = null; // the behind view's width in px and the driver's lean, while the kart is drawn from behind
   private boxes: Phaser.GameObjects.Rectangle[] = [];
-  private hud!: { lap: Phaser.GameObjects.Text; time: Phaser.GameObjects.Text; best: Phaser.GameObjects.Text; effect: Phaser.GameObjects.Text; slot: Phaser.GameObjects.Graphics };
+  private badge!: Badge;
+  private crackle!: Crackle;
+  private hud!: Hud;
+  private fx!: RaceFx;
+  private panel!: QuestionPanel;
+  private splash!: Splash;
   private soundButton!: Button;
-  private countdownText!: Phaser.GameObjects.Text;
 
-  // feedback state
-  private flash!: Phaser.GameObjects.Rectangle;
-  private speedLines!: Phaser.GameObjects.Graphics;
-  private jolt = { lurch: 0, wobble: 0 }; // tweened screen offsets of the kart
-  private doubleBoost = false;
-  private dustAtMs = 0;
-  private dustTicks = 0;
-  private skid: { lx: number; ly: number; rx: number; ry: number } | null = null;
-  private skidShownMs = 0;
-
-  private keys!: Record<'left' | 'right' | 'a' | 'd' | 'down' | 's', Phaser.Input.Keyboard.Key> | null;
+  private keys!: RaceKeys;
   private pointerSteer = 0;
-  private steerPointer = -1;
-  private touchDrift = false;
   private lastEscapeMs = -Infinity;
 
-  private deck: RaceQuestionResponse[] = [];
-  private dealt = 0;
-  private open: OpenQuestion | null = null;
+  private questions: RaceQuestion[] = [];
+  private dealt = 0; // the next deck position to open
   private correctCount = 0;
   private wrongCount = 0;
-  private missed: RaceQuestionResponse[] = [];
+  private missed: RaceQuestion[] = [];
+  private streak: Streak = createStreak();
+  private checker!: AnswerChecker;
+  private asked: Asked | null = null;
 
   private hum: EngineSound | null = null;
-  private screech: Screech | null = null;
 
   constructor() {
     super(SCENE.race);
   }
 
-  init(choice: ScopeChoice): void {
+  init({ choice, race }: RaceStart): void {
     this.choice = choice;
-    this.seed = Math.floor(Math.random() * 0x100000000);
-    this.deck = shuffle(choice.questions, mulberry32(this.seed));
+    this.raceId = race.raceId;
+    this.questions = race.questions;
     this.dealt = 0;
-    this.open = null;
     this.correctCount = 0;
     this.wrongCount = 0;
     this.missed = [];
+    this.streak = createStreak();
+    this.checker = choice.checker;
+    this.asked = null;
     this.phase = 'countdown';
     this.view = null;
     this.pointerSteer = 0;
-    this.steerPointer = -1;
-    this.touchDrift = false;
     this.lastEscapeMs = -Infinity;
-    this.jolt = { lurch: 0, wobble: 0 };
-    this.doubleBoost = false;
-    this.dustAtMs = 0;
-    this.dustTicks = 0;
-    this.skid = null;
-    this.skidShownMs = 0;
-    this.screech = null;
+    this.trapped = false;
+    this.stunEndMs = null;
   }
 
   create(): void {
     setupStage(this);
     const data = bridgeOf(this).data;
     const trackDef = data.track === 'test' ? TEST_TRACK : LAP;
-    this.race = createRace({ seed: this.seed, track: trackDef, laps: C.laps, racers: [{ id: LOCAL_RACER, appearance: data.look }] });
+    this.race = createRace({ track: trackDef, laps: C.laps, racers: [{ id: LOCAL_RACER, appearance: data.look }] });
     this.look = { character: characterOf(data.look.characterId), kart: kartOf(data.look.kartId) };
     this.playable = hasWebGL(this);
     this.calm = reducedMotion();
+    this.panel = new QuestionPanel(this, (i) => this.answer(i));
+    this.splash = new Splash(this, this.calm);
 
     cornerButton(this, 'Quit', () => this.quit()).setDepth(DEPTH.hud);
     if (!this.playable) {
-      wrapText(this, W / 2, H / 2, 'Lightning Kart needs WebGL in this browser', W - 4 * UI.pad, { color: UI.colors.danger });
+      wrapText(this, W / 2, H / 2, NO_WEBGL, W - 4 * UI.pad, { color: UI.colors.danger });
       return;
     }
 
@@ -140,30 +145,26 @@ export class RaceScene extends Phaser.Scene {
     this.view.shader.setDepth(DEPTH.ground);
     const me = this.race.racers[0];
     this.cam = { x: me.x - C.camera.back, y: me.y, yaw: me.heading, height: C.camera.height, pitch: (C.camera.pitchDeg * Math.PI) / 180, fovDeg: C.camera.fovDeg };
+    this.skyline = new Skyline(this, DEPTH.ground + 1);
+    this.skyline.setYaw(this.cam.yaw);
+    this.props = new Props(this, this.race.built, DEPTH.world);
+    this.roadOverlay = new RoadOverlay(this, this.race.built, DEPTH.ground + 0.5);
     this.boxes = this.race.boxes.map(() => this.add.rectangle(0, 0, 10, 10, ROAD.box).setStrokeStyle(2, ROAD.boxEdge).setOrigin(0.5, 1).setDepth(DEPTH.world).setVisible(false));
     this.kartG = this.add.graphics();
-    this.kartObj = this.add.container(0, 0, [this.kartG]).setDepth(DEPTH.world + 1);
-    this.speedLines = this.add.graphics().setDepth(DEPTH.lines).setAlpha(0);
-    this.flash = this.add.rectangle(W / 2, H / 2, W, H, 0xffffff).setDepth(DEPTH.flash).setAlpha(0);
-
-    // HUD: lap, time, best, effect, the held-item slot; Sound top right beside Quit.
-    const best = data.leaderboard?.mine?.finishMs;
-    const hudLabel = (x: number, text: string): Phaser.GameObjects.Text =>
-      label(this, x, UI.pad + 18, text, { size: UI.font.hud, bold: true, originX: 0 }).setDepth(DEPTH.hud);
-    this.hud = {
-      lap: hudLabel(UI.pad, ''),
-      time: hudLabel(UI.pad + 120, ''),
-      best: hudLabel(UI.pad + 240, `Best ${best === undefined ? '–' : formatTime(best)}`),
-      effect: hudLabel(UI.pad + 400, ''),
-      slot: this.add.graphics().setDepth(DEPTH.hud),
-    };
+    this.stunBack = this.add.graphics();
+    this.stunFront = this.add.graphics();
+    this.kartObj = this.add.container(0, 0, [this.stunBack, this.kartG, this.stunFront]).setDepth(DEPTH.world + 1);
+    this.badge = new Badge(this);
+    this.crackle = new Crackle(this, this.calm);
+    this.fx = new RaceFx(this, this.calm);
+    // HUD in the corners; Sound top right beside Quit, the time and best under them.
+    this.hud = new Hud(this, data.leaderboard?.mine?.finishMs);
     this.soundButton = cornerButton(this, 'Sound on', () => this.toggleSound(), 1).setDepth(DEPTH.hud);
-    this.countdownText = label(this, W / 2, H * 0.4, '3', { size: FX.shoutSize * 2, bold: true }).setDepth(DEPTH.shout);
 
     this.setupInput();
-    this.startCountdown();
+    this.fx.countdown(() => { this.phase = 'racing'; });
     this.placeWorld();
-    this.drawHud();
+    this.hud.draw(hudState(this.race, LOCAL_RACER));
     // On shutdown the display list is already gone, so only the audio is stopped here, never a label.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopAudio());
   }
@@ -173,44 +174,54 @@ export class RaceScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, C.maxStepS);
     let events: RaceEvent[] = [];
     if (this.phase === 'racing') {
-      events = step(this.race, dt, { steer: this.pointerSteer || this.keySteer(), drift: this.touchDrift || this.keyDrift() });
-      this.tickQuestion();
+      events = step(this.race, dt, { steer: this.pointerSteer || this.keys.steer() });
       this.tickFeedback();
     }
     this.followKart(dt);
     this.placeWorld();
-    this.drawHud();
-    if (this.hum) setEngineSpeed(this.hum, (this.race.racers[0].speed / C.kart.topSpeed) * hudState(this.race, LOCAL_RACER).speed);
+    this.splash.tick(this.race.elapsedMs, this.kartPoint()); // after placeWorld: the bubble or the bottle flies to where the kart is drawn now
+    this.drawStun(); // after the tick: a bubble bursting in this frame stuns in this frame
+    const hud = hudState(this.race, LOCAL_RACER);
+    this.hud.draw(hud);
+    if (this.hum) {
+      const tier = tierOf(this.streak.count);
+      const semitones = tier ? STREAK.tiers[tier].hum : 0;
+      setEngineSpeed(this.hum, (this.race.racers[0].speed / C.kart.topSpeed) * hud.speed * 2 ** (semitones / 12));
+    }
     this.handleEvents(events);
+    // After the events: a countdown that runs out in the finishing frame must not count as
+    // wrong, since the finish closes an open question neither way.
+    if (this.phase === 'racing') {
+      this.chase();
+      this.panel.tick(this.race.elapsedMs);
+    }
   }
 
   /** Engine events of one frame. Public so the flow spec can force a finish. */
   handleEvents(events: RaceEvent[]): void {
     for (const event of events) {
       if (event.type === 'item' && event.kind === 'question') {
-        if (!this.open && this.phase === 'racing') this.openQuestion(this.nextQuestion());
-      } else if (event.type === 'bump') {
-        this.shake(event.steep ? FX.shakeBump : FX.shakeOffroad);
-        if (this.hum) playThud(this.hum.ctx);
+        // A deal shorter than the race runs out: the boxes left open nothing.
+        const next = this.questions[this.dealt];
+        if (next && !this.panel.question && this.phase === 'racing') {
+          this.dealt++;
+          this.openQuestion(next);
+        }
       } else if (event.type === 'lap') {
         this.lapFlip(event.lap);
         if (this.hum) playLapTone(this.hum.ctx);
       } else if (event.type === 'finish') {
-        this.closeQuestion(); // a question still open at the line counts neither way
+        this.panel.close(); // a question still open at the line, or still waiting for its verdict, counts neither way
         this.phase = 'done';
-        if (this.hum) playFanfare(this.hum.ctx);
+        // The best streak rides only in the scene data to Result: the server's result payload has
+        // no field for it, so `finished` below leaves it out.
         const outcome: RaceOutcome = {
-          choice: this.choice,
-          seed: this.seed,
-          finishMs: event.finishMs,
-          correctCount: this.correctCount,
-          wrongCount: this.wrongCount,
-          missed: this.missed,
+          choice: this.choice, raceId: this.raceId, finishMs: event.finishMs, correctCount: this.correctCount, wrongCount: this.wrongCount, missed: this.missed,
+          bestStreak: this.streak.best,
         };
-        // Once per finish; the host posts it and refreshes the board.
-        bridgeOf(this).intent('finished', {
-          scope: this.choice.scope, finishMs: outcome.finishMs, correctCount: outcome.correctCount, wrongCount: outcome.wrongCount, seed: this.seed,
-        });
+        if (this.hum) playFanfare(this.hum.ctx, perfectRace(outcome));
+        // Once per finish; the host sends it once no answer call is out, then refreshes the board.
+        bridgeOf(this).intent('finished', { scope: this.choice.scope, raceId: this.raceId, finishMs: outcome.finishMs });
         this.scene.start(SCENE.result, outcome);
         return;
       }
@@ -221,104 +232,21 @@ export class RaceScene extends Phaser.Scene {
     this.scene.start(SCENE.ready, this.choice);
   }
 
-  // ── Countdown ──
-
-  private startCountdown(): void {
-    const steps = ['3', '2', '1', 'GO'];
-    let i = 0;
-    this.countdownText.setText(steps[0]).setVisible(true);
-    this.time.addEvent({
-      delay: 1000,
-      repeat: steps.length - 1,
-      callback: () => {
-        i++;
-        if (i < steps.length) {
-          this.countdownText.setText(steps[i]);
-          if (steps[i] === 'GO') {
-            this.phase = 'racing';
-            this.tweens.add({ targets: this.countdownText, alpha: 0, duration: 500, delay: 300, onComplete: () => this.countdownText.setVisible(false) });
-          }
-        }
-      },
-    });
-  }
-
   // ── Input ──
 
   private setupInput(): void {
-    const keyboard = this.input.keyboard;
-    this.keys = keyboard ? (keyboard.addKeys({ left: 'LEFT', right: 'RIGHT', a: 'A', d: 'D', down: 'DOWN', s: 'S' }) as RaceScene['keys']) : null;
-    keyboard?.on('keydown-ESC', () => {
-      const now = this.race.elapsedMs;
-      if (now - this.lastEscapeMs < UI.escapeTwiceMs) this.quit();
-      this.lastEscapeMs = now;
+    this.keys = setupRaceInput(this, {
+      steer: (value) => { this.pointerSteer = value; },
+      answer: (i) => {
+        const question = this.panel.question;
+        if (question && i < question.options.length) this.answer(i);
+      },
+      escape: () => {
+        const now = this.race.elapsedMs;
+        if (now - this.lastEscapeMs < UI.escapeTwiceMs) this.quit();
+        this.lastEscapeMs = now;
+      },
     });
-    for (const code of ['UP', 'W', 'SPACE']) keyboard?.on(`keydown-${code}`, () => this.fire());
-    KEY_NUMBERS.forEach((code, i) => keyboard?.on(`keydown-${code}`, () => {
-      if (this.open && i < this.open.question.options.length) this.answer(i);
-    }));
-
-    this.input.addPointer(2);
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: unknown[]) => {
-      if (over.length) return;
-      this.steerPointer = pointer.id;
-      this.pointerSteer = pointer.x < this.scale.gameSize.width / 2 ? -1 : 1;
-    });
-    const release = (pointer: Phaser.Input.Pointer): void => {
-      if (pointer.id === this.steerPointer) {
-        this.pointerSteer = 0;
-        this.steerPointer = -1;
-      }
-    };
-    this.input.on('pointerup', release);
-    this.input.on('pointerupoutside', release);
-
-    if (this.sys.game.device.input.touch) {
-      this.holdButton(UI.pad + 50, H - UI.pad - 50, 'Drift', (down) => { this.touchDrift = down; });
-      this.holdButton(W - UI.pad - 50, H - UI.pad - 50, 'Nitro', (down) => { if (down) this.fire(); });
-    }
-  }
-
-  /** A round button that reports press and release, for touch. */
-  private holdButton(x: number, y: number, text: string, onChange: (down: boolean) => void): void {
-    const g = this.add.graphics().setDepth(DEPTH.hud);
-    const paint = (down: boolean): void => {
-      g.clear().fillStyle(down ? UI.colors.buttonHover : UI.colors.button, 0.8).fillCircle(x, y, 44).lineStyle(2, FX.line, 0.6).strokeCircle(x, y, 44);
-    };
-    paint(false);
-    label(this, x, y, text, { size: UI.font.small, bold: true }).setDepth(DEPTH.hud);
-    const zone = this.add.zone(x, y, 96, 96).setInteractive().setDepth(DEPTH.hud);
-    zone.on('pointerdown', () => { paint(true); onChange(true); });
-    const up = (): void => { paint(false); onChange(false); };
-    zone.on('pointerup', up);
-    zone.on('pointerout', up);
-  }
-
-  private keySteer(): number {
-    const k = this.keys;
-    if (!k) return 0;
-    return ((k.right.isDown || k.d.isDown) ? 1 : 0) - ((k.left.isDown || k.a.isDown) ? 1 : 0);
-  }
-
-  private keyDrift(): boolean {
-    const k = this.keys;
-    return !!k && (k.down.isDown || k.s.isDown);
-  }
-
-  /** Up, W, Space or the Nitro button: a boost, the chain, or nothing. */
-  private fire(): void {
-    if (this.phase !== 'racing') return;
-    const result = fireNitro(this.race, LOCAL_RACER);
-    if (result === 'none') return;
-    const chained = result === 'chained';
-    if (chained) this.doubleBoost = true;
-    if (this.hum) playWhoosh(this.hum.ctx, chained);
-    this.burstSpeedLines(chained ? 2 : 1);
-    this.shout(chained ? 'DOUBLE BOOST' : 'NITRO', UI.colors.good);
-    if (!this.calm) {
-      this.jolt.lurch = FX.boostLurchPx;
-      this.tweens.add({ targets: this.jolt, lurch: 0, duration: FX.boostMs, ease: 'Cubic.easeOut' });
-    }
   }
 
   // ── Sound ──
@@ -338,11 +266,9 @@ export class RaceScene extends Phaser.Scene {
     this.soundButton?.setLabel(this.hum ? 'Sound off' : 'Sound on');
   }
 
-  /** Stops the hum and the screech; safe after the scene's objects are gone. */
+  /** Stops the hum; safe after the scene's objects are gone. */
   private stopAudio(): void {
     if (!this.hum) return;
-    if (this.screech) stopScreech(this.hum.ctx, this.screech);
-    this.screech = null;
     stopEngineSound(this.hum);
     this.hum = null;
   }
@@ -357,265 +283,252 @@ export class RaceScene extends Phaser.Scene {
     c.x = me.x - Math.cos(c.yaw) * C.camera.back;
     c.y = me.y - Math.sin(c.yaw) * C.camera.back;
     this.view?.setCamera(c);
+    this.skyline?.setYaw(c.yaw);
   }
 
   private placeWorld(): void {
     const view = this.view;
     if (!view) return;
     const now = this.race.elapsedMs;
+    const tier = tierOf(this.streak.count);
     this.race.boxes.forEach((box, i) => {
       const p = view.project(box);
       const obj = this.boxes[i];
       if (!p) { obj.setVisible(false); return; }
-      const s = 2.4 * p.scale;
       const dark = box.hitAtMs !== null && now - box.hitAtMs < C.world.boxCooldownS * 1000;
-      obj.setVisible(true).setPosition(p.x, p.y).setDisplaySize(s, s).setAlpha(dark ? 0.35 : 1).setDepth(DEPTH.world + p.y / H);
+      const gold = tier === 'lightning' && !dark; // every box projected is ahead of the eye
+      const s = 2.4 * p.scale * (gold ? STREAK.boxScale : 1);
+      obj.setVisible(true).setPosition(p.x, p.y).setDisplaySize(s, s).setAlpha(dark ? 0.35 : 1).setDepth(DEPTH.world + p.y / H)
+        .setFillStyle(gold ? STREAK.box : ROAD.box).setStrokeStyle(gold ? STREAK.boxRim : 2, gold ? STREAK.boxEdge : ROAD.boxEdge);
     });
+    this.props?.update(view, this.cam);
+    this.roadOverlay?.update(this.cam);
 
-    // The kart: the top-down look, turned by its heading relative to the eye, squashed by the
-    // pitch so it lies on the ground, scaled by depth; the nitro flame trails it.
+    // The kart, at its projected ground point plus the lurch. The camera follows
+    // the heading with a lag, so `rel` is how far the kart turns ahead of it on screen.
     const me = this.race.racers[0];
     const p = view.project(me);
     const g = this.kartG.clear();
     this.kartObj.setVisible(!!p);
+    if (!p || !tier) this.badge.hide();
+    if (!p || tier !== 'lightning') this.crackle.hide();
     if (!p) return;
-    const squash = Math.max(Math.sin(this.cam.pitch), UI.kart.minSquash);
-    this.kartObj.setPosition(p.x + this.jolt.wobble, p.y - this.jolt.lurch).setScale(p.scale, p.scale * squash).setDepth(DEPTH.world + 1 + p.y / H);
-    // `drawKartTop` points the nose along +x; a heading equal to the camera's points up the screen.
-    this.kartG.setRotation(me.heading - this.cam.yaw - Math.PI / 2);
-    const L = C.kart.length;
-    g.fillStyle(0x000000, UI.kart.shadowAlpha).fillEllipse(0, 0, L * 1.1, L * 0.8);
+    const jolt = this.fx.jolt;
+    this.kartObj.setPosition(p.x, p.y - jolt.lurch).setDepth(DEPTH.world + 1 + p.y / H);
+    // The boost's flame while one runs; else, from Spark up, a small idle flame in the tier's colours.
     const boosted = me.effects.some((e) => e.type === 'boost');
-    const flame = boosted ? { lengths: this.doubleBoost ? FX.doubleFlame : 1, colours: FX.flame, flicker: Math.random() } : null;
-    drawKartTop(g, L, this.look.character, this.look.kart, flame);
+    const idle = tier ? STREAK.tiers[tier] : null;
+    const flame = boosted ? { lengths: isDouble(me) ? FX.doubleFlame : 1, colours: FX.flame, flicker: Math.random() }
+      : idle ? { lengths: STREAK.idleFlame, colours: idle.flame, flicker: Math.random() } : null;
+    const rel = wrapAngle(me.heading - this.cam.yaw);
+    const topView = (UI.kart.topViewDeg * Math.PI) / 180;
+    // The behind view's width at this depth; the badge takes it in both views, so it keeps its size when the view flips.
+    const s = C.kart.width * p.scale * UI.kart.behindScale;
+    let badgeAt: { x: number; y: number };
+    if (Math.abs(rel) < topView) {
+      // Behind view, drawn in stage pixels with its own shadow: the driver leans into the
+      // bend and the whole kart tilts with it. A right turn raises the heading and the camera
+      // lags, so `rel` is positive there and the kart turns clockwise, its top toward the inside.
+      this.kartObj.setScale(1);
+      this.kartG.setRotation(rel * UI.kart.leanTilt);
+      this.behind = { s, lean: rel / topView };
+      drawRacer(g, 0, 0, s, rel / topView, this.look.character, this.look.kart, flame);
+      // Over the headgear's top, which slides with the head and swings with the tilt.
+      const hx = HEAD_SLIDE * s * Math.max(-1, Math.min(1, rel / topView));
+      const hy = -(racerTop(this.look.character) + STREAK.badgeGap) * s;
+      const tilt = this.kartG.rotation;
+      badgeAt = { x: this.kartObj.x + hx * Math.cos(tilt) - hy * Math.sin(tilt), y: this.kartObj.y + hx * Math.sin(tilt) + hy * Math.cos(tilt) };
+    } else {
+      this.behind = null;
+      // Spun round: the top-down look, nose along +x turned to the heading, squashed by the
+      // pitch so it lies on the ground, scaled by depth, the scene's shadow ellipse under it.
+      const squash = Math.max(Math.sin(this.cam.pitch), UI.kart.minSquash);
+      this.kartObj.setScale(p.scale, p.scale * squash);
+      this.kartG.setRotation(rel - Math.PI / 2);
+      const L = C.kart.length;
+      g.fillStyle(0x000000, UI.kart.shadowAlpha).fillEllipse(0, 0, L * 1.1, L * 0.8);
+      drawKartTop(g, L, this.look.character, this.look.kart, flame);
+      // Over the kart lying on the ground: past half its length squashed, whichever way it points.
+      badgeAt = { x: this.kartObj.x, y: this.kartObj.y - 0.5 * L * p.scale * squash - STREAK.badgeGap * s };
+    }
+    if (tier) this.badge.show(badgeAt.x, badgeAt.y, s, this.streak.count, tier, this.kartObj.depth + 0.001);
+    if (tier === 'lightning') {
+      // round the racer's middle, halfway between its headgear's top and its shadow's bottom, from behind; the kart's centre from above
+      const lift = this.behind ? ((racerTop(this.look.character) - 0.08) / 2) * s : 0;
+      this.crackle.show(this.kartObj.x + lift * Math.sin(this.kartG.rotation), this.kartObj.y - lift * Math.cos(this.kartG.rotation), s, now, this.kartObj.depth + 0.002);
+    }
   }
 
-  private drawHud(): void {
-    const hud = hudState(this.race, LOCAL_RACER);
-    this.hud.lap.setText(`Lap ${hud.lap} / ${hud.laps}`);
-    this.hud.time.setText(formatTime(Math.floor(hud.elapsedMs / 100) * 100));
-    if (hud.effect) {
-      const boost = hud.effect.type === 'boost';
-      this.hud.effect.setText(`${boost ? 'Nitro' : 'Slow'} ${Math.ceil(hud.effect.left)}s`).setColor(boost ? UI.colors.good : UI.colors.danger);
-    } else {
-      this.hud.effect.setText(hud.drifting ? 'Drift' : '');
-      this.hud.effect.setColor(UI.colors.muted);
-    }
-    // The slot: two circles, lit per charge; it pulses green while a fired charge would chain.
-    const slot = UI.itemSlot;
-    const x = UI.pad + 560;
-    const y = UI.pad + 1;
-    const pulse = hud.chainWindow ? 0.5 + 0.5 * Math.sin((hud.elapsedMs / 1000) * FX.chainPulseHz * 2 * Math.PI) : 0;
-    const g = this.hud.slot.clear();
-    const good = Phaser.Display.Color.HexStringToColor(UI.colors.good).color;
-    g.lineStyle(2 + 2 * pulse, hud.chainWindow ? good : FX.line, hud.chainWindow ? 0.5 + 0.5 * pulse : 0.5).strokeRoundedRect(x, y, slot * 2, slot, 6);
-    for (let i = 0; i < C.boost.maxCharges; i++) {
-      const cx = x + slot / 2 + i * slot;
-      const r = slot * (0.3 + 0.05 * pulse);
-      if (i < hud.charges) g.fillStyle(ROAD.box, 1).fillCircle(cx, y + slot / 2, r);
-      else g.lineStyle(1, FX.line, 0.35).strokeCircle(cx, y + slot / 2, r);
-    }
+  /**
+   * The stunned racer's ring of stars and drops round its head for as long as the trap holds
+   * the kart, read from the engine every frame, turning on race time (standing still under
+   * reduced motion), then fading over `C.ui.splash.stun.fadeMs` from the frame the trap ended.
+   * Its far half is drawn under the racer, its near half over it. From behind only: on rails
+   * the heading never leads the camera far enough for the top view.
+   */
+  private drawStun(): void {
+    const back = this.stunBack.clear().setRotation(this.kartG.rotation);
+    const front = this.stunFront.clear().setRotation(this.kartG.rotation);
+    if (!this.behind) return;
+    const ST = UI.splash.stun;
+    const now = this.race.elapsedMs;
+    const trapped = this.race.racers[0].effects.some((e) => e.type === 'trap');
+    const alpha = trapped ? 1 : this.stunEndMs === null ? 0 : 1 - (now - this.stunEndMs) / ST.fadeMs;
+    if (alpha <= 0) return;
+    const head = racerHead(0, 0, this.behind.s, this.behind.lean, 0, this.look.character);
+    const phase = this.calm ? 0 : (now / 1000) * ST.turnHz * 2 * Math.PI;
+    drawStun(back, head.x, head.y, this.behind.s, phase, alpha, 'back');
+    drawStun(front, head.x, head.y, this.behind.s, phase, alpha, 'front');
+  }
+
+  /** Where Splash's bubble or bottle lands: the racer's head as drawn from behind (`racerHead`), the kart's centre from above. */
+  private kartPoint(): { x: number; y: number } {
+    if (!this.behind) return { x: this.kartObj.x, y: this.kartObj.y };
+    return racerHead(this.kartObj.x, this.kartObj.y, this.behind.s, this.behind.lean, this.kartG.rotation, this.look.character);
   }
 
   // ── Feedback ──
 
-  /** Per frame while racing: the drift's screech and skid marks, the grass's dust and rumble, the boost's end. */
+  /** Per frame while racing: the trap's end (the stun's ring starts to fade), the boost's vignette and the Lightning tier's edge. */
   private tickFeedback(): void {
     const me = this.race.racers[0];
-    const now = this.race.elapsedMs;
-
-    if (me.drifting) {
-      if (this.hum && !this.screech) this.screech = startScreech(this.hum.ctx);
-      this.markSkid(me, now);
-    } else {
-      if (this.screech && this.hum) stopScreech(this.hum.ctx, this.screech);
-      this.screech = null;
-      if (this.skid) {
-        this.skid = null;
-        this.texture.canvas.refresh();
-      }
-    }
-
-    if (me.onGrass && now - this.dustAtMs >= FX.dustEveryMs) {
-      this.dustAtMs = now;
-      this.dustTicks++;
-      this.puffDust();
-      this.shake(FX.shakeOffroad);
-      if (this.hum && this.dustTicks % 2 === 0) playRumble(this.hum.ctx);
-    }
-
-    if (this.doubleBoost && !me.effects.some((e) => e.type === 'boost')) this.doubleBoost = false;
-  }
-
-  /** Draws the rear wheels' path onto the track texture; the marks reach the screen every `skidRefreshMs`. */
-  private markSkid(me: { x: number; y: number; heading: number }, now: number): void {
-    const L = C.kart.length;
-    const w = 0.68 * L;
-    const cos = Math.cos(me.heading);
-    const sin = Math.sin(me.heading);
-    const wheel = (side: number): { x: number; y: number } => ({
-      x: me.x + -0.32 * L * cos - side * 0.5 * w * sin,
-      y: me.y + -0.32 * L * sin + side * 0.5 * w * cos,
-    });
-    const l = wheel(-1);
-    const r = wheel(1);
-    if (this.skid) {
-      const ctx = this.texture.canvas.context;
-      ctx.strokeStyle = FX.skid;
-      ctx.lineWidth = FX.skidWidth;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(this.skid.lx, this.skid.ly);
-      ctx.lineTo(l.x, l.y);
-      ctx.moveTo(this.skid.rx, this.skid.ry);
-      ctx.lineTo(r.x, r.y);
-      ctx.stroke();
-      if (now - this.skidShownMs >= FX.skidRefreshMs) {
-        this.skidShownMs = now;
-        this.texture.canvas.refresh();
-      }
-    }
-    this.skid = { lx: l.x, ly: l.y, rx: r.x, ry: r.y };
-  }
-
-  /** A puff behind the kart on the grass. */
-  private puffDust(): void {
-    const k = this.kartObj;
-    const s = Math.max(2, k.scaleX * 0.8);
-    const puff = this.add.circle(k.x + (Math.random() - 0.5) * s * 3, k.y + s * 0.5, s, FX.dust, 0.7).setDepth(DEPTH.world + 0.5);
-    this.tweens.add({ targets: puff, alpha: 0, scale: 2.2, y: puff.y + s, duration: FX.dustMs, onComplete: () => puff.destroy() });
-  }
-
-  /** Lines rushing in from the edges, `strength` 1 for a boost and 2 for the chain. */
-  private burstSpeedLines(strength: number): void {
-    const g = this.speedLines.clear().setAlpha(1);
-    g.lineStyle(2, FX.line, 0.8);
-    for (let i = 0; i < FX.speedLines * strength; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r0 = Math.min(W, H) * (0.35 + Math.random() * 0.2);
-      const r1 = r0 + 60 + Math.random() * 80 * strength;
-      g.lineBetween(W / 2 + Math.cos(a) * r0, H / 2 + Math.sin(a) * r0, W / 2 + Math.cos(a) * r1, H / 2 + Math.sin(a) * r1);
-    }
-    this.tweens.killTweensOf(this.speedLines);
-    this.tweens.add({ targets: this.speedLines, alpha: 0, duration: FX.speedLineMs });
-  }
-
-  private flashScreen(rgb: [number, number, number]): void {
-    this.flash.setFillStyle(Phaser.Display.Color.GetColor(rgb[0], rgb[1], rgb[2])).setAlpha(0.4);
-    this.tweens.killTweensOf(this.flash);
-    this.tweens.add({ targets: this.flash, alpha: 0, duration: FX.flashMs });
-  }
-
-  private shake(spec: { ms: number; power: number }): void {
-    if (this.calm || !this.playable) return;
-    this.cameras.main.shake(spec.ms, spec.power);
-  }
-
-  /** A word over the road that grows and fades; it just sits for a moment under reduced motion. */
-  private shout(text: string, color: string): void {
-    if (!this.playable) return;
-    const t = label(this, W / 2, H * 0.3, text, { size: FX.shoutSize, bold: true, color }).setDepth(DEPTH.shout);
-    if (this.calm) {
-      this.time.delayedCall(FX.shoutMs, () => t.destroy());
-      return;
-    }
-    t.setScale(0.6);
-    this.tweens.add({ targets: t, scale: 1.15, alpha: 0, duration: FX.shoutMs, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    const trapped = me.effects.some((e) => e.type === 'trap');
+    if (this.trapped && !trapped) this.stunEndMs = this.race.elapsedMs;
+    this.trapped = trapped;
+    this.fx.setBoosting(me.effects.some((e) => e.type === 'boost'));
+    this.fx.setLightning(tierOf(this.streak.count) === 'lightning', this.race.elapsedMs);
   }
 
   private lapFlip(lap: number): void {
     if (!this.playable) return;
-    this.shout(`LAP ${lap}`, UI.colors.text);
-    if (this.calm) return;
-    this.hud.lap.setScale(1.4);
-    this.tweens.add({ targets: this.hud.lap, scale: 1, duration: FX.lapPopMs, ease: 'Back.easeOut' });
-  }
-
-  private wobble(): void {
-    if (this.calm) return;
-    this.jolt.wobble = FX.wobblePx;
-    this.tweens.add({ targets: this.jolt, wobble: -FX.wobblePx, duration: FX.wobbleMs, yoyo: true, repeat: FX.wobbleRepeats, onComplete: () => { this.jolt.wobble = 0; } });
+    this.fx.shout(`LAP ${lap}`, UI.colors.text);
+    this.hud.lapFlip(this.calm);
   }
 
   // ── Questions ──
 
-  /** Deals the next card; reshuffles when the deck is exhausted, never the same card twice in a row. */
-  private nextQuestion(): RaceQuestionResponse {
-    if (this.dealt >= this.deck.length) {
-      const last = this.deck[this.deck.length - 1];
-      this.deck = shuffle(this.deck, Math.random);
-      if (this.deck.length > 1 && this.deck[0] === last) this.deck.push(this.deck.shift()!);
-      this.dealt = 0;
+  private openQuestion(question: RaceQuestion): void {
+    this.panel.show(question, this.race.elapsedMs, nextTier(this.streak.count));
+  }
+
+  /**
+   * A card, a number key, or the countdown run out (`null`): the panel locks, the countdown
+   * stops and the checker is asked. Nothing else happens until its verdict, which `verdict`
+   * takes only while that very showing of the question is still open and the scene is up:
+   * closing the panel (the finish, a restart, or the void at the deadline) makes a late
+   * verdict do nothing, so the first of two replies wins. A checker that throws or rejects
+   * gives nothing; the deadline (`chase`) decides.
+   */
+  private answer(index: number | null): void {
+    const question = this.panel.question;
+    const showing = this.panel.showing;
+    if (!question || !showing || this.panel.locked) return;
+    this.panel.lock(index);
+    if (this.playable) this.splash.start(this.race.elapsedMs); // she comes at the press and waits for the verdict
+    this.asked = { question, choice: index, showing, atMs: this.race.elapsedMs, resent: false };
+    this.ask(this.asked);
+  }
+
+  /** One attempt at the checker for `asked`. */
+  private ask({ question, choice, showing }: Asked): void {
+    const settle = (verdict: Verdict): void => {
+      if (!this.sys.isActive() || this.panel.showing !== showing) return;
+      this.verdict(question, verdict);
+    };
+    Promise.resolve().then(() => this.checker.check(this.raceId, question, choice)).then(settle, () => undefined);
+  }
+
+  /**
+   * Each racing frame, on race time: no verdict by `C.answer.checkingMs` shows "Checking…" on
+   * the board, none by `resendMs` asks once more, none by `voidMs` voids the question.
+   */
+  private chase(): void {
+    const asked = this.asked;
+    if (!asked || this.panel.showing !== asked.showing) return;
+    const waited = this.race.elapsedMs - asked.atMs;
+    if (waited >= C.answer.checkingMs) this.panel.checking(this.race.elapsedMs);
+    if (waited >= C.answer.voidMs) this.verdict(asked.question, 'void');
+    else if (!asked.resent && waited >= C.answer.resendMs) {
+      asked.resent = true;
+      this.ask(asked);
     }
-    return this.deck[this.dealt++];
   }
 
-  private openQuestion(question: RaceQuestionResponse): void {
-    const { panelW, optionH, optionGap } = UI.question;
-    const cx = W / 2;
-    const left = cx - panelW / 2;
-    // Measure the wrapped question first; the options start under it.
-    const text = wrapText(this, left + 20, 0, question.content, panelW - 110, { originX: 0, originY: 0, size: UI.font.body });
-    const textH = text.height;
-    const optionsTop = 22 + textH + 16;
-    const panelH = optionsTop + question.options.length * (optionH + optionGap);
-    const top = Math.max(UI.pad + 50, H - panelH - UI.pad);
-    text.setY(top + 22);
-    const panel = this.add.graphics()
-      .fillStyle(UI.colors.panel, 0.96).fillRoundedRect(left, top, panelW, panelH, UI.button.radius);
-    const bar = this.add.graphics();
-    const countdown = label(this, left + panelW - 24, top + 36, String(C.questionCountdownS), { size: UI.font.title * 0.6, bold: true, originX: 1 });
-    const options = question.options.map((option, i) =>
-      button(this, cx, top + optionsTop + i * (optionH + optionGap) + optionH / 2, option, () => this.answer(i), {
-        w: panelW - 40, h: optionH, size: UI.font.small, badge: String(i + 1), alignLeft: true,
-      })
-    );
-    const container = this.add.container(0, 0, [panel, bar, text, countdown, ...options]).setDepth(DEPTH.overlay);
-    this.open = { question, openedMs: this.race.elapsedMs, container, countdown, bar, barX: left + 12, barY: top + 6, barW: panelW - 24 };
-    this.tickQuestion();
-  }
-
-  /** The countdown runs on race time. The bar drains from good to danger. */
-  private tickQuestion(): void {
-    const open = this.open;
-    if (!open) return;
-    const total = C.questionCountdownS * 1000;
-    const left = total - (this.race.elapsedMs - open.openedMs);
-    if (left <= 0) {
-      this.answer(null);
+  /**
+   * The checker's verdict closes the question. A void one does nothing else. Otherwise it
+   * counts, and the streak counts now, not at the landing: its chime, shout and badge are the
+   * player's feedback on the answer just judged. Then Splash, who came at the press, throws:
+   * a right answer's boost starts when her bottle lands, a wrong one traps the kart when her
+   * bubble bursts on the racer's head and stuns it, both on race time (`splash.ts`, `C.splash`); a void sends her
+   * away. Whether a boost runs is read here, after the press landed any throw still in flight,
+   * and decides a Double Boost. Without WebGL nothing is drawn and nothing more happens.
+   */
+  private verdict(question: RaceQuestion, verdict: Verdict): void {
+    this.panel.close();
+    this.asked = null;
+    if (verdict === 'void') {
+      if (this.playable) this.splash.leave(this.race.elapsedMs);
       return;
     }
-    open.countdown.setText(String(Math.ceil(left / 1000)));
-    const t = left / total;
-    const colour = Phaser.Display.Color.Interpolate.ColorWithColor(
-      Phaser.Display.Color.ValueToColor(UI.colors.danger), Phaser.Display.Color.ValueToColor(UI.colors.good), 100, Math.round(t * 100));
-    open.bar.clear().fillStyle(Phaser.Display.Color.GetColor(colour.r, colour.g, colour.b), 1)
-      .fillRoundedRect(open.barX, open.barY, open.barW * t, FX.timerBarH, FX.timerBarH / 2);
-  }
-
-  /** `null` is a timeout. A right answer stores a charge; a wrong one slows the kart. */
-  private answer(index: number | null): void {
-    const open = this.open;
-    if (!open) return;
-    this.closeQuestion();
-    const correct = index === open.question.correctIndex;
-    if (correct) {
-      this.correctCount++;
-      addCharge(this.race, LOCAL_RACER);
-      this.flashScreen(FX.flashGood);
-      if (this.hum) playChime(this.hum.ctx);
-    } else {
+    const right = verdict === 'right';
+    if (right) this.correctCount++;
+    else {
       this.wrongCount++;
-      this.missed.push(open.question);
-      applySlow(this.race, LOCAL_RACER);
-      this.flashScreen(FX.flashBad);
-      this.wobble();
-      if (this.hum) playBuzzer(this.hum.ctx);
+      this.missed.push(question);
     }
+    const change = answerStreak(this.streak, right);
+    if (!this.playable) return;
+    if (right) this.fx.flashScreen(FX.flashGood);
+    this.streakChanged(change);
+    const kind = boostKind(this.race, LOCAL_RACER);
+    this.splash.decide(this.race.elapsedMs, right ? 'bottle' : 'bubble', {
+      fire: () => { if (this.hum) (right ? playToss : playSquirt)(this.hum.ctx); },
+      hit: () => this.landed(right, kind),
+    });
   }
 
-  private closeQuestion(): void {
-    this.open?.container.destroy();
-    this.open = null;
+  /**
+   * Reacts to one answer's change to the streak, which `engine/streak.ts` decides. Up: the chime
+   * one note higher per answer in the run; a new tier shouts its name if its look says so. A
+   * break resets the chime; from `C.streak.loudBreakAt` on it stings, shouts STREAK LOST (sound
+   * is off by default, so the word carries it) and the badge shatters, below that the badge and
+   * the idle flame just go. The badge, the idle flame, the hum, the gold boxes and the blue edge
+   * follow the tier every frame.
+   */
+  private streakChanged(change: StreakChange): void {
+    if (change.type === 'up') {
+      if (this.hum) playChime(this.hum.ctx, change.count - 1);
+      if (!change.tierUp) return;
+      const look = STREAK.tiers[change.tierUp];
+      if (look.shout) this.fx.shout(change.tierUp.toUpperCase(), cssHex(look.colour));
+      return;
+    }
+    if (!change.loud) return;
+    if (this.hum) playStreakLost(this.hum.ctx);
+    this.fx.shout('STREAK LOST', UI.colors.danger);
+    this.badge.shatter();
+  }
+
+  /**
+   * Splash's throw landed on the kart. The bottle starts the boost of `kind`, decided at the
+   * verdict; the bubble bursts on the racer's head, which traps the kart and stuns the racer. Once the racer has finished the
+   * race is over and nothing happens.
+   */
+  private landed(right: boolean, kind: BoostKind): void {
+    if (this.race.racers[0].finishMs !== null) return;
+    if (right) {
+      const double = applyBoost(this.race, LOCAL_RACER, kind) === 'double';
+      if (this.hum) {
+        playCatch(this.hum.ctx);
+        playWhoosh(this.hum.ctx, double);
+      }
+      this.fx.burstSpeedLines(double ? 2 : 1);
+      this.fx.shout(double ? 'DOUBLE BOOST' : 'BOOST', UI.colors.good);
+      this.fx.lurch();
+    } else {
+      // The bubble bursts on the head (Splash draws the burst) and the racer is stunned (drawStun).
+      applyTrap(this.race, LOCAL_RACER);
+      if (this.hum) playPop(this.hum.ctx);
+    }
   }
 }

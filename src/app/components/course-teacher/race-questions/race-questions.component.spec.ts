@@ -176,6 +176,35 @@ describe('RaceQuestionsComponent', () => {
     expect(component.isDirty()).toBeFalse();
   });
 
+  it('a question with five options keeps the first four, says so, and its drawer offers no fifth', () => {
+    load();
+
+    paste('1. Pick one\na) one\n*b) two\nc) three\nd) four\ne) five');
+
+    expect(component.rows().map(r => r.options)).toEqual([['one', 'two', 'three', 'four']]);
+    expect(component.rows()[0].correctIndex).toBe(1);
+    expect(el.querySelector('.add-warning')?.textContent?.trim())
+      .toBe('1 question had more than 4 options; only the first 4 are kept.');
+
+    openRow(0);
+    expect(document.querySelectorAll('input.options__input').length).toBe(4);
+    expect(document.querySelector('button.options__add')).toBeNull();
+    component.addDraftOption();
+    expect(component.draft()?.options.length).toBe(4);
+  });
+
+  it('a question whose * is on a cut option is refused as having no correct answer', () => {
+    load();
+
+    paste('1. Pick one\na) one\nb) two\nc) three\nd) four\n*e) five');
+
+    expect(component.rows()).toEqual([]);
+    expect(Array.from(el.querySelectorAll('.add-warning')).map(w => w.textContent?.trim())).toEqual([
+      '1 question has no correct answer marked. The race needs one, so it was not added.',
+      '1 question had more than 4 options; only the first 4 are kept.',
+    ]);
+  });
+
   it('a question with no * is refused with a warning', () => {
     load();
 

@@ -23,22 +23,59 @@ export interface RaceQuestionResponse {
   courseId: string;
   moduleId: string;
   content: string;
+  /** Empty unless the caller teaches the course. */
   options: string[];
-  correctIndex: number;
+  /** The right option. Null unless the caller teaches the course. */
+  correctIndex: number | null;
   orderIndex: number;
   createdAt: number;
   updatedAt: number;
 }
 
-export interface CreateRaceResultRequest {
+/** POST a race: the server deals it. */
+export interface StartRaceRequest {
   /** Null for a race over the whole course. */
   moduleId: string | null;
-  finishMs: number;
-  correctCount: number;
-  wrongCount: number;
-  seed: number;
+  /** How many questions the race needs; the server may deal fewer. */
+  questionCount: number;
 }
 
+/** One dealt question. No key. */
+export interface DealtQuestion {
+  /** The question number, from 0; the same as its position in the list. */
+  seq: number;
+  questionId: string;
+  moduleId: string;
+  content: string;
+  /** One to four, in the order to show. */
+  options: string[];
+}
+
+export interface StartRaceResponse {
+  raceId: string;
+  seed: number;
+  questions: DealtQuestion[];
+}
+
+export interface RaceAnswerRequest {
+  seq: number;
+  /** The shown option pressed, from 0; null when the countdown ran out. */
+  choice: number | null;
+}
+
+export interface RaceAnswerResponse {
+  seq: number;
+  correct: boolean;
+  correctCount: number;
+  wrongCount: number;
+}
+
+export interface FinishRaceRequest {
+  /** An integer. */
+  finishMs: number;
+}
+
+/** The saved result, from the server's own counts. */
 export interface RaceResultResponse {
   id: string;
   userId: string;
@@ -49,6 +86,11 @@ export interface RaceResultResponse {
   wrongCount: number;
   seed: number;
   createdAt: number;
+  /**
+   * One entry per question number: the right shown option, an index into that question's dealt
+   * `options`, only for the first few questions the server judged wrong; null everywhere else.
+   */
+  answerKey: (number | null)[];
 }
 
 export interface LeaderboardRow {

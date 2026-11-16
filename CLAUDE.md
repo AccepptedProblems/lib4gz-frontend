@@ -29,9 +29,10 @@ What the product does: `../docs/README.md`. Contract with the backend: `../CLAUD
 - Specs cover the app shell, the auth, cache and sign-up flow services, the registration
   guard, the token interceptor, `apiErrorMessage`, the Fast Create parser, the code input,
   the profile screen, the exercise editor's Fast Create sheet, the course material
-  screen's reorder and delete dialogs, the race-questions editor, the race track geometry,
-  the race engine, the mode 7 view and the race scene (WebGL launcher only), the game's
-  scene flow (headless Phaser) and every character and kart drawing. The rest of
+  screen's reorder and delete dialogs, the race-questions editor, the race service's calls,
+  the game host's calls, the race track geometry, the race engine, the mode 7 view and the
+  race scene (WebGL launcher only), the game's scene flow (headless Phaser) and every
+  character and kart drawing. The rest of
   the course and teacher screens have none, so a change there is not verified by the tests;
   say so.
 

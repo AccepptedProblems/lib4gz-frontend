@@ -55,4 +55,5 @@ interceptors in `../interceptors/` and `../shared/utils/api-error.ts` follow the
 ## Verify
 
 Specs: `auth.service.spec.ts`, `course-cache.service.spec.ts`,
-`registration-flow.service.spec.ts`. The other services have none.
+`registration-flow.service.spec.ts`, `race.service.spec.ts` (the race calls' method, path and
+body). The other services have none.

@@ -2,7 +2,10 @@ import Phaser from 'phaser';
 import { bridgeOf } from '../bridge';
 import { C } from '../engine/constants';
 import { createRace, LOCAL_RACER, Race, step } from '../engine/race';
-import { hasWebGL, Mode7Camera, Mode7View } from '../render/mode7';
+import { hasWebGL, Mode7Camera, Mode7View, NO_WEBGL } from '../render/mode7';
+import { Props } from '../render/props';
+import { RoadOverlay } from '../render/road-overlay';
+import { Skyline } from '../render/skyline';
 import { createTrackTexture, TrackTexture } from '../render/track-texture';
 import { pointAt, worldAt } from '../track/geometry';
 import { LAP } from '../track/lap';
@@ -22,7 +25,7 @@ export interface DebugStart {
 /**
  * Behind `?debug=top|mode7` on the race page. `top` shows the track texture with the kart
  * driven by the engine as a dot; `mode7` flies a free camera over it with a marker on the
- * start line and one on the first checkpoint. Arrows steer or fly, Down drifts, Q/E change
+ * start line and one on the first checkpoint. Arrows slide or fly, Q/E change
  * the camera height, A/Z its pitch.
  */
 export class DebugScene extends Phaser.Scene {
@@ -37,6 +40,9 @@ export class DebugScene extends Phaser.Scene {
   private fit = { s: 1, ox: 0, oy: 0 };
   // mode7
   private view: Mode7View | null = null;
+  private skyline: Skyline | null = null;
+  private props: Props | null = null;
+  private overlay: RoadOverlay | null = null;
   private cam!: Mode7Camera;
   private markers: { p: { x: number; y: number }; obj: Phaser.GameObjects.Arc }[] = [];
 
@@ -51,7 +57,7 @@ export class DebugScene extends Phaser.Scene {
   create(): void {
     setupStage(this);
     const def = this.start.track === 'lap' ? LAP : TEST_TRACK;
-    this.race = createRace({ seed: 1, track: def });
+    this.race = createRace({ track: def });
     this.texture = createTrackTexture(this, `track-${this.start.track}`, this.race.built);
     const keyboard = this.input.keyboard;
     this.keys = keyboard ? (keyboard.addKeys({ left: 'LEFT', right: 'RIGHT', up: 'UP', down: 'DOWN', q: 'Q', e: 'E', a: 'A', z: 'Z' }) as DebugScene['keys']) : null;
@@ -68,13 +74,19 @@ export class DebugScene extends Phaser.Scene {
         const p = this.toStage(box);
         this.add.rectangle(p.x, p.y, 6, 6, UI.road.box);
       }
+      const dot = { palm: UI.road.props.frondLight, billboard: UI.road.props.stripes[0], sign: UI.road.props.diamond };
+      for (const prop of this.race.built.props) {
+        const p = this.toStage(prop);
+        this.add.circle(p.x, p.y, 2, dot[prop.kind]);
+      }
       return;
     }
     if (!hasWebGL(this)) {
-      label(this, W / 2, H / 2, 'Lightning Kart needs WebGL in this browser', { color: UI.colors.danger });
+      label(this, W / 2, H / 2, NO_WEBGL, { color: UI.colors.danger });
       return;
     }
     this.view = new Mode7View(this, this.texture);
+    this.skyline = new Skyline(this, 1); // sits at the default pitch's horizon; the pitch keys leave it put
     this.cam = { x: -30, y: 0, yaw: 0, height: C.camera.height, pitch: (C.camera.pitchDeg * Math.PI) / 180, fovDeg: C.camera.fovDeg };
     const track = this.race.built.track;
     const at = (p: { x: number; y: number }, colour: number): void => {
@@ -84,6 +96,8 @@ export class DebugScene extends Phaser.Scene {
     at(pointAt(track, this.race.built.checkpoints[0]), UI.road.checkpoint);
     at(worldAt(track, 0, C.world.roadWidth / 2), 0xffffff); // the start line's right end
     this.race.boxes.forEach((b) => at(b, UI.road.box));
+    this.props = new Props(this, this.race.built, 10);
+    this.overlay = new RoadOverlay(this, this.race.built, 0.5); // over the ground, under the skyline
   }
 
   override update(_time: number, delta: number): void {
@@ -91,12 +105,12 @@ export class DebugScene extends Phaser.Scene {
     const k = this.keys;
     const steer = k ? (k.right.isDown ? 1 : 0) - (k.left.isDown ? 1 : 0) : 0;
     if (this.start.mode === 'top') {
-      step(this.race, dt, { steer, drift: !!k?.down.isDown });
+      step(this.race, dt, { steer });
       const me = this.race.racers[0];
       const p = this.toStage(me);
-      this.trail.fillStyle(me.onGrass ? 0xffffff : 0xff3b3b, 0.5).fillCircle(p.x, p.y, 1.5);
+      this.trail.fillStyle(0xff3b3b, 0.5).fillCircle(p.x, p.y, 1.5);
       this.dot.setPosition(p.x, p.y);
-      this.readout.setText(`speed ${me.speed.toFixed(1)}  d ${me.d.toFixed(0)}  offset ${me.offset.toFixed(1)}  lap ${me.lap}  cp ${me.nextCheckpoint}  ${me.drifting ? 'DRIFT' : ''}${me.onGrass ? ' GRASS' : ''}${me.onWall ? ' WALL' : ''}`);
+      this.readout.setText(`speed ${me.speed.toFixed(1)}  d ${me.d.toFixed(0)}  offset ${me.offset.toFixed(1)}  lap ${me.lap}  cp ${me.nextCheckpoint}`);
       return;
     }
     if (!this.view || !k) return;
@@ -108,6 +122,9 @@ export class DebugScene extends Phaser.Scene {
     c.height = Math.max(1, c.height + ((k.e.isDown ? 1 : 0) - (k.q.isDown ? 1 : 0)) * 6 * dt);
     c.pitch = Math.max(0.05, Math.min(1.4, c.pitch + ((k.a.isDown ? 1 : 0) - (k.z.isDown ? 1 : 0)) * 0.5 * dt));
     this.view.setCamera(c);
+    this.skyline?.setYaw(c.yaw);
+    this.props?.update(this.view, c);
+    this.overlay?.update(c);
     for (const m of this.markers) {
       const s = this.view.project(m.p);
       if (!s) { m.obj.setVisible(false); continue; }

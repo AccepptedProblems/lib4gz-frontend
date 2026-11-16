@@ -7,13 +7,18 @@ import { ExerciseType, ModuleResponse, RaceQuestionItem, RaceQuestionResponse } 
 import {
   ButtonComponent, DialogComponent, SideSheetComponent, SkeletonComponent, TextareaComponent, ToastService,
 } from '../../../shared/components';
-import {
-  MAX_OPTIONS, MIN_OPTIONS, WARN_TOO_FEW_OPTIONS, WARN_TOO_MANY_OPTIONS, parseFastCreate,
-} from '../../../shared/utils/fast-create';
+import { MIN_OPTIONS, WARN_TOO_FEW_OPTIONS, parseFastCreate } from '../../../shared/utils/fast-create';
 
 import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type ScreenState = 'loading' | 'loaded' | 'error';
+
+/**
+ * The race panel has four cards; the shared parser and the server allow six. Must match the
+ * length of `C.ui.cards.fill` in games/lightning-kart/engine/constants.ts, which this screen
+ * must not import: that would pull the game into the teacher bundle.
+ */
+const RACE_MAX_OPTIONS = 4;
 
 function plural(n: number, one: string, many: string): string {
   return n === 1 ? `1 question ${one}` : `${n} questions ${many}`;
@@ -31,7 +36,7 @@ function plural(n: number, one: string, many: string): string {
   styleUrl: './race-questions.component.scss',
 })
 export class RaceQuestionsComponent implements OnInit {
-  readonly maxOptions = MAX_OPTIONS;
+  readonly maxOptions = RACE_MAX_OPTIONS;
   readonly minOptions = MIN_OPTIONS;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -98,13 +103,18 @@ export class RaceQuestionsComponent implements OnInit {
   }
 
   private setRows(questions: RaceQuestionResponse[]): void {
+    // A teacher of the course always gets the key; the null is a student's.
     this.rows.set(questions.map(q => ({
-      id: q.id, moduleId: q.moduleId, content: q.content, options: q.options, correctIndex: q.correctIndex,
+      id: q.id, moduleId: q.moduleId, content: q.content, options: q.options, correctIndex: q.correctIndex ?? 0,
     })));
     this.savedSnapshot.set(JSON.stringify(this.rows()));
   }
 
-  /** Parses the paste, keeps every question with a correct option and no blank option, appends the rows. */
+  /**
+   * Parses the paste, cuts each question to its first four options, keeps every question with
+   * a correct option and no blank option, appends the rows. A mark on a cut option counts as
+   * no mark: the race cannot ask a question whose right answer it dropped.
+   */
   addQuestions(): void {
     const moduleId = this.bulkModuleId();
     if (!moduleId) return;
@@ -115,9 +125,10 @@ export class RaceQuestionsComponent implements OnInit {
     const added: RaceQuestionItem[] = [];
     let noCorrect = 0, tooFew = 0, blank = 0, trimmed = 0;
     for (const q of parsed) {
-      const options: { text: string; isCorrect: boolean }[] = q.meta['options'];
+      const pasted: { text: string; isCorrect: boolean }[] = q.meta['options'];
+      const options = pasted.slice(0, RACE_MAX_OPTIONS);
       const correctIndex = options.findIndex(o => o.isCorrect);
-      if (q.warnings.includes(WARN_TOO_MANY_OPTIONS)) trimmed++;
+      if (pasted.length > RACE_MAX_OPTIONS) trimmed++;
       if (correctIndex < 0) { noCorrect++; continue; }
       if (q.warnings.includes(WARN_TOO_FEW_OPTIONS)) { tooFew++; continue; }
       if (options.some(o => !o.text.trim())) { blank++; continue; }
@@ -128,7 +139,7 @@ export class RaceQuestionsComponent implements OnInit {
     if (noCorrect > 0) warnings.push(`${plural(noCorrect, 'has', 'have')} no correct answer marked. The race needs one, so ${noCorrect === 1 ? 'it was' : 'they were'} not added.`);
     if (tooFew > 0) warnings.push(`${plural(tooFew, 'has', 'have')} fewer than ${MIN_OPTIONS} options and ${tooFew === 1 ? 'was' : 'were'} not added.`);
     if (blank > 0) warnings.push(`${plural(blank, 'has', 'have')} an empty option and ${blank === 1 ? 'was' : 'were'} not added.`);
-    if (trimmed > 0) warnings.push(`${plural(trimmed, 'had', 'had')} more than ${MAX_OPTIONS} options; only the first ${MAX_OPTIONS} are kept.`);
+    if (trimmed > 0) warnings.push(`${plural(trimmed, 'had', 'had')} more than ${RACE_MAX_OPTIONS} options; only the first ${RACE_MAX_OPTIONS} are kept.`);
     this.addWarnings.set(warnings);
 
     if (added.length) {
@@ -177,7 +188,7 @@ export class RaceQuestionsComponent implements OnInit {
   }
 
   addDraftOption(): void {
-    this.patchDraft(d => (d.options.length >= MAX_OPTIONS ? d : { ...d, options: [...d.options, ''] }));
+    this.patchDraft(d => (d.options.length >= RACE_MAX_OPTIONS ? d : { ...d, options: [...d.options, ''] }));
   }
 
   /** Keeps the correct mark on the same option, or on the first one if that option is removed. */

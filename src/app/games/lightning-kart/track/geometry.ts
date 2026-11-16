@@ -18,8 +18,6 @@ export interface Centreline {
 
 export interface Track {
   line: Centreline;
-  /** Grass from the road edge to the wall. */
-  verge: number;
   length: number;
   /** Distance along the line at each point; `cum[n]` is the total length. */
   cum: number[];
@@ -41,7 +39,7 @@ export interface Nearest {
   half: number;
 }
 
-export function createTrack(line: Centreline, verge: number): Track {
+export function createTrack(line: Centreline): Track {
   const pts = line.points;
   const n = pts.length;
   if (n < 3) throw new Error('a track needs at least three points');
@@ -55,7 +53,7 @@ export function createTrack(line: Centreline, verge: number): Track {
     const h2 = Math.atan2(c.y - b.y, c.x - b.x);
     return wrapAngle(h2 - h1) / ((dist(a, b) + dist(b, c)) / 2);
   });
-  return { line, verge, length: cum[n], cum, curvature };
+  return { line, length: cum[n], cum, curvature };
 }
 
 export function wrapAngle(a: number): number {
@@ -114,12 +112,6 @@ export function widthAt(t: Track, d: number): number {
   return a.width + (b.width - a.width) * f;
 }
 
-export function curvatureAt(t: Track, d: number): number {
-  const { i, f } = locate(t, d);
-  const n = t.curvature.length;
-  return t.curvature[i] * (1 - f) + t.curvature[(i + 1) % n] * f;
-}
-
 /** The nearest point on the centreline to `p`, by projecting onto every segment. */
 export function nearest(t: Track, p: Vec): Nearest {
   const pts = t.line.points;
@@ -153,23 +145,6 @@ export function nearest(t: Track, p: Vec): Nearest {
   // right of the tangent, with y down, is (-ty, tx)
   const offset = (p.x - x) * -ty + (p.y - y) * tx;
   return { d: t.cum[bi] + len * bf, offset, x, y, tx, ty, half: (a.width + (b.width - a.width) * bf) / 2 };
-}
-
-export function isOnRoad(t: Track, p: Vec): boolean {
-  const n = nearest(t, p);
-  return Math.abs(n.offset) <= n.half;
-}
-
-export function isInsideWall(t: Track, p: Vec): boolean {
-  const n = nearest(t, p);
-  return Math.abs(n.offset) <= n.half + t.verge;
-}
-
-/** Unit normal pointing from the nearest wall back onto the track. */
-export function wallNormal(t: Track, p: Vec): Vec {
-  const n = nearest(t, p);
-  const s = n.offset >= 0 ? -1 : 1;
-  return { x: -n.ty * s, y: n.tx * s };
 }
 
 /** A world point from a distance along the lap and an offset across it (positive right). */
