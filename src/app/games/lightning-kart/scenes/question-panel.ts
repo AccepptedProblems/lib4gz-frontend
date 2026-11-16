@@ -89,7 +89,7 @@ export class QuestionPanel {
     // and both cards in a row take the taller one's height, so the rows grow upward.
     const cardW = (panelW - gap) / 2;
     const captions = question.options.map((option) =>
-      fit(wrapText(this.scene, 0, 0, option, cardW - CAPTION_LEFT - CAPTION_RIGHT, { originX: 0, originY: 0, bold: true }).setStroke(INK, CARDS.stroke),
+      fit(wrapText(this.scene, 0, 0, option, cardW - CAPTION_LEFT - CAPTION_RIGHT, { originX: 0, originY: 0, family: UI.read.stack, weight: UI.read.option }).setStroke(INK, CARDS.stroke),
         CARDS.optionSizes, CARDS.optionLines));
     const rows: number[][] = [];
     for (let i = 0; i < captions.length; i += 2) rows.push(captions.slice(i, i + 2).map((_, k) => i + k));
@@ -110,7 +110,7 @@ export class QuestionPanel {
     }
 
     // The board on them, its shadow `gap` above the first row, as tall as the question needs.
-    const text = fit(wrapText(this.scene, left + PAD_X, 0, question.content, panelW - 2 * PAD_X - NUMBER_W, { originX: 0, originY: 0, color: INK }),
+    const text = fit(wrapText(this.scene, left + PAD_X, 0, question.content, panelW - 2 * PAD_X - NUMBER_W, { originX: 0, originY: 0, color: INK, family: UI.read.stack, weight: UI.read.question }),
       CARDS.questionSizes, CARDS.questionLines);
     const textTop = BOARD_PAD_Y + FX.timerBarH + 6; // under the countdown bar, from the board's top
     const boardH = textTop + text.height + BOARD_PAD_Y;

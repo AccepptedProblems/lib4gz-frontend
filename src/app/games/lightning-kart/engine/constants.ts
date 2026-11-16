@@ -108,6 +108,10 @@ export const C = {
     // `family` is the name the FontFace is registered under (public/fonts/oswald-variable.woff2,
     // loaded by the host before the game boots); `stack` is what every canvas text uses.
     font: { family: 'Oswald', stack: 'Oswald, "Arial Narrow", sans-serif', title: 44, button: 22, body: 20, small: 16, hud: 18, hudBig: 28 },
+    // The reading face of the question panel's question and options: Open Sans, registered the
+    // same way from three subset files (public/fonts/open-sans-*.woff2: latin, latin-ext,
+    // vietnamese). `question` and `option` are CSS font weights within its 300 to 800 range.
+    read: { family: 'Open Sans', stack: '"Open Sans", Arial, sans-serif', question: '600', option: '700' },
     // Skewed shapes (widgets.ts): `skew` is the horizontal shear in px between the top and
     // bottom edge of every button and panel, `stripe` the width of a button's accent block at
     // its left end.

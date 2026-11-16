@@ -48,14 +48,18 @@ export interface LabelOptions {
   originX?: number;
   originY?: number;
   bold?: boolean;
+  /** A font stack other than `C.ui.font.stack`, such as `C.ui.read.stack`. */
+  family?: string;
+  /** A CSS font weight such as '600'; wins over `bold`. */
+  weight?: string;
 }
 
 export function label(scene: Phaser.Scene, x: number, y: number, text: string, opts: LabelOptions = {}): Phaser.GameObjects.Text {
   return scene.add
     .text(x, y, text, {
-      fontFamily: UI.font.stack,
+      fontFamily: opts.family ?? UI.font.stack,
       fontSize: `${opts.size ?? UI.font.body}px`,
-      fontStyle: opts.bold ? 'bold' : 'normal',
+      fontStyle: opts.weight ?? (opts.bold ? 'bold' : 'normal'),
       color: opts.color ?? UI.colors.text,
       resolution: stageScale(scene),
     })

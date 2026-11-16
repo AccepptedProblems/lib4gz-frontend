@@ -30,12 +30,14 @@ host.
 - A look change touches `C.ui` only: colours, fonts, sizes and shapes. It never changes a
   duration or a power under `C.ui.fx`, and nothing in the kart, world, boost, trap, answer,
   net, camera or engine blocks.
-- Everything is drawn by code; no image file is loaded. The canvas typeface is Oswald, the one
-  asset of the game: `public/fonts/oswald-variable.woff2`
-  (SIL OFL, licence beside it). The host registers it with the FontFace API under
-  `C.ui.font.family` before `new Phaser.Game`, because a text object measures with the font
+- Everything is drawn by code; no image file is loaded. The only assets are two typefaces in
+  `public/fonts/` (SIL OFL, licences beside them): Oswald (`oswald-variable.woff2`) and Open
+  Sans as three subset files (`open-sans-*.woff2`, each registered with its `unicodeRange`).
+  The host registers both with the FontFace API, under `C.ui.font.family` and
+  `C.ui.read.family`, before `new Phaser.Game`, because a text object measures with the font
   registered when it is created; a failed load still creates the game on the fallback stack.
-  Every canvas text uses `C.ui.font.stack`. The Angular shell keeps its own font.
+  Every canvas text uses `C.ui.font.stack` except the question panel's question and option
+  text, which use `C.ui.read`. The Angular shell keeps its own font.
 - Scenes work in stage units, 960 by 540. The canvas is that times the pixel ratio (capped
   by `C.ui.maxPixelRatio`) and each scene's `create` calls `setupStage` first, which zooms
   the camera to match. Never read `scene.scale.width` for layout.
