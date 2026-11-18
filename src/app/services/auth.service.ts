@@ -1,8 +1,9 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, map, shareReplay, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CourseCacheService } from './course-cache.service';
+import { accessTokenMsLeft, clearTokens, getAccessToken, getRefreshToken, storeTokens } from './token-store';
 import {
   CompleteRegistrationRequest,
   GoogleSignInResponse,
@@ -10,8 +11,8 @@ import {
   LoginRequest,
   LoginResponse,
   OtpSentResponse,
+  RefreshTokenRequest,
   RegistrationStartedResponse,
-  Token,
   UserRole
 } from '../shared/models';
 
@@ -21,6 +22,10 @@ export class AuthService {
   // One-way dependency: the cache service reads localStorage directly, never AuthService.
   private readonly courseCache = inject(CourseCacheService);
   private readonly baseUrl = `${environment.apiUrl}/v1/auth`;
+  /** The refresh in flight, shared by every caller until it settles. */
+  private refreshing: Observable<LoginResponse> | null = null;
+  /** The refresh token the refresh in flight sent, null when none is in flight. */
+  private sentRefreshToken: string | null = null;
 
   /** The signed-in user, so profile edits reach the navbar without a reload. */
   readonly currentUser = signal<UserResponse | null>(readStoredUser());
@@ -71,37 +76,78 @@ export class AuthService {
     );
   }
 
-  refreshToken(): Observable<Token> {
-    return this.http.post<Token>(`${this.baseUrl}/refresh-token`, {}).pipe(
-      tap(token => this.storeToken(token))
-    );
-  }
-
-  logout(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('token_expiry');
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_id');
-    this.currentUser.set(null);
-    // Shared-machine privacy: drop all cached course data for this user.
-    this.courseCache.clearAll().catch(() => {});
-  }
-
-  isAuthenticated(): boolean {
-    const token = localStorage.getItem('access_token');
-    const expiry = localStorage.getItem('token_expiry');
-
-    if (!token || !expiry) {
-      return false;
+  /**
+   * Trades the refresh token for a new pair. One request at a time: callers during a refresh share it.
+   * The pair is stored only while storage still holds the token sent; otherwise the new refresh token
+   * is revoked on the server, and the callers get a 401 (the session cleared) if storage is empty or
+   * the reply if another tab stored its own pair (they read the access token from storage, never from
+   * the reply).
+   * A 401 means the sign-in is over, so the session is cleared; any other failure (no network,
+   * server down) keeps the session, because the refresh token is still good.
+   */
+  refreshSession(): Observable<LoginResponse> {
+    if (this.refreshing) return this.refreshing;
+    const sent = getRefreshToken();
+    if (!sent) {
+      this.clearSession();
+      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'No refresh token' }));
     }
+    this.sentRefreshToken = sent;
+    const body: RefreshTokenRequest = { refreshToken: sent };
+    this.refreshing = this.http.post<LoginResponse>(`${this.baseUrl}/refresh-token`, body).pipe(
+      // Both branches mark the refresh settled before the callers hear of it, so a sign-out in a
+      // caller's own callback is not a sign-out during the refresh, and a refresh asked for there
+      // starts a new, tracked one instead of getting this finished one back (shareReplay resets
+      // on error, so subscribing to it again would post the same token again).
+      catchError((error: HttpErrorResponse) => {
+        this.sentRefreshToken = null;
+        this.refreshing = null;
+        if (error.status === 401) this.clearSession();
+        else if (!getRefreshToken()) this.revokeOnServer(sent);
+        return throwError(() => error);
+      }),
+      map(response => {
+        this.sentRefreshToken = null;
+        this.refreshing = null;
+        const stored = getRefreshToken();
+        if (stored === sent) {
+          this.storeLoginData(response);
+          return response;
+        }
+        this.revokeOnServer(response.refreshToken.token);
+        if (!stored) {
+          // Signed out meanwhile, or the refresh token expired in flight: either way the sign-in is over.
+          this.clearSession();
+          throw new HttpErrorResponse({ status: 401, statusText: 'Signed out during the refresh' });
+        }
+        return response;
+      }),
+      // Not ref-counted: once sent, the refresh completes and settles even if every caller has
+      // gone, because the server has already revoked the old token.
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    return this.refreshing;
+  }
 
-    return Date.now() < parseInt(expiry, 10);
+  /**
+   * Signs out here at once, network or not, then asks the server to revoke the stored refresh token.
+   * During a refresh it never revokes the token in flight (the refresh revokes its own new one when
+   * it settles); it revokes the stored token only when another tab's refresh stored it.
+   */
+  logout(): void {
+    const stored = getRefreshToken();
+    const inFlight = this.sentRefreshToken;
+    this.clearSession();
+    if (stored && stored !== inFlight) this.revokeOnServer(stored);
+  }
+
+  /** True while a request can be made: an unexpired access token, or a refresh token to renew it. */
+  isAuthenticated(): boolean {
+    return accessTokenMsLeft() > 0 || getRefreshToken() !== null;
   }
 
   getToken(): string | null {
-    return localStorage.getItem('access_token');
+    return getAccessToken();
   }
 
   getUserName(): string {
@@ -126,13 +172,25 @@ export class AuthService {
   }
 
   private storeLoginData(response: LoginResponse): void {
-    this.storeToken(response.accessToken);
+    storeTokens(response.accessToken, response.refreshToken);
     this.setCurrentUser(response.user);
   }
 
-  private storeToken(token: Token): void {
-    localStorage.setItem('access_token', token.token);
-    localStorage.setItem('token_expiry', token.expiredAt.toString());
+  /** Asks the server to revoke [refreshToken]. The answer does not matter: this browser is done with it. */
+  private revokeOnServer(refreshToken: string): void {
+    const body: RefreshTokenRequest = { refreshToken };
+    this.http.post(`${this.baseUrl}/logout`, body).subscribe({ error: () => {} });
+  }
+
+  private clearSession(): void {
+    clearTokens();
+    localStorage.removeItem('user');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_id');
+    this.currentUser.set(null);
+    // Shared-machine privacy: drop all cached course data for this user.
+    this.courseCache.clearAll().catch(() => {});
   }
 }
 

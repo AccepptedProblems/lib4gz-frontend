@@ -34,6 +34,13 @@ export interface UpdateMeRequest {
 export interface LoginResponse {
   user: UserResponse;
   accessToken: Token;
+  /** Opaque and single use: trade it at `/v1/auth/refresh-token` for a new pair. */
+  refreshToken: Token;
+}
+
+/** The body of both refresh and logout. */
+export interface RefreshTokenRequest {
+  refreshToken: string;
 }
 
 export interface StartEmailRegistrationRequest {

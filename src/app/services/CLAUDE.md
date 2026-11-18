@@ -14,12 +14,36 @@ interceptors in `../interceptors/` and `../shared/utils/api-error.ts` follow the
   the server's text for 4xx and 503 and `fallback` for everything else. Never read
   `err.error` in a component.
 - The token travels in the `access_token` header.
+- `token-store.ts` is the only code that reads or writes the token keys (`access_token`,
+  `token_expiry`, `refresh_token`, `refresh_token_expiry`). It keeps no copy in memory: a tab
+  must see the pair another tab just stored.
 - A new endpoint under `/v1/auth/` must be checked against two lists: the public list in
   `../interceptors/jwt.interceptor.ts` (no token is sent) and the refresh exception in
   `../interceptors/error.interceptor.ts`.
-- A 401 from a non-auth call starts a token refresh. The backend's refresh endpoint is an
-  empty stub, so today that ends in logout and `/login`. A permission failure is a 403 and
-  reaches the screen.
+- Refresh goes only through `AuthService.refreshSession`, which allows one request in flight.
+  A refresh token is single use, so two refreshes with the same one waste a rotation.
+- `jwtInterceptor` refreshes before a request when the access token has under 5 minutes left.
+  `errorInterceptor` refreshes on a 401 from a non-auth call and retries once. `authGuard`
+  refreshes before sending the person to `/login`.
+- Only a 401 from refresh signs the person out. A network error or 5xx from refresh fails
+  that one request and keeps the session. A permission failure is a 403 and reaches the
+  screen.
+- A refresh stores its new pair and user only if `getRefreshToken()` still returns the token
+  it sent. Storage empty: it stores nothing, revokes the new refresh token and fails its
+  callers with a 401. Another token in storage (another tab refreshed): it stores nothing,
+  revokes the new refresh token and its callers get the reply.
+- A refresh that fails with a 401 clears the session and revokes nothing. One that fails
+  otherwise revokes the token it sent only if storage is empty by then; with a token in
+  storage it does nothing.
+- After `refreshSession()`, every caller sends with the access token `getAccessToken()`
+  returns, never the one in the reply.
+- `logout()` clears the session first, then revokes the stored refresh token. During a
+  refresh it never revokes the token that refresh sent: it revokes the stored token only
+  when that differs. A refresh counts as in flight until it settles, before its callers
+  hear of it.
+- Every revoke posts to `/logout` through `AuthService.revokeOnServer` and ignores the result.
+- `refreshSession` stays `shareReplay({ bufferSize: 1, refCount: false })`: a refresh settles
+  after every caller has unsubscribed.
 - `AuthService.setCurrentUser` is the one place that stores the signed-in user.
 - `roleGuard` always returns true. Gate the UI with `AuthService.hasRole`; only the server
   enforces roles.

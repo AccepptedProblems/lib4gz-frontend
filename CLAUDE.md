@@ -26,8 +26,8 @@ What the product does: `../docs/README.md`. Contract with the backend: `../CLAUD
   launcher in `karma.conf.js` that draws WebGL in software) runs them too.
 - `scripts/check-docs.sh` fails when a `CLAUDE.md` names a file that no longer exists, and
   lists folders whose code changed without their doc.
-- Specs cover the app shell, the auth, cache and sign-up flow services, the registration
-  guard, the token interceptor, `apiErrorMessage`, the Fast Create parser, the code input,
+- Specs cover the app shell, the auth, cache and sign-up flow services, the auth and
+  registration guards, the token and error interceptors, `apiErrorMessage`, the Fast Create parser, the code input,
   the profile screen, the exercise editor's Fast Create sheet, the course material
   screen's reorder and delete dialogs, the race-questions editor, the race service's calls,
   the game host's calls, the race track geometry, the race engine, the mode 7 view and the
